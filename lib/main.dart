@@ -29,11 +29,11 @@ void main() async {
         title: 'W Burger - POS',
         center: true,
         size: Size(1280, 720),
+        fullScreen: true,
       );
       await windowManager.waitUntilReadyToShow(windowOptions, () async {
         await windowManager.show();
         await windowManager.focus();
-        await windowManager.setFullScreen(true);
       });
     }
 
@@ -111,28 +111,41 @@ class _DesktopShellShortcuts extends StatefulWidget {
 }
 
 class _DesktopShellShortcutsState extends State<_DesktopShellShortcuts> {
+  static const _escapeHoldDuration = Duration(milliseconds: 700);
+
   Timer? _escapeHoldTimer;
 
   bool get _isWindowsDesktop =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
   @override
+  void initState() {
+    super.initState();
+    if (_isWindowsDesktop) {
+      HardwareKeyboard.instance.addHandler(_handleKey);
+    }
+  }
+
+  @override
   void dispose() {
+    if (_isWindowsDesktop) {
+      HardwareKeyboard.instance.removeHandler(_handleKey);
+    }
     _escapeHoldTimer?.cancel();
     super.dispose();
   }
 
-  KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
-    if (!_isWindowsDesktop) return KeyEventResult.ignored;
+  bool _handleKey(KeyEvent event) {
+    if (!_isWindowsDesktop) return false;
 
     if (event.logicalKey == LogicalKeyboardKey.f11 && event is KeyDownEvent) {
       unawaited(windowManager.setFullScreen(true));
-      return KeyEventResult.handled;
+      return true;
     }
 
     if (event.logicalKey == LogicalKeyboardKey.escape) {
       if (event is KeyDownEvent) {
-        _escapeHoldTimer ??= Timer(const Duration(milliseconds: 700), () {
+        _escapeHoldTimer ??= Timer(_escapeHoldDuration, () {
           _escapeHoldTimer = null;
           unawaited(windowManager.setFullScreen(false));
         });
@@ -140,22 +153,14 @@ class _DesktopShellShortcutsState extends State<_DesktopShellShortcuts> {
         _escapeHoldTimer?.cancel();
         _escapeHoldTimer = null;
       }
-      return KeyEventResult.handled;
+      return true;
     }
 
-    return KeyEventResult.ignored;
+    return false;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_isWindowsDesktop) {
-      return widget.child;
-    }
-
-    return Focus(
-      autofocus: true,
-      onKeyEvent: _handleKey,
-      child: widget.child,
-    );
+    return widget.child;
   }
 }
