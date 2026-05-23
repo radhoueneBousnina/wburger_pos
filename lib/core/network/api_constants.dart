@@ -3,7 +3,7 @@ class ApiConstants {
   // Use http://10.0.2.2:8000 on Android emulator
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8000',
+    defaultValue: 'https://w-burger.com:8000',
   );
   static const String apiPrefix = '/api/v1';
 
