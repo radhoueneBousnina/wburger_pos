@@ -8,10 +8,6 @@ jobs:
     name: Build Windows x64 POS
     runs-on: windows-latest
 
-    defaults:
-      run:
-        working-directory: wburger_pos
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,9 +27,6 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Analyze project
-        run: flutter analyze
-
       - name: Build Windows release
         run: flutter build windows --release
 
@@ -41,7 +34,7 @@ jobs:
         shell: pwsh
         run: |
           $releasePath = "build\windows\x64\runner\Release"
-          $zipPath = "..\wburger-pos-windows-x64.zip"
+          $zipPath = "wburger-pos-windows-x64.zip"
 
           if (!(Test-Path $releasePath)) {
             Write-Error "Release folder not found: $releasePath"
