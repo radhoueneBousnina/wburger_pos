@@ -1,0 +1,542 @@
+Cahier des charges
+Système de management Fast Food W Burger
+POS caisse + impression tickets, interface cuisine (KDS), stock et achats, backoffice
+
+Client / Exploitant : W Burger
+Projet : Système de management W Burger
+Pays : Tunisie
+Ville : Sousse
+
+Informations document
+Reference : CDC-WBURGER-2026-02
+Version : v0.1
+Date : 19/02/2026
+
+Auteurs et contacts
+Rédigé par : Radhouene Bousnina
+Contact : 51947278 radhouene.bousnina@coradash.com
+Référent côté client : Wiheb Mokni - gérant
+Contact : 40041001
+
+Confidentialité
+Ce document contient des informations confidentielles relatives au projet W Burger. Il est
+destiné uniquement aux personnes autorisées. Toute diffusion, reproduction ou utilisation
+non autorisée est interdite.
+
+1)​ Contexte et objectifs
+1.1​ Contexte
+W Burger souhaite mettre en place un système de management complet pour son activité
+fast food, couvrant l' ensemble du cycle opérationnel en point de vente: prise de commande
+et encaissement, transmission et suivi en cuisine, impression des tickets, gestion des stocks
+et des achats, pilotage via un backoffice (administration et statistiques), ainsi qu'une application
+mobile client (deals, points, QR codes) inspirée des standards des grandes enseignes.
+Le système doit permettre de standardiser les opérations, réduire les erreurs, accélérer le
+service, améliorer la traçabilité (ventes, annulations, stocks) et fournir une vision claire de la
+performance (chiffre d'affaires, produits, marges si applicable, ruptures, productivité).
+
+1.2​ Objectifs métier
+●​ Unifier les outils caisse, cuisine, stock, management et application mobile dans un même
+écosystème cohérent.
+●​ Améliorer l'expérience client (rapidité, exactitude des commandes, offres et fidélité).
+●​ Mettre en place une stratégie de fidélisation (points, deals, coupons, QR code) pour
+augmenter la récurrence et le panier moyen.
+●​ Assurer la traçabilité et la responsabilisation (actions utilisateur, annulations, remises,
+ajustements stock).
+
+1.3​ Objectifs opérationnels
+●​ Accélérer la prise de commande et l'encaissement au comptoir.
+●​ Assurer une transmission fiable et immédiate des commandes à la cuisine (ticket cuisine
+et ou écran cuisine KDS).
+●​ Réduire les erreurs de préparation via des statuts et un suivi clair côté cuisine.
+●​ Éviter les ruptures et limiter les pertes via alertes stock, inventaires et suivi des
+mouvements.
+●​ Faciliter le travail des équipes (interfaces simples, rôles et droits, procédures
+standardisées).
+
+1.4​ Objectifs de pilotage et reporting
+●​ Donner au management un backoffice pour paramètres, administration et analyse.
+●​ Suivre les indicateurs clés: chiffre d'affaires, ventes par produit et par catégorie, panier
+moyen, ventes par heure, remises et annulations, performance des deals, ruptures et écarts
+stock.
+●​ Produire des rapports exploitables pour la décision (quotidien, hebdomadaire,
+mensuel).
+
+1.5​ Objectifs techniques et évolutivité
+
+●​ Concevoir un système robuste, sécurisé et maintenable, adapté à un usage en
+environnement magasin.
+●​ Prévoir l'évolutivité vers multi caisses et multi sites si W Burger se développe.
+●​ Prévoir une architecture permettant l'ajout d'options futures.
+
+2)​ Prérequis
+●​ Terminal caisse avec écran tactile recommande
+●​ Tiroir caisse compatible
+●​ Scanner QR code
+●​ Imprimante ticket client (thermique)
+●​ Imprimante cuisine (thermique)
+●​ Tablette cuisine
+●​ Accès Internet stable
+●​ Logo W Burger
+●​ Charte graphique
+
+3)​ Périmètre fonctionnel
+Le périmètre du projet W Burger inclut le développement et la mise en place des
+composants suivants :
+1.​ POS Caisse + app mobile (Point of Sale)
+2.​ Impression tickets (client + cuisine) et routage vers cuisine
+3.​ Interface Cuisine (KDS) pour le traitement des commandes
+4.​ Gestion Stock (mouvements, inventaires, alertes)
+5.​ Gestion Achats et Fournisseurs (bons de commande, réceptions)
+6.​ Backoffice / Admin Panel + app mobile (paramétrage, utilisateurs, reporting)
+7.​ Application mobile Client (deals, points, QR codes, etc.)
+8.​ Services techniques (authentification, rôles, journaux, notifications si incluses)
+
+4)​ Parties prenantes et utilisateurs
+●​ Exploitant / Propriétaire (W Burger) : sponsor du projet, validation des choix
+fonctionnels.
+●​
+
+Manager opérationnel (caisse + stock au quotidien) : responsable de
+
+l’exploitation journalière, exécute la caisse, suit le stock et les réceptions, remonte les besoins
+terrain.
+●​ Équipe cuisine (préparateurs) : utilisateurs (guest) de l’interface cuisine
+(KDS/tickets), retours sur lisibilité, suivi des statuts, gestion du flux.
+●​ Client final (application mobile) : utilisateur de l’application mobile des clients,
+retour sur simplicité et fiabilité.
+●​ Prestataire (Radhouene): conception, développement, déploiement, maintenance,
+support.
+
+5)​ Exigences fonctionnelles par module
+
+5.1​ Système de caisse (POS)
+5.1.1​ Authentification et gestion des accès
+1.​ Le système doit permettre une connexion par username + mot de passe.
+2.​ Les comptes utilisateurs de la caisse sont créés uniquement par l'admin.
+3.​ Les droits d’accès sont définis par l’Admin.
+4.​ Le système doit journaliser les connexions et actions sensibles (ventes, achat,
+annulation, remise, clôture, etc).
+
+5.1.2​ Interface catalogue et structure des produits
+1.​ Le POS doit afficher une liste de catégories.
+2.​ Chaque catégorie contient une liste de produits.
+3.​ Chaque produit contient les attributs suivants :
+○​ Nom
+○​ Image
+○​ Description
+○​ Prix de vente
+4.​ Chaque produit doit être associé à une liste de matières premières (recette/BOM) pour la
+déduction automatique du stock et calcul du coût après validation de vente.
+5.1.3​ Gestion des matières premières (interface stock intégrée) Le système doit
+permettre la gestion des matières premières utilisées dans la préparation
+des produits (viande, poulet, salade, pain, etc.).
+Pour chaque matière première, les attributs suivants doivent être disponibles :
+●​ Nom / Titre
+●​ Quantité en stock
+●​ Seuil minimum (déclenchement d’alerte si atteint)
+●​ Prix d’achat
+Fonctionnalités attendues :
+1.​ Consultation de la liste des matières premières.
+2.​ Modification des informations selon les droits.
+3.​ Génération d’alertes si quantité ≤ seuil défini.
+
+5.1.4​ Gestion des achats
+Le système doit permettre l’enregistrement des achats fournisseurs.
+Fonctionnalités :
+1.​ Création d’un achat :
+○​ Sélection d’un ou plusieurs produits
+○​ Saisie de la quantité achetée (par produit)
+○​ Saisie du prix d’achat (par produit)
+2.​ Téléversement obligatoire d’une photo de la facture fournisseur.
+3.​ Validation de l’achat par l’utilisateur autorisé.
+4.​ Mise à jour automatique du stock après confirmation.
+5.​ Historisation complète des achats (date, utilisateur, montant, etc.).
+
+5.1.5​ Processus de vente – Méthode 1 (vente directe en caisse)
+Étapes :
+1.​ Sélection catégorie.
+2.​ Sélection produit.
+3.​ Saisie de quantité.
+4.​ Possibilité d’ajouter une note produit (ex: sans salade).
+5.​ Possibilité d’appliquer une remise (selon droits).
+6.​ Choisir sur place/à emporter.
+Validation paiement via popup contenant :
+●​ Type de paiement :
+○​ Cash (si cash -> ouverture de caisse)
+○​ Carte
+○​ Staff
+○​ Autre
+Après confirmation :
+1.​ Impression ticket numéroté client.
+2.​ Impression ticket numéroté cuisine.
+3.​ Transmission automatique vers interface cuisine (KDS).
+4.​ Mise à jour automatique du stock selon recette du produit.
+5.​ Enregistrement en base de données.
+
+5.1.6​ Processus de vente – Méthode 2 (commande via application mobile)
+1.​ Le client passe commande via application mobile.
+2.​ L’application génère un QR code unique.
+3.​ Le caissier scanne le QR code.
+4.​ La commande apparaît automatiquement dans l’interface POS.
+5.​ Le caissier valide le paiement via le popup standard.
+6.​ La vente sera enregistrée au nom de ce client
+7.​ Le processus suit ensuite exactement le flux de la vente classique.
+5.1.7​ Annulation de commande
+1.​ Le caissier autorisé peut annuler une commande.
+2.​ Le statut devient “Annulée”.
+3.​ Le montant est retiré du total caisse.
+4.​ Le stock ne doit pas être impacté.
+5.​ L’action est journalisée avec motif obligatoire.
+5.1.8​ Clôture de session caisse
+À la fin d’une journée, le caissier doit :
+1.​ Cliquer sur “Clôturer caisse”.
+2.​ Le système affiche un tableau récapitulatif contenant :
+○​ Chiffre d’affaires total
+○​ Total cash
+○​ Total carte
+○​ Autres paiements
+○​ Fond de caisse
+3.​ Le caissier saisit :
+
+○​ Montant réel cash
+○​ Montant réel carte
+○​ Fond de caisse
+○​ Note facultative
+4.​ Si différence entre calcul système et montant réel :
+○​ La note devient obligatoire.
+5.​ Upload obligatoire d’une photo du TPE pour vérification des paiements carte.
+6.​ Validation finale → enregistrement en base de données avec horodatage.
+
+5.1.9​ Clôture journalière avec vérification stock
+En fin de journée :
+1.​ Le système affiche le stock calculé.
+2.​ Le responsable mesure le stock réel (poids).
+3.​ Il saisit les valeurs réelles pour chaque matière.
+4.​ Si écart détecté :
+○​ Note obligatoire.
+5.​ Enregistrement de la clôture avec :
+○​ Données théoriques
+○​ Données réelles
+○​ Écarts
+○​ Photos justificatives si requises
+
+5.1.10​ Traçabilité et enregistrement
+Le système doit enregistrer :
+●​ Toutes les ventes
+●​ Annulations
+●​ Remises
+●​ Clôtures session
+●​ Clôtures journalières
+●​ Mouvements stock
+●​ Photos factures fournisseurs
+●​ Photos TPE
+Toutes les données doivent être stockées en base de données avec horodatage et utilisateur
+responsable.
+
+5.1.11​ Ouverture manuelle du tiroir caisse (avec traçabilité)
+1.​ Le POS doit proposer un bouton “Ouvrir la caisse” (ou “Ouvrir tiroir-caisse”)
+accessible selon les droits.
+2.​ À l’activation du bouton, le système doit afficher un popup contenant, à l’instant T :
+○​ Chiffre d’affaires total (session ou jour, à préciser dans le paramétrage)
+○​ Total Cash
+○​ Total Carte
+○​ Autres paiements
+○​ Fond de caisse théorique
+3.​ Le popup doit inclure :
+○​ Un champ Note / Motif (obligatoire) indiquant la raison de l’ouverture.
+
+4.​ Après validation, le tiroir caisse s’ouvre et l’événement est enregistré en base de
+données avec :
+○​ Date/heure
+○​ Utilisateur
+○​ Motif (note)
+○​ Totaux affichés (CA, cash, carte, fond de caisse)
+5.​L’Administrateur doit pouvoir consulter l’historique des ouvertures de caisse (filtrable
+par date et utilisateur).
+
+5.1.12​ Consultation des ventes du jour (interface caissier)
+1.​ Le POS doit proposer une interface “Ventes du jour” accessible au caissier/manager selon
+droits.
+2.​ Cette interface doit afficher :
+○​ Un tableau listant les ventes du jour (tickets) avec au minimum :
+■​ Heure
+■​ Numéro ticket
+■​ Montant total
+■​ Mode de paiement
+■​ Statut (validée / annulée)
+○​ Un récapitulatif en haut ou bas de page :
+■​ Total chiffre d’affaires (CA)
+■​ Total Cash
+■​ Total Carte
+■​ Autres paiements
+
+5.2​ Backoffice / Admin (Administration et pilotage)
+5.2.1​ Authentification et accès
+1.​ Le backoffice doit permettre une connexion par username + mot de passe.
+2.​ Le système doit supporter un seul compte Administrateur (Admin unique).
+3.​ L’Administrateur doit avoir accès à l’ensemble des modules et données du système.
+
+5.2.2​ Paramétrage global du système (Setup)
+L’Administrateur doit pouvoir configurer les règles globales, notamment :
+1.​ Remises : taux maximum de remise autorisé (par défaut et/ou par rôle).
+2.​ Fidélité : nombre de points attribués par ventes (ou règle équivalente).
+3.​ Rewards : définition des récompenses (seuils de points, avantages, limites).
+4.​ Paramètres généraux : modes de paiement activés, taxes, libellés, etc. (si retenus).
+5.2.3​ Gestion des référentiels (CRUD)
+L’Administrateur doit disposer d’écrans CRUD complets (créer, consulter, modifier,
+supprimer) pour :
+1.​ Catégories
+2.​ Produits finaux
+○​ Nom, image, description, prix de vente, catégorie, statut actif/inactif
+3.​ Produits de stock (matières premières / emballages)
+
+○​ Nom, unité (kg, g, pièce, litre), seuil, prix de base
+4.​ Fiches techniques / Recettes (BOM) par produit final
+○​ Association produit final → liste matières premières + quantités
+○​ Impact sur coût théorique et déduction stock
+5.​ Meals (menus)
+○​ Composition (produits inclus), prix, règles d’options, statut
+6.​ Deals
+○​
+Titre, description, image, date d’expiration, produits (composition), statut
+(actif/inactif)
+7.​ Autres espaces de gestion
+○​
+Toute entité exposée dans le système doit être administrable selon périmètre
+défini.
+
+5.2.4​ Gestion des utilisateurs et permissions
+1.​ Le backoffice doit permettre le CRUD des utilisateurs.
+2.​ L’Administrateur doit pouvoir attribuer les accès par utilisateur via des switchs par
+fonctionnalité (permissions fines), par exemple :
+○​ Accès POS
+○​ Remise autorisée
+○​ Annulation autorisée
+○​ Clôture session/journée
+○​ accès stat journalier
+○​ Accès stock
+○​ Accès achats
+○​ Accès statistiques
+3.​ Toute modification de permissions doit être journalisée.
+5.2.5​ Validation journalière caisse et stock
+L’Administrateur doit disposer d’une interface de contrôle quotidien permettant :
+1.​ Vérification des chiffres (avant validation finale) :
+○​ CA total
+○​ Répartition cash / carte / autres
+○​ Fond de caisse
+○​ Écarts saisis par le caissier
+○​ Photo TPE (preuve carte)
+2.​ Vérification stock fin de journée :
+○​ Stock théorique vs stock réel saisi
+○​ Écarts et notes obligatoires en cas de différence
+3.​ Validation finale conditionnée :
+○​
+La validation finale de la journée est executé uniquement si le caissier a
+téléversé la preuve de dépôt de l’argent de la journée (photo du dépôt).
+○​ Le statut de la journée passe à “Validée” après validation Admin.
+
+5.2.6​ Statistiques et reporting
+Le backoffice doit fournir des tableaux de bord et listes filtrables incluant :
+1.​ Statistiques ventes
+
+○​ CA, nombre de tickets, panier moyen, ventes par heure/jour
+2.​ Statistiques produits
+○​ Top produits, ventes par produit, performance en CA et en volume
+3.​ Statistiques catégories
+○​ Ventes et CA par catégorie
+4.​ Statistiques achats
+○​ Montants, fréquences, fournisseurs, évolution des coûts
+5.​ Filtres obligatoires
+○​ Filtre par date (jour/semaine/mois/période)
+○​ Filtre par produit
+○​ Filtre par catégorie
+○​ Filtre par utilisateur (caissier)
+6.​ Possibilité d’exporter les données en fichier Excel
+
+5.2.7​ Traçabilité et audit (Admin)
+1.​ L’Administrateur doit accéder à des journaux d’événements incluant au minimum :
+○​ Connexions
+○​ Ouvertures de caisse
+○​ Remises
+○​ Annulations
+○​ Clôtures session/journée
+○​ Ajustements stock
+○​ Créations/modifications référentiels (produits, deals, recettes, users)
+
+5.3​ Application mobile Client (Android/iOS)
+5.3.1​ Environnement et langue
+1.​ L’application doit être disponible sur Android et iOS.
+2.​ La langue de l’application doit être English (interface et contenus).
+5.3.2​ Compte client et authentification
+1.​ L’utilisateur doit créer un compte avec les informations obligatoires suivantes :
+○​ Email
+○​ Phone number
+○​ -> utile pour marketing
+2.​ Authentification par email + password.
+3.​ Profil client contenant au minimum :
+○​ First name
+○​ Last name
+○​ Email
+○​ Phone number
+○​ Points balance
+○​ Orders history
+5.3.3​ Pages et navigation
+5.3.3.1​ Home (Marketing / News)
+1.​ Une page Home doit afficher des posts marketing/communication.
+
+2.​ Chaque post contient :
+○​ Image
+○​ Title
+○​ Description
+○​ Status (Active/Inactive)
+○​ Clickable (Yes/No)
+3.​ Si Clickable = Yes, le post redirige vers la page adéquate (deal, produit, meal, ou autre
+page définie).
+
+5.3.3.2​ Deals
+1.​ Une page Deals doit afficher la liste des deals disponibles.
+2.​ Le système doit supporter deux types de deals :
+○​ Type A (Daily) : utilisable une seule fois par jour par client.
+○​
+Type B (Multi-days / Prepaid) : utilisable sur plusieurs jours, le client paie au
+moment de la confirmation, puis peut récupérer le deal dans une période
+limitée.
+3.​ La période de récupération pour les deals Type B doit être limitée à 30 jours
+maximum (valeur configurable côté Admin).
+5.3.3.3​ Menu (Produits et meals)
+1.​ Une page Menu doit permettre de consulter :
+○​ Produits finaux (menu/carte)
+○​ Meals (menus composés)
+2.​ Chaque item doit afficher au minimum : nom, image, description, prix.
+5.3.3.4​ Settings / Profile
+1.​ Une page Settings doit permettre:
+○​ Consultation du profil client
+○​ Consultation du nombre de points
+○​ Accès à l’historique des commandes
+5.3.4​ Passage de commande via QR code
+1.​Le client doit pouvoir sélectionner un produit (ou mea/deall) et initier une
+commande.
+2.​ Lors de la génération de la commande, l’application doit créer un QR code unique.
+3.​ Le QR code doit avoir une durée de validité de 5 minutes (valeur configurable via Admin).
+4.​ Le caissier scanne le QR code via le POS :
+○​ La commande est importée automatiquement dans le POS.
+○​ Le caissier confirme ensuite le paiement via le popup standard.
+5.​ Une fois confirmé :
+○​ Le QR code devient inactive immédiatement.
+6.​ Si le délai expire sans confirmation :
+○​
+Le QR code devient inactive automatiquement et la commande n’est pas
+validée.
+
+5.3.5​ Fidélité et attribution des points
+
+1.​ À chaque achat confirmé, des points doivent être attribués au client.
+2.​ Les règles d’attribution des points doivent être configurables côté Admin (10pts par 1DT).
+3.​ Le solde de points et l’historique des commandes doivent se mettre à jour après
+confirmation de la commande.
+
+5.4​ Interface Cuisine (KDS)
+5.4.1​ Vue générale
+1.​ Le KDS doit être une interface unique structurée en trois colonnes :
+○​ To Do
+○​ Doing
+○​ Done
+5.4.2​ Création et alimentation des tickets
+1.​ Lorsqu’une commande est validée côté caisse (paiement confirmé), le système doit créer
+automatiquement un ticket digital dans le KDS.
+2.​ Le ticket est créé par défaut dans la colonne To Do.
+5.4.3​ Cycle de vie et actions sur un ticket
+1.​ Depuis la colonne To Do, le cuisinier doit pouvoir cliquer sur un bouton Start /
+Commencer.
+○​ Le ticket passe alors de To Do vers Doing.
+2.​ Depuis la colonne Doing, le cuisinier doit pouvoir cliquer sur un bouton Done / Terminé.
+○​ Le ticket passe alors de Doing vers Done.
+
+5.4.4​ Contenu d’un ticket KDS
+Chaque ticket affiché dans le KDS doit contenir au minimum :
+1.​ Numéro de ticket (identifiant unique visible)
+2.​ Liste des produits (avec quantités)
+3.​ Note du caissier (ex : sans salade, etc.)
+4.​ heure de création du ticket
+5.4.5​ Règles d’affichage et tri
+1.​ Dans chaque colonne, les tickets doivent être ordonnés par numéro de ticket (ordre
+croissant).
+2.​ Le numéro de ticket doit rester visible en permanence sur la carte du ticket (lisibilité cuisine).
+
+6)​ Tests, recette et critères d’acceptation
+6.1​ Objectif
+Assurer la qualité, la stabilité et la conformité fonctionnelle du système W Burger avant mise
+en production, sur l’ensemble des modules (POS, stock/achats, cuisine KDS, backoffice, application
+mobile, services techniques).
+
+6.2​ Périmètre des tests
+Les tests couvrent au minimum :
+●​
+
+Fonctionnalités métier (vente, annulation, clôture, stock, achats, deals, QR code, points)
+
+●​ Interfaces utilisateur (écrans, widgets, navigation, formulaires, validations)
+●​ Intégrations internes (POS ↔ KDS, POS ↔ stock, mobile ↔ POS, backoffice ↔
+reporting)
+●​ Matériel (imprimantes, tiroir caisse, scanner QR, tablette cuisine)
+●​ Données et traçabilité (journaux, statuts, historisation, photos factures/TPE/dépôts)
+
+6.3​ Types de tests obligatoires
+1.​ Tests unitaires
+Vérification des règles de gestion et composants critiques
+2.​ Tests d’intégration
+Vérification des échanges entre modules et du flux complet :
+○​ Vente caisse → impression tickets → affichage KDS → mise à jour stock
+○​
+Commande mobile → QR code → scan POS → paiement →
+tickets/KDS/points
+○​ Achat fournisseur → upload facture → validation → mise à jour stock
+○​ Clôture caisse → contrôles → validation admin
+3.​ Tests fonctionnels (end-to-end)
+Exécution des scénarios principaux et des cas d’erreur (QR expiré, annulation, différence cash,
+écart stock, droits insuffisants).
+4.​ Tests de sécurité
+○​ Authentification et contrôle d’accès (permissions par fonctionnalité)
+○​ Protection des données sensibles et des uploads (photos)
+○​ Journalisation des actions sensibles (remises, annulations, ouvertures caisse)
+5.​ Tests de performance
+○​ Temps de réponse des écrans critiques (POS, KDS, backoffice)
+○​
+Stabilité sous charge réaliste (enchaînement commandes, impressions,
+scans QR)
+6.​ Tests de compatibilité
+○​ Android et iOS (versions supportées à définir)
+○​ Différents formats d’écran (mobile)
+○​ Compatibilité matériel POS et imprimantes (selon modèles retenus)
+
+6.4​ Recette et critères d’acceptation
+●​ La recette est considérée réussie lorsque l’ensemble des scénarios critiques passent sans
+blocage, avec résultats conformes aux exigences.
+●​ Tout écart bloquant doit être corrigé et retesté avant mise en production.
+●​ Les modules POS, KDS, stock, backoffice et mobile doivent être validés sur
+environnement de test puis en conditions magasin.
+
+7)​ Validation et approbation
+
+7.1​ Signature du cahier des charges
+Le présent cahier des charges doit être signé et cacheté par W Burger afin de confirmer l’accord sur le
+périmètre, les exigences et les livrables.
+
+7.2​ Jalons de validation
+Des validations formelles sont requises aux étapes suivantes :
+1.​ Validation des fonctionnalités backend
+Validation des fonctionnalités développées côté backend (règles métier, données, intégrations).
+2.​ Validation des maquettes UI (UX/UI)
+Validation des maquettes des interfaces avant implémentation (POS, KDS, backoffice, mobile).
+3.​ Validation par module
+Une validation est effectuée pour chaque partie du système :
+○​ POS + Stock
+○​ Backoffice / Admin
+○​ KDS (Cuisine)
+○​ Application mobile client
+Chaque validation doit être confirmée explicitement (accord écrit) avant passage à l’étape
+suivante.
+
+Signature
+W Burger
+

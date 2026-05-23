@@ -1,0 +1,62 @@
+import 'package:flutter/material.dart';
+
+class AppColors {
+  AppColors._();
+
+  // Brand Primary
+  static const Color blue = Color(0xFF2814B8);
+  static const Color yellow = Color(0xFFFFD500);
+  static const Color white = Color(0xFFFFFFFF);
+
+  // Blue Shades
+  static const Color blueLight = Color(0xFF3A25D8);
+  static const Color blueDark = Color(0xFF1A0B7D);
+  static const Color blueSurface = Color(0xFFECE9FF);
+  static const Color blueBorder = Color(0xFFC7BFFF);
+
+  // Yellow Shades
+  static const Color yellowLight = Color(0xFFFFE04D);
+  static const Color yellowDark = Color(0xFFCCAA00);
+  static const Color yellowSurface = Color(0xFFFFFBE6);
+
+  // Neutrals
+  static const Color neutral50 = Color(0xFFF8F9FA);
+  static const Color neutral100 = Color(0xFFF1F3F5);
+  static const Color neutral200 = Color(0xFFE9ECEF);
+  static const Color neutral300 = Color(0xFFDEE2E6);
+  static const Color neutral400 = Color(0xFFCED4DA);
+  static const Color neutral500 = Color(0xFFADB5BD);
+  static const Color neutral600 = Color(0xFF6C757D);
+  static const Color neutral700 = Color(0xFF495057);
+  static const Color neutral800 = Color(0xFF343A40);
+  static const Color neutral900 = Color(0xFF212529);
+
+  // Semantic
+  static const Color success = Color(0xFF28A745);
+  static const Color successLight = Color(0xFFD4EDDA);
+  static const Color warning = Color(0xFFFF8C00);
+  static const Color warningLight = Color(0xFFFFF3CD);
+  static const Color error = Color(0xFFDC3545);
+  static const Color errorLight = Color(0xFFF8D7DA);
+  static const Color info = Color(0xFF17A2B8);
+  static const Color infoLight = Color(0xFFD1ECF1);
+
+  // Sidebar
+  static const Color sidebarBg = Color(0xFF2814B8);
+  static const Color sidebarSelected = Color(0xFF3A25D8);
+  static const Color sidebarText = Color(0xFFFFFFFF);
+  static const Color sidebarIcon = Color(0xFFC7BFFF);
+
+  // Surface
+  static const Color background = Color(0xFFFFFFFF);
+  static const Color surface = Color(0xFFF8F9FA);
+  static const Color cardBg = Color(0xFFFFFFFF);
+  static const Color border = Color(0xFFE9ECEF);
+
+  // Text
+  static const Color textPrimary = Color(0xFF212529);
+  static const Color textSecondary = Color(0xFF6C757D);
+  static const Color textDisabled = Color(0xFFADB5BD);
+  static const Color textOnBlue = Color(0xFFFFFFFF);
+  static const Color textOnYellow = Color(0xFF2814B8);
+}
