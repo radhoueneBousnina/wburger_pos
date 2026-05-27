@@ -473,6 +473,20 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
   void _markOrderCancelled(String id, String reason) {
     final current = state.asData?.value;
     if (current == null) return;
+    Order? existing;
+    for (final order in current) {
+      if (order.id == id) {
+        existing = order;
+        break;
+      }
+    }
+    if (ref.read(testModeProvider).isActive &&
+        existing != null &&
+        existing.status != OrderStatus.cancelled) {
+      ref
+          .read(stockProvider.notifier)
+          .restoreSaleCart(_cartFromOrder(existing));
+    }
 
     state = AsyncValue.data(
       current
@@ -485,6 +499,19 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
                 : order,
           )
           .toList(),
+    );
+  }
+
+  CartState _cartFromOrder(Order order) {
+    return CartState(
+      items: order.items.map((item) => item.copyWith()).toList(),
+      orderType: order.orderType,
+      paymentType: order.paymentType,
+      redemptionToken: order.redemptionToken,
+      customerId: order.customerId,
+      customerName: order.customerName,
+      customerNote: order.customerNote,
+      ticketNumber: order.ticketNumber,
     );
   }
 
@@ -542,6 +569,9 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
           changeReturned: changeReturned,
         ),
       );
+      if (ref.read(testModeProvider).isActive) {
+        ref.read(stockProvider.notifier).applySaleCart(cart);
+      }
     }
 
     unawaited(fetchTodayOrders(showLoading: false, force: true));

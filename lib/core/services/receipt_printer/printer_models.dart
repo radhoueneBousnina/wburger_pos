@@ -122,6 +122,8 @@ class ReceiptLine {
   final double unitPrice;
   final List<ReceiptModifier> modifiers;
   final String? note;
+  final bool isDealComponent;
+  final String? parentDealName;
 
   const ReceiptLine({
     required this.name,
@@ -129,15 +131,23 @@ class ReceiptLine {
     required this.unitPrice,
     this.modifiers = const [],
     this.note,
+    this.isDealComponent = false,
+    this.parentDealName,
   });
 
   factory ReceiptLine.fromCartItem(CartItem item) {
     final discountAmount = item.discountAmount;
     final discountPercent = item.discountPercent;
     return ReceiptLine(
-      name: item.product.name,
+      name: item.isDealComponent
+          ? 'Deal item - ${item.product.name}'
+          : item.product.name,
       quantity: item.quantity,
-      unitPrice: discountAmount > 0 ? item.product.price : item.unitPrice,
+      unitPrice: item.isDealComponent
+          ? 0
+          : discountAmount > 0
+              ? item.product.price
+              : item.unitPrice,
       modifiers: [
         if (discountAmount > 0)
           ReceiptModifier(
@@ -148,10 +158,12 @@ class ReceiptLine {
           ),
       ],
       note: item.note,
+      isDealComponent: item.isDealComponent,
+      parentDealName: item.parentDealName,
     );
   }
 
-  double get total => unitPrice * quantity;
+  double get total => isDealComponent ? 0 : unitPrice * quantity;
 }
 
 class ReceiptData {

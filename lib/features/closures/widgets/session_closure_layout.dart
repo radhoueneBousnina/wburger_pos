@@ -14,11 +14,16 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
     return Column(
       children: [
         Container(
-          color: AppColors.white,
+          color: AppColors.surfaceFor(context),
           padding: EdgeInsets.all(layout.pagePadding),
           child: Row(
             children: [
-              Text('Session Closure', style: AppTextStyles.h4),
+              Text(
+                'Session Closure',
+                style: AppTextStyles.h4.copyWith(
+                  color: AppColors.textPrimaryFor(context),
+                ),
+              ),
               const Spacer(),
               if (_isForcedClosure)
                 Text('Forced closure',
@@ -27,7 +32,7 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
             ],
           ),
         ),
-        const Divider(height: 1),
+        Divider(height: 1, color: AppColors.borderFor(context)),
         Expanded(
           child: SingleChildScrollView(
             padding: EdgeInsets.all(layout.pagePadding),
@@ -135,14 +140,14 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: AppColors.white,
+            color: AppColors.panelFor(context),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: AppColors.borderFor(context)),
           ),
           child: Column(
             children: [
               const _TheoreticalActualHeader(),
-              const Divider(height: 24),
+              Divider(height: 24, color: AppColors.borderFor(context)),
               _ComparisonRow(
                   label: 'Cash',
                   theoryAmount: _theoreticalCash,
@@ -242,9 +247,9 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
       children: [
         Container(
           decoration: BoxDecoration(
-            color: AppColors.white,
+            color: AppColors.panelFor(context),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: AppColors.borderFor(context)),
           ),
           child: Column(
             children: [
@@ -255,11 +260,19 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
                     children: [
                       Expanded(
                           flex: 3,
-                          child:
-                              Text(stock.name, style: AppTextStyles.titleSm)),
+                          child: Text(
+                            stock.name,
+                            style: AppTextStyles.titleSm.copyWith(
+                              color: AppColors.textPrimaryFor(context),
+                            ),
+                          )),
                       Expanded(
                           child: Text(
-                              '${stock.quantity.toStringAsFixed(3)} ${stock.unit}')),
+                        '${stock.quantity.toStringAsFixed(3)} ${stock.unit}',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.textSecondaryFor(context),
+                        ),
+                      )),
                       SizedBox(
                         width: 160,
                         child: TextField(

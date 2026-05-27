@@ -180,9 +180,9 @@ class AppTheme {
         onSurface: AppColors.white,
         error: AppColors.errorLight,
       ),
-      scaffoldBackgroundColor: const Color(0xFF10131F),
+      scaffoldBackgroundColor: AppColors.trainingBackground,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF151827),
+        backgroundColor: AppColors.trainingSurface,
         foregroundColor: AppColors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -194,7 +194,7 @@ class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFF191D2E),
+        color: AppColors.trainingPanel,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -203,7 +203,7 @@ class AppTheme {
         clipBehavior: Clip.antiAlias,
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
-        fillColor: const Color(0xFF1D2235),
+        fillColor: AppColors.trainingElevated,
         labelStyle: AppTextStyles.body.copyWith(color: AppColors.neutral300),
         hintStyle: AppTextStyles.body.copyWith(color: AppColors.neutral500),
       ),
@@ -213,7 +213,7 @@ class AppTheme {
         space: 1,
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: const Color(0xFF191D2E),
+        backgroundColor: AppColors.trainingPanel,
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titleTextStyle: AppTextStyles.h3.copyWith(color: AppColors.white),

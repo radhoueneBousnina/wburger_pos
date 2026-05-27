@@ -51,6 +51,42 @@ class StockItem {
   }
 }
 
+class StockRecipeLine {
+  final String stockItemId;
+  final String? productId;
+  final String? mealId;
+  final double quantity;
+
+  const StockRecipeLine({
+    required this.stockItemId,
+    required this.quantity,
+    this.productId,
+    this.mealId,
+  });
+
+  factory StockRecipeLine.fromJson(Map<String, dynamic> json) {
+    String? idFrom(Object? value) {
+      if (value is Map) return value['id']?.toString();
+      return value?.toString();
+    }
+
+    return StockRecipeLine(
+      stockItemId:
+          idFrom(json['stock_item'] ?? json['stock_item_details']) ?? '',
+      productId: idFrom(json['product'] ?? json['product_details']),
+      mealId: idFrom(json['meal'] ?? json['meal_details']),
+      quantity: double.tryParse(
+            (json['quantity_required'] ??
+                    json['quantity'] ??
+                    json['amount'] ??
+                    '0')
+                .toString(),
+          ) ??
+          0,
+    );
+  }
+}
+
 class PurchaseLine {
   final StockItem stockItem;
   double quantity;

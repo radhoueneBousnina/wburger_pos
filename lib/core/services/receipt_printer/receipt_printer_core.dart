@@ -25,6 +25,7 @@ class ReceiptPrinterService {
     ReceiptData data, {
     ReceiptPrinterConfig config = defaultReceiptPrinterConfig,
     bool? openDrawer,
+    bool allowBrowserFallback = true,
   }) async {
     final shouldOpenDrawer = openDrawer ?? !data.isReprint;
     if (shouldOpenDrawer) {
@@ -32,7 +33,8 @@ class ReceiptPrinterService {
     }
     if (kDebugMode) {
       debugPrint(
-          '[Printer] printReceipt() called for ticket: ${data.ticketNumber}, openDrawer=$shouldOpenDrawer');
+        '[Printer] printReceipt() called for ticket: ${data.ticketNumber}, openDrawer=$shouldOpenDrawer',
+      );
     }
     try {
       final printedAt = DateTime.now();
@@ -58,6 +60,7 @@ class ReceiptPrinterService {
           config: config,
           printedAt: printedAt,
         ),
+        allowBrowserFallback: allowBrowserFallback,
       );
       final out = ReceiptPrintResult(
         printerCount: result.printerCount,

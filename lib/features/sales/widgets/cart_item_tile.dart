@@ -43,8 +43,10 @@ class _CartItemTile extends ConsumerWidget {
               alignment: Alignment.center,
               child: Text(
                 '${item.quantity}',
-                style: AppTextStyles.title
-                    .copyWith(fontSize: layout.isCompact ? 18 : 20),
+                style: AppTextStyles.title.copyWith(
+                  fontSize: layout.isCompact ? 18 : 20,
+                  color: AppColors.textPrimaryFor(context),
+                ),
               ),
             ),
           if (!readonly)
@@ -57,13 +59,17 @@ class _CartItemTile extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(item.product.name,
-                    style: AppTextStyles.titleSm,
+                    style: AppTextStyles.titleSm.copyWith(
+                      color: AppColors.textPrimaryFor(context),
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
                 if (effectiveNote != null)
                   Text(
                     '📝 $effectiveNote',
-                    style: AppTextStyles.bodySm,
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.textSecondaryFor(context),
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -85,7 +91,7 @@ class _CartItemTile extends ConsumerWidget {
               icon: Icon(
                 Icons.more_vert_rounded,
                 size: layout.isCompact ? 30 : 32,
-                color: AppColors.neutral500,
+                color: AppColors.textSecondaryFor(context),
               ),
               padding: EdgeInsets.zero,
               iconSize: layout.isCompact ? 30 : 32,
@@ -255,13 +261,14 @@ class _ReadonlyQtyBadge extends StatelessWidget {
       height: layout.iconTouchTarget,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppColors.neutral100,
+        color: AppColors.elevatedSurfaceFor(context),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Text(
         'x$quantity',
         style: AppTextStyles.title.copyWith(
           fontSize: layout.isCompact ? 16 : 18,
+          color: AppColors.textPrimaryFor(context),
         ),
       ),
     );
@@ -278,7 +285,7 @@ class _QtyBtn extends StatelessWidget {
     final layout = context.posLayout;
 
     return Material(
-      color: AppColors.neutral100,
+      color: AppColors.elevatedSurfaceFor(context),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
@@ -287,7 +294,7 @@ class _QtyBtn extends StatelessWidget {
           width: layout.iconTouchTarget,
           height: layout.iconTouchTarget,
           decoration: BoxDecoration(
-            color: AppColors.neutral100,
+            color: AppColors.elevatedSurfaceFor(context),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Icon(icon,

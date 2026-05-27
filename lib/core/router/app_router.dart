@@ -103,5 +103,8 @@ bool _canAccessRoute(AuthState auth, String path) {
   if (path == AppRoutes.sessionClosure) {
     return auth.permissions['can_close_session'] == true;
   }
+  if (path == AppRoutes.diagnostics) {
+    return false;
+  }
   return true;
 }

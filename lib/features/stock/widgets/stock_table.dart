@@ -28,8 +28,8 @@ class _StockTable extends StatelessWidget {
                     horizontal: _StockTableSpec.horizontalPadding,
                     vertical: 14,
                   ),
-                  color: AppColors.neutral50,
-                  child: const Row(
+                  color: AppColors.tableHeaderFor(context),
+                  child: Row(
                     children: [
                       _Cell(
                           width: _StockTableSpec.productWidth,
@@ -57,12 +57,13 @@ class _StockTable extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Divider(height: 1),
+                Divider(height: 1, color: AppColors.borderFor(context)),
                 Expanded(
                   child: ListView.separated(
                     padding: EdgeInsets.zero,
                     itemCount: stocks.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, __) =>
+                        Divider(height: 1, color: AppColors.borderFor(context)),
                     itemBuilder: (ctx, i) => _StockRow(item: stocks[i]),
                   ),
                 ),
@@ -103,7 +104,7 @@ class _StockHeaderCell extends StatelessWidget {
         label,
         textAlign: align,
         style: AppTextStyles.label.copyWith(
-          color: AppColors.textSecondary,
+          color: AppColors.textSecondaryFor(context),
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -118,11 +119,13 @@ class _StockRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = context.posLayout;
-    Color rowBg = AppColors.white;
+    Color rowBg = AppColors.surfaceFor(context);
     if (item.isCritical) {
-      rowBg = AppColors.errorLight.withValues(alpha: 0.25);
+      rowBg = AppColors.errorLight
+          .withValues(alpha: AppColors.isTraining(context) ? 0.12 : 0.25);
     } else if (item.isLowStock) {
-      rowBg = AppColors.warningLight.withValues(alpha: 0.3);
+      rowBg = AppColors.warningLight
+          .withValues(alpha: AppColors.isTraining(context) ? 0.12 : 0.3);
     }
 
     return InkWell(
@@ -145,10 +148,15 @@ class _StockRow extends StatelessWidget {
                     height: 42,
                     decoration: BoxDecoration(
                       color: item.isCritical
-                          ? AppColors.errorLight
+                          ? AppColors.errorLight.withValues(
+                              alpha: AppColors.isTraining(context) ? 0.18 : 1)
                           : item.isLowStock
-                              ? AppColors.warningLight
-                              : AppColors.blueSurface,
+                              ? AppColors.warningLight.withValues(
+                                  alpha:
+                                      AppColors.isTraining(context) ? 0.18 : 1)
+                              : AppColors.blueSurface.withValues(
+                                  alpha:
+                                      AppColors.isTraining(context) ? 0.18 : 1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -165,7 +173,9 @@ class _StockRow extends StatelessWidget {
                   Expanded(
                     child: Text(
                       item.name,
-                      style: AppTextStyles.titleLg,
+                      style: AppTextStyles.titleLg.copyWith(
+                        color: AppColors.textPrimaryFor(context),
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -178,8 +188,8 @@ class _StockRow extends StatelessWidget {
               width: _StockTableSpec.unitWidth,
               child: Text(
                 item.unit,
-                style:
-                    AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+                style: AppTextStyles.body
+                    .copyWith(color: AppColors.textSecondaryFor(context)),
               ),
             ),
             const Spacer(flex: 1),
@@ -198,7 +208,7 @@ class _StockRow extends StatelessWidget {
                             ? AppColors.error
                             : item.isLowStock
                                 ? AppColors.warning
-                                : AppColors.textPrimary,
+                                : AppColors.textPrimaryFor(context),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -213,8 +223,8 @@ class _StockRow extends StatelessWidget {
               child: Text(
                 '${item.minThreshold}',
                 textAlign: TextAlign.right,
-                style:
-                    AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+                style: AppTextStyles.body
+                    .copyWith(color: AppColors.textSecondaryFor(context)),
               ),
             ),
             const Spacer(flex: 1),

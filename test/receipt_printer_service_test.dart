@@ -39,7 +39,7 @@ void main() {
     expect(bytes.take(2).toList(), equals([0x1b, 0x40]));
     expect(printableText, contains('BURGER'));
     expect(printableText, contains('A win in every bite'));
-    expect(printableText, contains('[] [] []'));
+    expect(printableText, contains('[]  []  []'));
     expect(printableText, contains('101'));
     expect(printableText, isNot(contains('W-020526-101')));
     expect(printableText, contains('QTY'));
@@ -150,10 +150,14 @@ void main() {
         lines.indexWhere((line) => line.trim() == 'A win in every bite');
 
     expect(subtitleIndex, greaterThanOrEqualTo(0));
-    expect(lines[subtitleIndex + 1].trimLeft(), startsWith('[]'));
-    expect(lines[subtitleIndex + 2], contains('[]'));
-    expect(lines[subtitleIndex + 3].trimLeft(), startsWith('[]'));
-    expect(lines[subtitleIndex + 1], isNot(contains('---')));
+    expect(lines[subtitleIndex + 1], isEmpty);
+    expect(lines[subtitleIndex + 2].trimLeft(), startsWith('[]'));
+    expect(lines[subtitleIndex + 3], contains('[]'));
+    expect(lines[subtitleIndex + 4].trimLeft(), startsWith('[]'));
+    expect(lines[subtitleIndex + 2].length, 48);
+    expect(lines[subtitleIndex + 3].length, 48);
+    expect(lines[subtitleIndex + 4].length, 48);
+    expect(lines[subtitleIndex + 2], isNot(contains('---')));
   });
 
   test('prints remise only when a discount exists', () {
@@ -269,6 +273,76 @@ void main() {
     expect(receipt.subtotal, 24);
     expect(receipt.discountAmount, 6);
     expect(receipt.totalAmount, 18);
+  });
+
+  test('deal component rows stay visible for preparation without double charge',
+      () {
+    final order = Order.fromJson({
+      'id': 501,
+      'ticket_number': 'W-260526-501',
+      'created_at': '2026-05-26T18:30:00Z',
+      'service_type': 'takeaway',
+      'payment_type': 'deal',
+      'status': 'confirmed',
+      'total_amount': '0.000',
+      'discount_amount': '0.000',
+      'redemption_token': 'qr-token',
+      'items': [
+        {
+          'id': 1,
+          'quantity': 1,
+          'unit_price': '0.000',
+          'is_deal_component': false,
+          'deal_details': {
+            'id': 10,
+            'title': 'Multi Day Burger Pack',
+            'description': '5 burgers pack',
+            'price': '55.000',
+          },
+        },
+        {
+          'id': 2,
+          'quantity': 2,
+          'unit_price': '0.000',
+          'is_deal_component': true,
+          'parent_deal_details': {
+            'id': 10,
+            'title': 'Multi Day Burger Pack',
+          },
+          'product_details': {
+            'id': 7,
+            'name': 'Classic Burger',
+            'description': '',
+            'price': '11.000',
+          },
+        },
+      ],
+    });
+
+    expect(order.items, hasLength(2));
+    expect(order.items.first.product.name, 'Multi Day Burger Pack');
+    expect(order.items.first.total, 0);
+    expect(order.items.last.product.name, 'Classic Burger');
+    expect(order.items.last.quantity, 2);
+    expect(order.items.last.isDealComponent, isTrue);
+    expect(order.items.last.parentDealName, 'Multi Day Burger Pack');
+    expect(order.items.last.total, 0);
+
+    final receipt = ReceiptData.fromOrder(order);
+    expect(receipt.subtotal, 0);
+    expect(receipt.totalAmount, 0);
+    expect(receipt.lines.last.name, 'Deal item - Classic Burger');
+    expect(receipt.lines.last.quantity, 2);
+    expect(receipt.lines.last.total, 0);
+
+    final preview = ReceiptPrinterService.instance.buildPreviewText(
+      receipt,
+      printedAt: DateTime(2026, 5, 26, 19, 30),
+    );
+
+    expect(preview, contains('Multi Day Burger Pack'));
+    expect(preview, contains('Deal item - Classic Burger'));
+    expect(preview, contains('- From Multi Day Burger Pack'));
   });
 
   test('builds a conservative hardware smoke test without logo raster bytes',

@@ -82,7 +82,7 @@ class _TodaySalesScreenState extends ConsumerState<TodaySalesScreen> {
             // Summary cards
             Container(
               padding: EdgeInsets.all(layout.pagePadding),
-              color: AppColors.white,
+              color: AppColors.surfaceFor(context),
               child: Wrap(
                 spacing: 12,
                 runSpacing: 12,
@@ -126,7 +126,7 @@ class _TodaySalesScreenState extends ConsumerState<TodaySalesScreen> {
                 ],
               ),
             ),
-            const Divider(height: 1),
+            Divider(height: 1, color: AppColors.borderFor(context)),
             // Orders table
             Expanded(
               child:

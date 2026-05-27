@@ -203,19 +203,14 @@ class TestModeNotifier extends StateNotifier<TestModeState> {
       ref.invalidate(activeSessionStatusProvider);
       ref.read(ordersProvider.notifier).enterTestMode();
       ref.read(purchasesProvider.notifier).enterTestMode();
-      unawaited(ref.read(stockProvider.notifier).fetchStock(
-            silent: true,
-            force: true,
-          ));
+      ref.read(stockProvider.notifier).enterTestMode();
       state = state.copyWith(message: 'Training mode approved by admin.');
     } else if (wasActive && !isActive) {
       ref.read(cartProvider.notifier).clear();
       ref.invalidate(activeSessionStatusProvider);
       ref.read(ordersProvider.notifier).exitTestMode();
       ref.read(purchasesProvider.notifier).exitTestMode();
-      unawaited(ref.read(stockProvider.notifier).fetchStock(
-            force: true,
-          ));
+      ref.read(stockProvider.notifier).exitTestMode();
     }
   }
 

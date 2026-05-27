@@ -8,11 +8,12 @@ class _CartPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final layout = context.posLayout;
     final cart = ref.watch(cartProvider);
+    final isTraining = AppColors.isTraining(context);
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        border: Border(left: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceFor(context),
+        border: Border(left: BorderSide(color: AppColors.borderFor(context))),
       ),
       child: Column(
         children: [
@@ -28,8 +29,10 @@ class _CartPanel extends ConsumerWidget {
                       ? 14
                       : 16,
             ),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.border)),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceFor(context),
+              border: Border(
+                  bottom: BorderSide(color: AppColors.borderFor(context))),
             ),
             child: Column(
               children: [
@@ -45,6 +48,7 @@ class _CartPanel extends ConsumerWidget {
                       cart.isQrOrder ? 'Mobile Order' : 'Order',
                       style: AppTextStyles.h4.copyWith(
                         fontSize: layout.isCompact ? 20 : 22,
+                        color: AppColors.textPrimaryFor(context),
                       ),
                     ),
                     const Spacer(),
@@ -93,7 +97,7 @@ class _CartPanel extends ConsumerWidget {
                         Text(
                           '${cart.orderType == OrderType.dineIn ? 'Dine In' : 'Takeaway'} • ${_salesPaymentLabel(cart.paymentType)}',
                           style: AppTextStyles.bodySm.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.textSecondaryFor(context),
                           ),
                         ),
                         if (cart.ticketNumber != null &&
@@ -121,7 +125,10 @@ class _CartPanel extends ConsumerWidget {
                       Positioned.fill(
                         child: CustomPaint(
                           painter: BrandCheckerPainter(
-                            color1: AppColors.blue.withValues(alpha: 0.03),
+                            color1: AppColors.subtlePatternFor(
+                              context,
+                              isTraining ? AppColors.yellow : AppColors.blue,
+                            ),
                             color2: Colors.transparent,
                           ),
                         ),
@@ -130,15 +137,23 @@ class _CartPanel extends ConsumerWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.shopping_basket_outlined,
-                                size: 52, color: AppColors.neutral300),
+                            Icon(
+                              Icons.shopping_basket_outlined,
+                              size: 52,
+                              color: isTraining
+                                  ? AppColors.neutral500
+                                  : AppColors.neutral300,
+                            ),
                             const SizedBox(height: 12),
                             Text('Cart is empty',
-                                style: AppTextStyles.body
-                                    .copyWith(color: AppColors.textSecondary)),
+                                style: AppTextStyles.body.copyWith(
+                                    color:
+                                        AppColors.textSecondaryFor(context))),
                             const SizedBox(height: 4),
                             Text('Tap a product or scan a customer QR',
-                                style: AppTextStyles.bodySm),
+                                style: AppTextStyles.bodySm.copyWith(
+                                  color: AppColors.textSecondaryFor(context),
+                                )),
                           ],
                         ),
                       ),
@@ -147,8 +162,11 @@ class _CartPanel extends ConsumerWidget {
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     itemCount: cart.items.length,
-                    separatorBuilder: (_, __) =>
-                        const Divider(height: 1, indent: 14, endIndent: 14),
+                    separatorBuilder: (_, __) => Divider(
+                        height: 1,
+                        indent: 14,
+                        endIndent: 14,
+                        color: AppColors.borderFor(context)),
                     itemBuilder: (ctx, i) => _CartItemTile(
                       index: i,
                       item: cart.items[i],
@@ -163,8 +181,10 @@ class _CartPanel extends ConsumerWidget {
           if (cart.items.isNotEmpty)
             Container(
               padding: EdgeInsets.all(layout.pagePadding),
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: AppColors.border)),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceFor(context),
+                border: Border(
+                    top: BorderSide(color: AppColors.borderFor(context))),
               ),
               child: Column(
                 children: [
@@ -172,7 +192,9 @@ class _CartPanel extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(cart.isQrOrder ? 'Total' : 'Subtotal',
-                          style: AppTextStyles.body),
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.textSecondaryFor(context),
+                          )),
                       Text('${cart.subtotal.toStringAsFixed(3)} DT',
                           style: AppTextStyles.title
                               .copyWith(color: AppColors.blue, fontSize: 18)),

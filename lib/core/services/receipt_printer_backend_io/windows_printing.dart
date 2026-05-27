@@ -7,12 +7,21 @@ class _WindowsPrinterSpooler {
   static const int _printerAttributeFax = 0x00004000;
   static const int _printerStatusError = 0x00000002;
   static const int _printerStatusOffline = 0x00000080;
+  static const String _posPrinterNameConfig =
+      String.fromEnvironment('POS_PRINTER_NAME');
+  static const String _posPrinterNamesConfig =
+      String.fromEnvironment('POS_PRINTER_NAMES');
+  static const String _rawPrinterNamesConfig =
+      String.fromEnvironment('RAW_PRINT_ALLOWED_PRINTERS');
 
   final DynamicLibrary _winspool = DynamicLibrary.open('winspool.drv');
   final DynamicLibrary _kernel32 = DynamicLibrary.open('kernel32.dll');
 
   late final _EnumPrintersDart _enumPrinters = _winspool
       .lookupFunction<_EnumPrintersNative, _EnumPrintersDart>('EnumPrintersW');
+  late final _GetDefaultPrinterDart _getDefaultPrinter = _winspool
+      .lookupFunction<_GetDefaultPrinterNative, _GetDefaultPrinterDart>(
+          'GetDefaultPrinterW');
   late final _OpenPrinterDart _openPrinter = _winspool
       .lookupFunction<_OpenPrinterNative, _OpenPrinterDart>('OpenPrinterW');
   late final _StartDocPrinterDart _startDocPrinter =
@@ -90,8 +99,57 @@ class _WindowsPrinterSpooler {
       }
 
       printers.sort((a, b) => a.name.compareTo(b.name));
-      return printers;
+
+      final configuredNames = _configuredPrinterNames();
+      if (configuredNames.isNotEmpty) {
+        return printers
+            .where((printer) =>
+                configuredNames.contains(_normalizePrinterName(printer.name)))
+            .toList();
+      }
+
+      final ticketPrinters = printers.where(_isTicketPrinter).toList();
+      if (ticketPrinters.isNotEmpty) return ticketPrinters;
+
+      final defaultPrinter = _defaultPrinter(printers, alloc);
+      if (defaultPrinter != null) return [defaultPrinter];
+
+      // Many Windows POS installs expose a receipt printer with a generic
+      // driver/name. If it is the only real printer, use it; otherwise fail
+      // closed unless Windows has an explicit default real printer.
+      if (printers.length == 1) return printers;
+
+      return const <_WindowsPrinter>[];
     });
+  }
+
+  _WindowsPrinter? _defaultPrinter(
+    List<_WindowsPrinter> printers,
+    Arena alloc,
+  ) {
+    final defaultName = _defaultPrinterName(alloc);
+    if (defaultName == null) return null;
+
+    final normalizedDefault = _normalizePrinterName(defaultName);
+    for (final printer in printers) {
+      if (_normalizePrinterName(printer.name) == normalizedDefault) {
+        return printer;
+      }
+    }
+    return null;
+  }
+
+  String? _defaultPrinterName(Arena alloc) {
+    final bufferChars = alloc<Uint32>();
+    _getDefaultPrinter(nullptr.cast<Utf16>(), bufferChars);
+    if (bufferChars.value == 0) return null;
+
+    final buffer = alloc<Uint16>(bufferChars.value).cast<Utf16>();
+    final ok = _getDefaultPrinter(buffer, bufferChars);
+    if (ok == 0) return null;
+
+    final name = buffer.toDartString().trim();
+    return name.isEmpty ? null : name;
   }
 
   void printRawBytes({
@@ -165,13 +223,76 @@ class _WindowsPrinterSpooler {
 
   bool _isFax(int attributes) => (attributes & _printerAttributeFax) != 0;
 
+  Set<String> _configuredPrinterNames() {
+    final rawValues = <String>[
+      _posPrinterNameConfig,
+      _posPrinterNamesConfig,
+      _rawPrinterNamesConfig,
+    ];
+
+    return rawValues
+        .expand((value) => value.split(','))
+        .map(_normalizePrinterName)
+        .where((value) => value.isNotEmpty)
+        .toSet();
+  }
+
+  bool _isTicketPrinter(_WindowsPrinter printer) {
+    final value = _normalizePrinterSearchValue(
+      printer.name,
+      printer.driverName,
+    );
+    final keywords = const [
+      '80mm',
+      '58mm',
+      'thermal',
+      'receipt',
+      'ticket',
+      'escpos',
+      'esc-pos',
+      'esc_pos',
+      'sprt',
+      'xprinter',
+      'xp-',
+      'rongta',
+      'rp-',
+      'zjiang',
+      'sunmi',
+      'bixolon',
+      'star',
+      'citizen',
+      'epson tm',
+      'tm-t',
+      'tm-u',
+      'tsp',
+      'ct-s',
+      'pos58',
+      'pos80',
+      'pos-58',
+      'pos-80',
+    ];
+
+    if (keywords.any(value.contains)) return true;
+    return RegExp(r'(^|[\s_\-/])pos([0-9\s_\-/]|$)').hasMatch(value);
+  }
+
   bool _isVirtualPrinter(String name, String driverName, String portName) {
-    final value = '$name $driverName $portName'.toLowerCase();
+    final value = _normalizePrinterSearchValue(name, driverName, portName);
     return value.contains('pdf') ||
         value.contains('xps') ||
         value.contains('fax') ||
         value.contains('onenote') ||
         value.contains('document writer');
+  }
+
+  String _normalizePrinterName(String value) => value.trim().toLowerCase();
+
+  String _normalizePrinterSearchValue(
+    String name,
+    String driverName, [
+    String portName = '',
+  ]) {
+    return '$name $driverName $portName'.toLowerCase();
   }
 }
 

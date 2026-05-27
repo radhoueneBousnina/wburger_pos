@@ -22,15 +22,19 @@ class _StepTab extends StatelessWidget {
     final layout = context.posLayout;
     final isInteractive = enabled || selected || done;
     final Color color = !isInteractive
-        ? AppColors.neutral400
+        ? AppColors.textSecondaryFor(context)
         : selected
             ? AppColors.blue
-            : (done ? AppColors.success : AppColors.neutral500);
+            : (done ? AppColors.success : AppColors.textSecondaryFor(context));
     final Color bgColor = !isInteractive
-        ? AppColors.neutral50
+        ? AppColors.elevatedSurfaceFor(context)
         : selected
             ? AppColors.blueSurface
-            : (done ? AppColors.successLight : AppColors.neutral100);
+                .withValues(alpha: AppColors.isTraining(context) ? 0.18 : 1)
+            : (done
+                ? AppColors.successLight
+                    .withValues(alpha: AppColors.isTraining(context) ? 0.18 : 1)
+                : AppColors.elevatedSurfaceFor(context));
 
     return Material(
       color: Colors.transparent,
@@ -84,7 +88,7 @@ class _EodKpi extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
+          color: AppColors.panelFor(context),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
@@ -97,7 +101,7 @@ class _EodKpi extends StatelessWidget {
               children: [
                 Text(label,
                     style: AppTextStyles.label
-                        .copyWith(color: AppColors.textSecondary)),
+                        .copyWith(color: AppColors.textSecondaryFor(context))),
                 Text(value, style: AppTextStyles.h4.copyWith(color: color)),
               ],
             ),
@@ -121,7 +125,12 @@ class _TheoreticalActualHeader extends StatelessWidget {
               const Icon(Icons.calculate_rounded,
                   color: AppColors.blue, size: 20),
               const SizedBox(width: 8),
-              Text('Theoretical Values', style: AppTextStyles.h4),
+              Text(
+                'Theoretical Values',
+                style: AppTextStyles.h4.copyWith(
+                  color: AppColors.textPrimaryFor(context),
+                ),
+              ),
             ],
           ),
         ),
@@ -132,7 +141,12 @@ class _TheoreticalActualHeader extends StatelessWidget {
               const Icon(Icons.edit_rounded,
                   color: AppColors.success, size: 20),
               const SizedBox(width: 8),
-              Text('Actual Values (Counted)', style: AppTextStyles.h4),
+              Text(
+                'Actual Values (Counted)',
+                style: AppTextStyles.h4.copyWith(
+                  color: AppColors.textPrimaryFor(context),
+                ),
+              ),
             ],
           ),
         ),
@@ -175,13 +189,19 @@ class _ComparisonRow extends StatelessWidget {
           child: Row(
             children: [
               SizedBox(
-                  width: 90, child: Text(label, style: AppTextStyles.body)),
+                  width: 90,
+                  child: Text(
+                    label,
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.textSecondaryFor(context),
+                    ),
+                  )),
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: pct,
-                    backgroundColor: AppColors.neutral100,
+                    backgroundColor: AppColors.elevatedSurfaceFor(context),
                     valueColor: AlwaysStoppedAnimation(color),
                     minHeight: 8,
                   ),
@@ -219,7 +239,7 @@ class _ComparisonRow extends StatelessWidget {
                       borderSide: BorderSide(
                           color: hasDiscrepancy
                               ? AppColors.error
-                              : AppColors.border),
+                              : AppColors.borderFor(context)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),

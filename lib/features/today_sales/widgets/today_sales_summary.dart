@@ -19,7 +19,7 @@ class _SummaryCard extends StatelessWidget {
       width: 220,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.panelFor(context),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -28,7 +28,12 @@ class _SummaryCard extends StatelessWidget {
             offset: const Offset(0, 8),
           ),
         ],
-        border: Border.all(color: color.withValues(alpha: 0.1), width: 1.5),
+        border: Border.all(
+          color: AppColors.isTraining(context)
+              ? AppColors.borderFor(context)
+              : color.withValues(alpha: 0.1),
+          width: 1.5,
+        ),
       ),
       child: Row(
         children: [
@@ -48,7 +53,8 @@ class _SummaryCard extends StatelessWidget {
                 Text(
                   label,
                   style: AppTextStyles.label.copyWith(
-                      color: AppColors.textSecondary, letterSpacing: 0.5),
+                      color: AppColors.textSecondaryFor(context),
+                      letterSpacing: 0.5),
                 ),
                 const SizedBox(height: 4),
                 FittedBox(

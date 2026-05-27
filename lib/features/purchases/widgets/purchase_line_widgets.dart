@@ -12,8 +12,14 @@ class _SummaryRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label,
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
-        Text(value, style: AppTextStyles.titleSm),
+            style: AppTextStyles.body
+                .copyWith(color: AppColors.textSecondaryFor(context))),
+        Text(
+          value,
+          style: AppTextStyles.titleSm.copyWith(
+            color: AppColors.textPrimaryFor(context),
+          ),
+        ),
       ],
     );
   }
@@ -43,12 +49,13 @@ class _PurchaseLineRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = context.posLayout;
+    final textColor = AppColors.textPrimaryFor(context);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(layout.isCompact ? 12 : 16),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.panelFor(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -57,7 +64,7 @@ class _PurchaseLineRow extends StatelessWidget {
             offset: const Offset(0, 2),
           ),
         ],
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderFor(context)),
       ),
       child: Row(
         children: [
@@ -67,7 +74,10 @@ class _PurchaseLineRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Stock Item', style: AppTextStyles.labelSm),
+                Text('Stock Item',
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.textSecondaryFor(context),
+                    )),
                 const SizedBox(height: 4),
                 _StockSearchPicker(
                   initialStock: entry.stockItem,
@@ -84,15 +94,18 @@ class _PurchaseLineRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Qty', style: AppTextStyles.labelSm),
+                Text('Qty',
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.textSecondaryFor(context),
+                    )),
                 const SizedBox(height: 4),
                 TextField(
                   controller: entry.quantityCtrl,
                   keyboardType: TextInputType.number,
                   onChanged: (_) => onChanged(),
-                  style: AppTextStyles.titleSm,
+                  style: AppTextStyles.titleSm.copyWith(color: textColor),
                   decoration: InputDecoration(
-                    fillColor: AppColors.neutral50,
+                    fillColor: AppColors.elevatedSurfaceFor(context),
                     filled: true,
                     suffixText: entry.stockItem.unit,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
@@ -112,15 +125,18 @@ class _PurchaseLineRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Unit Price', style: AppTextStyles.labelSm),
+                Text('Unit Price',
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.textSecondaryFor(context),
+                    )),
                 const SizedBox(height: 4),
                 TextField(
                   controller: entry.priceCtrl,
                   keyboardType: TextInputType.number,
                   onChanged: (_) => onChanged(),
-                  style: AppTextStyles.titleSm,
+                  style: AppTextStyles.titleSm.copyWith(color: textColor),
                   decoration: InputDecoration(
-                    fillColor: AppColors.neutral50,
+                    fillColor: AppColors.elevatedSurfaceFor(context),
                     filled: true,
                     suffixText: 'DT',
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
@@ -140,7 +156,10 @@ class _PurchaseLineRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text('Total', style: AppTextStyles.labelSm),
+                Text('Total',
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.textSecondaryFor(context),
+                    )),
                 const SizedBox(height: 10),
                 Text(
                   '${_lineTotal.toStringAsFixed(3)} DT',
@@ -198,8 +217,8 @@ class _StockSearchPickerState extends State<_StockSearchPicker> {
   Widget build(BuildContext context) {
     return SearchAnchor(
       searchController: _controller,
-      viewBackgroundColor: AppColors.white,
-      viewSurfaceTintColor: AppColors.white,
+      viewBackgroundColor: AppColors.panelFor(context),
+      viewSurfaceTintColor: AppColors.panelFor(context),
       viewHintText: 'Search stock item...',
       builder: (context, controller) {
         return InkWell(
@@ -208,7 +227,7 @@ class _StockSearchPickerState extends State<_StockSearchPicker> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.neutral50,
+              color: AppColors.elevatedSurfaceFor(context),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -216,13 +235,15 @@ class _StockSearchPickerState extends State<_StockSearchPicker> {
                 Expanded(
                   child: Text(
                     widget.initialStock.name,
-                    style: AppTextStyles.titleSm,
+                    style: AppTextStyles.titleSm.copyWith(
+                      color: AppColors.textPrimaryFor(context),
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Icon(Icons.search_rounded,
-                    size: 18, color: AppColors.neutral400),
+                Icon(Icons.search_rounded,
+                    size: 18, color: AppColors.textSecondaryFor(context)),
               ],
             ),
           ),

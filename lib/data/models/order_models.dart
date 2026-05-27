@@ -171,33 +171,48 @@ class CartItem {
   int quantity;
   String? note;
   double? discountPercent;
+  final bool isDealComponent;
+  final String? parentDealName;
 
   CartItem({
     required this.product,
     this.quantity = 1,
     this.note,
     this.discountPercent,
+    this.isDealComponent = false,
+    this.parentDealName,
   });
 
-  double get unitPrice => discountPercent != null
-      ? product.price * (1 - discountPercent! / 100)
-      : product.price;
+  double get unitPrice => isDealComponent
+      ? 0
+      : discountPercent != null
+          ? product.price * (1 - discountPercent! / 100)
+          : product.price;
 
   double get total => unitPrice * quantity;
 
-  double get originalTotal => product.price * quantity;
+  double get originalTotal => isDealComponent ? 0 : product.price * quantity;
 
   double get discountAmount {
     final discount = originalTotal - total;
     return discount > 0 ? discount : 0;
   }
 
-  CartItem copyWith({int? quantity, String? note, double? discountPercent}) {
+  CartItem copyWith({
+    Product? product,
+    int? quantity,
+    String? note,
+    double? discountPercent,
+    bool? isDealComponent,
+    String? parentDealName,
+  }) {
     return CartItem(
-      product: product,
+      product: product ?? this.product,
       quantity: quantity ?? this.quantity,
       note: note ?? this.note,
       discountPercent: discountPercent ?? this.discountPercent,
+      isDealComponent: isDealComponent ?? this.isDealComponent,
+      parentDealName: parentDealName ?? this.parentDealName,
     );
   }
 
@@ -339,13 +354,15 @@ class Order {
     List<CartItem> parsedItems = [];
     if (json['items'] != null) {
       for (var itemJson in json['items']) {
-        // If it's a deal component, we skip showing it individually and rely on parent item,
-        // OR we map it to product/meal. For POS display, we map based on what's available.
-        final pDetails = itemJson['product_details'];
-        final mDetails = itemJson['meal_details'];
-        final dDetails = itemJson['deal_details'];
+        final itemMap = _asStringKeyMap(itemJson);
+        if (itemMap == null) continue;
+
+        final isDealComponent = itemMap['is_deal_component'] == true;
+        final pDetails = _asStringKeyMap(itemMap['product_details']);
+        final mDetails = _asStringKeyMap(itemMap['meal_details']);
+        final dDetails = _asStringKeyMap(itemMap['deal_details']);
         final unitPrice =
-            double.tryParse((itemJson['unit_price'] ?? '0').toString()) ?? 0.0;
+            double.tryParse((itemMap['unit_price'] ?? '0').toString()) ?? 0.0;
 
         Product? product;
         if (pDetails != null) {
@@ -356,13 +373,26 @@ class Order {
           product = Product.fromDealJson(dDetails, unitPrice: unitPrice);
         }
 
-        if (product != null && itemJson['is_deal_component'] != true) {
-          product = product.copyWith(price: unitPrice);
+        if (product != null) {
+          final parentDealDetails =
+              _asStringKeyMap(itemMap['parent_deal_details']) ??
+                  _asStringKeyMap(itemMap['deal_parent_details']) ??
+                  dDetails;
+          final parentDealName = _firstNonEmptyString([
+            itemMap['parent_deal_title'],
+            itemMap['deal_title'],
+            parentDealDetails?['title'],
+            parentDealDetails?['name'],
+          ]);
+
+          product = product.copyWith(price: isDealComponent ? 0 : unitPrice);
           parsedItems.add(CartItem(
             product: product,
-            quantity: itemJson['quantity'] ?? 1,
-            note: itemJson['note'],
+            quantity: _parseInt(itemMap['quantity'], fallback: 1),
+            note: itemMap['note']?.toString(),
             discountPercent: null, // Deals compute total instead
+            isDealComponent: isDealComponent,
+            parentDealName: isDealComponent ? parentDealName : null,
           ));
         }
       }
@@ -414,6 +444,25 @@ class Order {
       hasBackendTotal: json.containsKey('total_amount'),
     );
   }
+}
+
+Map<String, dynamic>? _asStringKeyMap(Object? value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return Map<String, dynamic>.from(value);
+  return null;
+}
+
+String? _firstNonEmptyString(Iterable<Object?> values) {
+  for (final value in values) {
+    final text = value?.toString().trim();
+    if (text != null && text.isNotEmpty) return text;
+  }
+  return null;
+}
+
+int _parseInt(Object? value, {required int fallback}) {
+  if (value is int) return value;
+  return int.tryParse(value?.toString() ?? '') ?? fallback;
 }
 
 String displayTicketNumberFrom(String ticketNumber) {

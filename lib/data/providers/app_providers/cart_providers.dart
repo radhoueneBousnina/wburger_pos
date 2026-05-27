@@ -91,6 +91,8 @@ class CartNotifier extends StateNotifier<CartState> {
       quantity: items[index].quantity,
       note: note,
       discountPercent: items[index].discountPercent,
+      isDealComponent: items[index].isDealComponent,
+      parentDealName: items[index].parentDealName,
     );
     state = state.copyWith(items: items);
   }
@@ -102,6 +104,8 @@ class CartNotifier extends StateNotifier<CartState> {
       quantity: items[index].quantity,
       note: items[index].note,
       discountPercent: percent,
+      isDealComponent: items[index].isDealComponent,
+      parentDealName: items[index].parentDealName,
     );
     state = state.copyWith(items: items);
   }

@@ -30,7 +30,7 @@ class StockScreen extends ConsumerWidget {
             Container(
               padding: EdgeInsets.fromLTRB(
                   layout.pagePadding, 16, layout.pagePadding, 12),
-              color: AppColors.white,
+              color: AppColors.surfaceFor(context),
               child: Row(
                 children: [
                   if (lowStockItems > 0)
@@ -49,12 +49,12 @@ class StockScreen extends ConsumerWidget {
                   ],
                   const Spacer(),
                   Text('${stocks.length} items',
-                      style: AppTextStyles.body
-                          .copyWith(color: AppColors.textSecondary)),
+                      style: AppTextStyles.body.copyWith(
+                          color: AppColors.textSecondaryFor(context))),
                 ],
               ),
             ),
-            const Divider(height: 1),
+            Divider(height: 1, color: AppColors.borderFor(context)),
             // Table items
             Expanded(
               child: _StockTable(stocks: stocks),

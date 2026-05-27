@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:js_interop';
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:web/web.dart' as web;
 
@@ -46,56 +47,72 @@ class RawCashDrawerStatusResult {
 class RawTicketPrinterBackend {
   const RawTicketPrinterBackend();
 
+  static final Dio _bridgeDio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 5),
+      receiveTimeout: const Duration(seconds: 12),
+      sendTimeout: const Duration(seconds: 8),
+      headers: const {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ),
+  );
+
   Future<RawTicketPrinterBackendResult> printTicket({
     required String jobName,
     required Uint8List bytes,
     int? paperWidthMm,
     String? previewText,
+    bool allowBrowserFallback = true,
   }) async {
-    String? backendError;
+    String? bridgeError;
+    final bridgeErrors = <String>[];
+    final base64Bytes = base64Encode(bytes);
 
-    // 1. Try backend proxy first. This is useful when the web app is running
-    // in a browser but the backend host has the printer locally attached.
-    try {
-      final base64Bytes = base64Encode(bytes);
-      final response = await apiClient.dio.post(
-        ApiConstants.printProxy,
-        data: {
-          'bytes': base64Bytes,
-          'job_name': jobName,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = response.data;
-        if (data is Map && data['status'] == 'success') {
-          if (kDebugMode) {
-            debugPrint('[Printer] Backend proxy print success.');
-          }
-          final printerCount = _readPrinterCount(data);
-          return RawTicketPrinterBackendResult(
-            printerCount: printerCount,
-            printedCount: _readPrintedCount(data, fallback: printerCount),
-            successMessage: (data['message'] as String?) ??
-                'Ticket queued through the web print bridge.',
-          );
-        }
-        if (data is Map) {
-          final details = _backendPrintMessage(data);
-          backendError = details == null
-              ? 'Backend print bridge is unavailable.'
-              : 'Backend print bridge unavailable: $details';
-        }
-      }
-    } catch (e) {
-      backendError = apiClient.describeError(
-        e,
-        fallback: 'Backend print bridge is unavailable.',
-      );
-      if (kDebugMode) {
-        debugPrint(
-          '[Printer] Backend proxy print failed. Falling back to Web Serial/browser preview...',
+    // 1. Try the cashier machine's local USB print bridge. The deployed API
+    // stays on the VPS; raw ESC/POS bytes must go to localhost.
+    for (final endpoint in _localPrintEndpoints()) {
+      try {
+        final response = await _bridgeDio.post(
+          endpoint,
+          data: {
+            'bytes': base64Bytes,
+            'job_name': jobName,
+          },
         );
+
+        if (response.statusCode == 200) {
+          final data = response.data;
+          if (data is Map && data['status'] == 'success') {
+            if (kDebugMode) {
+              debugPrint('[Printer] Local print bridge success: $endpoint');
+            }
+            final printerCount = _readPrinterCount(data);
+            return RawTicketPrinterBackendResult(
+              printerCount: printerCount,
+              printedCount: _readPrintedCount(data, fallback: printerCount),
+              successMessage: (data['message'] as String?) ??
+                  'Ticket queued through the web print bridge.',
+            );
+          }
+          if (data is Map) {
+            final details = _backendPrintMessage(data);
+            bridgeError = details == null
+                ? 'Local USB print bridge is unavailable.'
+                : 'Local USB print bridge unavailable: $details';
+            bridgeErrors.add('${_endpointLabel(endpoint)}: $bridgeError');
+          }
+        }
+      } catch (e) {
+        bridgeError = apiClient.describeError(
+          e,
+          fallback: 'Local USB print bridge is unavailable.',
+        );
+        bridgeErrors.add('${_endpointLabel(endpoint)}: $bridgeError');
+        if (kDebugMode) {
+          debugPrint('[Printer] Local print bridge failed at $endpoint: $e');
+        }
       }
     }
 
@@ -115,14 +132,14 @@ class RawTicketPrinterBackend {
         if (kDebugMode) {
           debugPrint('[WebSerial] Print error: $e');
         }
-        backendError ??= 'Web Serial print failed.';
+        bridgeError ??= 'Web Serial print failed.';
       }
     }
 
     // 3. Final fallback for the browser build: open a normal print dialog
     // using a text preview of the ticket. This keeps the web build useful for
     // testing on Windows/Linux/macOS even when no raw device access exists.
-    final preview = previewText?.trim();
+    final preview = allowBrowserFallback ? previewText?.trim() : null;
     if (preview != null && preview.isNotEmpty) {
       try {
         await _openBrowserPrintPreview(
@@ -140,7 +157,7 @@ class RawTicketPrinterBackend {
         if (kDebugMode) {
           debugPrint('[PrinterPreview] Browser print preview failed: $e');
         }
-        backendError ??= 'Browser print preview failed.';
+        bridgeError ??= 'Browser print preview failed.';
       }
     }
 
@@ -148,8 +165,10 @@ class RawTicketPrinterBackend {
       printerCount: 0,
       printedCount: 0,
       failedPrinters: const ['web'],
-      error: backendError ??
-          'No browser printing path is available. Use the desktop app for direct thermal printing.',
+      error: bridgeErrors.isNotEmpty
+          ? 'Print bridge failed. ${bridgeErrors.join(' ')}'
+          : bridgeError ??
+              'No browser printing path is available. Use the desktop app for direct thermal printing.',
     );
   }
 
@@ -159,46 +178,81 @@ class RawTicketPrinterBackend {
   }
 
   Future<RawCashDrawerStatusResult> readCashDrawerStatus() async {
-    try {
-      final response = await apiClient.dio.get(ApiConstants.drawerStatusProxy);
-      final data = response.data;
-      if (data is! Map) {
-        return const RawCashDrawerStatusResult(
-          supported: false,
-          error: 'Drawer status bridge returned an invalid response.',
-        );
-      }
+    Object? lastError;
+    for (final endpoint in _drawerStatusEndpoints()) {
+      try {
+        final response = await _bridgeDio.get(endpoint);
+        final data = response.data;
+        if (data is! Map) {
+          lastError = 'Drawer status bridge returned an invalid response.';
+          continue;
+        }
 
-      final status = data['status']?.toString();
-      if (status == 'success') {
-        return RawCashDrawerStatusResult(
-          supported: true,
-          isOpen: data['is_open'] is bool ? data['is_open'] as bool : null,
-          pin3High:
-              data['pin3_high'] is bool ? data['pin3_high'] as bool : null,
-          source: data['source']?.toString(),
-        );
-      }
+        final status = data['status']?.toString();
+        if (status == 'success') {
+          return RawCashDrawerStatusResult(
+            supported: true,
+            isOpen: data['is_open'] is bool ? data['is_open'] as bool : null,
+            pin3High:
+                data['pin3_high'] is bool ? data['pin3_high'] as bool : null,
+            source: data['source']?.toString(),
+          );
+        }
 
-      return RawCashDrawerStatusResult(
-        supported: false,
-        error: _backendPrintMessage(data) ??
-            'Drawer status bridge is not available.',
-      );
-    } catch (e) {
-      return RawCashDrawerStatusResult(
-        supported: false,
-        error: apiClient.describeError(
-          e,
-          fallback: 'Drawer status bridge is not available.',
-        ),
-      );
+        lastError = _backendPrintMessage(data) ??
+            'Drawer status bridge is not available.';
+      } catch (e) {
+        lastError = e;
+      }
     }
+
+    return RawCashDrawerStatusResult(
+      supported: false,
+      error: lastError == null
+          ? 'Drawer status bridge is not available.'
+          : apiClient.describeError(
+              lastError,
+              fallback: 'Drawer status bridge is not available.',
+            ),
+    );
   }
 }
 
 RawTicketPrinterBackend createRawTicketPrinterBackend() {
   return const RawTicketPrinterBackend();
+}
+
+List<String> _localPrintEndpoints() {
+  return _uniqueEndpoints(
+    const [
+      ApiConstants.printProxyBridge,
+    ],
+  );
+}
+
+List<String> _drawerStatusEndpoints() {
+  return _uniqueEndpoints(
+    const [
+      ApiConstants.drawerStatusProxyBridge,
+    ],
+  );
+}
+
+List<String> _uniqueEndpoints(List<String> endpoints) {
+  final seen = <String>{};
+  return endpoints.where((endpoint) {
+    final value = endpoint.trim();
+    return value.isNotEmpty && seen.add(value);
+  }).toList(growable: false);
+}
+
+String _endpointLabel(String endpoint) {
+  final uri = Uri.tryParse(endpoint);
+  if (uri == null || uri.host.isEmpty) return 'Local USB print bridge';
+  if (uri.host == 'localhost' || uri.host == '127.0.0.1') {
+    return 'Local USB print bridge';
+  }
+  return 'Local USB print bridge';
 }
 
 int _readPrinterCount(Map data) {

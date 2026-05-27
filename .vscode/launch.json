@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "W Burger POS Web (VPS)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "chrome",
+      "toolArgs": [
+        "--web-hostname",
+        "localhost",
+        "--web-port",
+        "5173",
+        "--dart-define",
+        "API_BASE_URL=https://w-burger.com"
+      ]
+    },
+    {
+      "name": "W Burger POS Linux (VPS)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "linux",
+      "toolArgs": [
+        "--dart-define",
+        "API_BASE_URL=https://w-burger.com"
+      ]
+    }
+  ]
+}

@@ -19,13 +19,14 @@ class _ProductsPanel extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider);
     final selectedCat = ref.watch(selectedCategoryProvider);
     final productsAsync = ref.watch(filteredProductsProvider);
+    final isTraining = AppColors.isTraining(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Search bar
         Container(
-          color: AppColors.white,
+          color: AppColors.surfaceFor(context),
           padding: EdgeInsets.fromLTRB(
             layout.pagePadding,
             6,
@@ -39,11 +40,13 @@ class _ProductsPanel extends ConsumerWidget {
                   controller: searchCtrl,
                   onChanged: onSearch,
                   onSubmitted: onSearchSubmitted,
-                  style: AppTextStyles.title,
+                  style: AppTextStyles.title.copyWith(
+                    color: AppColors.textPrimaryFor(context),
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Search products...',
                     hintStyle: AppTextStyles.body.copyWith(
-                      color: AppColors.textSecondary,
+                      color: AppColors.textSecondaryFor(context),
                     ),
                     prefixIcon: const Padding(
                       padding: EdgeInsets.all(14),
@@ -63,14 +66,15 @@ class _ProductsPanel extends ConsumerWidget {
                           )
                         : null,
                     filled: true,
-                    fillColor: AppColors.neutral50,
+                    fillColor: AppColors.elevatedSurfaceFor(context),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 18,
                       vertical: 18,
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide:
+                          BorderSide(color: AppColors.borderFor(context)),
                     ),
                   ),
                 ),
@@ -80,7 +84,7 @@ class _ProductsPanel extends ConsumerWidget {
         ),
         // Category chips — big touch targets
         Container(
-          color: AppColors.white,
+          color: AppColors.surfaceFor(context),
           padding: EdgeInsets.fromLTRB(
             layout.pagePadding,
             6,
@@ -127,20 +131,26 @@ class _ProductsPanel extends ConsumerWidget {
             ),
           ),
         ),
-        const Divider(height: 1),
+        Divider(height: 1, color: AppColors.borderFor(context)),
         // Products grid
         Expanded(
           child: productsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) =>
-                Center(child: Text('Error loading products: $err')),
+            error: (err, stack) => Center(
+                child: Text(
+              'Error loading products: $err',
+              style: TextStyle(color: AppColors.textPrimaryFor(context)),
+            )),
             data: (products) => products.isEmpty
                 ? Stack(
                     children: [
                       Positioned.fill(
                         child: CustomPaint(
-                          painter: BrandBlobPainter(
-                            color: AppColors.yellow.withValues(alpha: 0.1),
+                          painter: BrandCheckerPainter(
+                            color1: isTraining
+                                ? AppColors.yellow.withValues(alpha: 0.035)
+                                : AppColors.yellow.withValues(alpha: 0.05),
+                            color2: Colors.transparent,
                           ),
                         ),
                       ),
@@ -148,12 +158,18 @@ class _ProductsPanel extends ConsumerWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.search_off_rounded,
-                                size: 56, color: AppColors.neutral400),
+                            Icon(
+                              Icons.search_off_rounded,
+                              size: 56,
+                              color: isTraining
+                                  ? AppColors.neutral500
+                                  : AppColors.neutral400,
+                            ),
                             const SizedBox(height: 12),
                             Text('No products found',
-                                style: AppTextStyles.body
-                                    .copyWith(color: AppColors.textSecondary)),
+                                style: AppTextStyles.body.copyWith(
+                                    color:
+                                        AppColors.textSecondaryFor(context))),
                           ],
                         ),
                       ),
@@ -207,6 +223,7 @@ class _CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = context.posLayout;
+    final isTraining = AppColors.isTraining(context);
 
     return Padding(
       padding: const EdgeInsets.only(right: 10),
@@ -223,16 +240,18 @@ class _CategoryChip extends StatelessWidget {
               vertical: layout.isCompact ? 8 : 10,
             ),
             decoration: BoxDecoration(
-              color: selected ? AppColors.yellow : AppColors.white,
+              color: selected ? AppColors.yellow : AppColors.panelFor(context),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: selected ? AppColors.yellow : AppColors.border,
+                color:
+                    selected ? AppColors.yellow : AppColors.borderFor(context),
                 width: selected ? 2.5 : 1.5,
               ),
               boxShadow: [
                 if (selected)
                   BoxShadow(
-                    color: AppColors.yellow.withValues(alpha: 0.3),
+                    color: AppColors.yellow
+                        .withValues(alpha: isTraining ? 0.18 : 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -266,7 +285,9 @@ class _CategoryChip extends StatelessWidget {
                 Text(
                   label,
                   style: AppTextStyles.title.copyWith(
-                    color: selected ? AppColors.blue : AppColors.textSecondary,
+                    color: selected
+                        ? AppColors.blue
+                        : AppColors.textSecondaryFor(context),
                     fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                   ),
                 ),
@@ -289,9 +310,10 @@ class _ProductCard extends ConsumerWidget {
     final isLockedForQr = ref.watch(
       cartProvider.select((cart) => cart.isLockedForQr),
     );
+    final isTraining = AppColors.isTraining(context);
 
     return Material(
-      color: AppColors.white,
+      color: AppColors.panelFor(context),
       borderRadius: BorderRadius.circular(layout.cardRadius),
       child: InkWell(
         onTap: () {
@@ -313,12 +335,14 @@ class _ProductCard extends ConsumerWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(layout.cardRadius),
-            border: Border.all(color: AppColors.border),
-            boxShadow: const [
+            border: Border.all(color: AppColors.borderFor(context)),
+            boxShadow: [
               BoxShadow(
-                color: Color(0x08000000),
+                color: isTraining
+                    ? Colors.black.withValues(alpha: 0.16)
+                    : const Color(0x08000000),
                 blurRadius: 10,
-                offset: Offset(0, 4),
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -347,16 +371,20 @@ class _ProductCard extends ConsumerWidget {
                   children: [
                     Text(
                       product.name,
-                      style: AppTextStyles.title
-                          .copyWith(fontSize: layout.isCompact ? 14 : 15),
+                      style: AppTextStyles.title.copyWith(
+                        fontSize: layout.isCompact ? 14 : 15,
+                        color: AppColors.textPrimaryFor(context),
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       product.description,
-                      style: AppTextStyles.bodySm
-                          .copyWith(fontSize: layout.isCompact ? 12 : 13),
+                      style: AppTextStyles.bodySm.copyWith(
+                        fontSize: layout.isCompact ? 12 : 13,
+                        color: AppColors.textSecondaryFor(context),
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),

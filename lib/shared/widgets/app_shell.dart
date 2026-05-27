@@ -56,8 +56,9 @@ class _AppShellState extends ConsumerState<AppShell> {
     });
 
     final body = Scaffold(
-      backgroundColor:
-          testMode.isActive ? const Color(0xFF10131F) : AppColors.neutral50,
+      backgroundColor: testMode.isActive
+          ? AppColors.trainingBackground
+          : AppColors.neutral50,
       drawer: showSidebar || widget.lockNavigation ? null : const _AppDrawer(),
       body: Stack(
         children: [

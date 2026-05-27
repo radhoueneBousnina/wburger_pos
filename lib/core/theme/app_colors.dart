@@ -59,4 +59,47 @@ class AppColors {
   static const Color textDisabled = Color(0xFFADB5BD);
   static const Color textOnBlue = Color(0xFFFFFFFF);
   static const Color textOnYellow = Color(0xFF2814B8);
+
+  // Training mode surfaces
+  static const Color trainingBackground = Color(0xFF10131F);
+  static const Color trainingSurface = Color(0xFF151827);
+  static const Color trainingPanel = Color(0xFF191D2E);
+  static const Color trainingElevated = Color(0xFF1D2235);
+  static const Color trainingBorder = Color(0x33FFFFFF);
+  static const Color trainingTextSecondary = Color(0xFF9AA3B8);
+
+  static bool isTraining(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color pageBackgroundFor(BuildContext context) =>
+      isTraining(context) ? trainingBackground : neutral50;
+
+  static Color shellBackgroundFor(BuildContext context) =>
+      isTraining(context) ? trainingBackground : background;
+
+  static Color surfaceFor(BuildContext context) =>
+      isTraining(context) ? trainingSurface : white;
+
+  static Color panelFor(BuildContext context) =>
+      isTraining(context) ? trainingPanel : white;
+
+  static Color elevatedSurfaceFor(BuildContext context) =>
+      isTraining(context) ? trainingElevated : neutral50;
+
+  static Color tableHeaderFor(BuildContext context) =>
+      isTraining(context) ? trainingSurface : neutral50;
+
+  static Color borderFor(BuildContext context) =>
+      isTraining(context) ? trainingBorder : border;
+
+  static Color textPrimaryFor(BuildContext context) =>
+      isTraining(context) ? white : textPrimary;
+
+  static Color textSecondaryFor(BuildContext context) =>
+      isTraining(context) ? trainingTextSecondary : textSecondary;
+
+  static Color subtlePatternFor(BuildContext context, Color color) =>
+      isTraining(context)
+          ? color.withValues(alpha: 0.05)
+          : color.withValues(alpha: 0.03);
 }

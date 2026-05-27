@@ -52,6 +52,7 @@ class RawTicketPrinterBackend {
     required Uint8List bytes,
     int? paperWidthMm,
     String? previewText,
+    bool allowBrowserFallback = true,
   }) async {
     if (Platform.isWindows) {
       return Isolate.run(() => _printTicketOnWindows(jobName, bytes));

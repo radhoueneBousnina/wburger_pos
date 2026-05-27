@@ -40,10 +40,6 @@ class SidebarNav extends ConsumerWidget {
         label: 'Session Closure',
         route: AppRoutes.sessionClosure,
         permission: 'can_close_session'),
-    _NavItem(
-        icon: Icons.health_and_safety_rounded,
-        label: 'Diagnostics',
-        route: AppRoutes.diagnostics),
   ];
 
   @override

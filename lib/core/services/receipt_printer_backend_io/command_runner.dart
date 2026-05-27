@@ -142,6 +142,15 @@ typedef _EnumPrintersDart = int Function(
   Pointer<Uint32> printersReturned,
 );
 
+typedef _GetDefaultPrinterNative = Int32 Function(
+  Pointer<Utf16> buffer,
+  Pointer<Uint32> bufferChars,
+);
+typedef _GetDefaultPrinterDart = int Function(
+  Pointer<Utf16> buffer,
+  Pointer<Uint32> bufferChars,
+);
+
 typedef _OpenPrinterNative = Int32 Function(
   Pointer<Utf16> printerName,
   Pointer<IntPtr> printerHandle,

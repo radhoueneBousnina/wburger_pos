@@ -41,6 +41,11 @@ class CashDrawerKeyMonitor {
     try {
       final status =
           await ReceiptPrinterService.instance.readCashDrawerStatus();
+      if (!status.supported) {
+        _timer?.cancel();
+        _timer = null;
+        return;
+      }
       if (!status.isReliable) return;
 
       final isOpen = status.isOpen!;

@@ -55,8 +55,8 @@ class _PurchasesTableState extends ConsumerState<_PurchasesTable> {
                     horizontal: _PurchasesTableSpec.horizontalPadding,
                     vertical: 14,
                   ),
-                  color: AppColors.neutral50,
-                  child: const Row(
+                  color: AppColors.tableHeaderFor(context),
+                  child: Row(
                     children: [
                       _Cell(
                           width: _PurchasesTableSpec.dateWidth,
@@ -82,14 +82,15 @@ class _PurchasesTableState extends ConsumerState<_PurchasesTable> {
                     ],
                   ),
                 ),
-                const Divider(height: 1),
+                Divider(height: 1, color: AppColors.borderFor(context)),
                 Expanded(
                   child: ListView.separated(
                     controller: _scrollController,
                     padding: EdgeInsets.zero,
                     itemCount:
                         widget.purchases.length + (isLoadingMore ? 1 : 0),
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, __) =>
+                        Divider(height: 1, color: AppColors.borderFor(context)),
                     itemBuilder: (ctx, i) {
                       if (i == widget.purchases.length) {
                         return const Padding(
@@ -160,7 +161,7 @@ class _HeaderCell extends StatelessWidget {
       label,
       textAlign: align,
       style: AppTextStyles.label.copyWith(
-        color: AppColors.textSecondary,
+        color: AppColors.textSecondaryFor(context),
         fontWeight: FontWeight.w700,
       ),
     );
@@ -184,7 +185,7 @@ class _PurchaseRow extends StatelessWidget {
           horizontal: _PurchasesTableSpec.horizontalPadding,
           vertical: layout.isCompact ? 16 : 22,
         ),
-        color: AppColors.white,
+        color: AppColors.surfaceFor(context),
         child: Row(
           children: [
             _Cell(
@@ -194,16 +195,20 @@ class _PurchaseRow extends StatelessWidget {
                 children: [
                   Text(
                     DateFormat('dd MMM yyyy').format(purchase.createdAt),
-                    style: AppTextStyles.title,
+                    style: AppTextStyles.title.copyWith(
+                      color: AppColors.textPrimaryFor(context),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.access_time_rounded,
-                          size: 12, color: AppColors.textSecondary),
+                      Icon(Icons.access_time_rounded,
+                          size: 12, color: AppColors.textSecondaryFor(context)),
                       const SizedBox(width: 4),
                       Text(DateFormat('HH:mm').format(purchase.createdAt),
-                          style: AppTextStyles.bodySm),
+                          style: AppTextStyles.bodySm.copyWith(
+                            color: AppColors.textSecondaryFor(context),
+                          )),
                     ],
                   ),
                 ],
@@ -229,7 +234,7 @@ class _PurchaseRow extends StatelessWidget {
                   Text(
                     '${purchase.lines.length} item(s)',
                     style: AppTextStyles.labelSm
-                        .copyWith(color: AppColors.textDisabled),
+                        .copyWith(color: AppColors.textSecondaryFor(context)),
                   ),
                 ],
               ),
@@ -445,15 +450,21 @@ class _EmptyPurchases extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.shopping_cart_outlined,
-              size: 64, color: AppColors.neutral300),
+          Icon(
+            Icons.shopping_cart_outlined,
+            size: 64,
+            color: AppColors.isTraining(context)
+                ? AppColors.neutral500
+                : AppColors.neutral300,
+          ),
           const SizedBox(height: 16),
           Text('No purchases recorded',
-              style: AppTextStyles.h4.copyWith(color: AppColors.textSecondary)),
+              style: AppTextStyles.h4
+                  .copyWith(color: AppColors.textSecondaryFor(context))),
           const SizedBox(height: 8),
           Text('Tap "New Purchase" to record a stock purchase.',
-              style:
-                  AppTextStyles.body.copyWith(color: AppColors.textDisabled)),
+              style: AppTextStyles.body
+                  .copyWith(color: AppColors.textSecondaryFor(context))),
         ],
       ),
     );

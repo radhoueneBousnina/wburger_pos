@@ -395,8 +395,10 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   void _printTicketInBackground(ReceiptData receiptData) {
     unawaited(() async {
       try {
-        final result =
-            await ReceiptPrinterService.instance.printReceipt(receiptData);
+        final result = await ReceiptPrinterService.instance.printReceipt(
+          receiptData,
+          allowBrowserFallback: false,
+        );
         _showPrintResult(result);
       } catch (error, stackTrace) {
         if (kDebugMode) {
@@ -540,7 +542,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       onKeyEvent: _handleSalesKey,
       child: Scaffold(
         backgroundColor:
-            testMode.isActive ? const Color(0xFF10131F) : AppColors.white,
+            testMode.isActive ? AppColors.trainingBackground : AppColors.white,
         floatingActionButton: _enableTestWebcamScanner
             ? Column(
                 mainAxisSize: MainAxisSize.min,

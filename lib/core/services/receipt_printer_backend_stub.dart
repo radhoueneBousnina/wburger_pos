@@ -42,6 +42,7 @@ class RawTicketPrinterBackend {
     required Uint8List bytes,
     int? paperWidthMm,
     String? previewText,
+    bool allowBrowserFallback = true,
   }) async {
     return const RawTicketPrinterBackendResult(
       printerCount: 0,

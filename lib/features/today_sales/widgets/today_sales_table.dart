@@ -26,8 +26,8 @@ class _OrdersTable extends ConsumerWidget {
                     horizontal: _TodaySalesTableSpec.horizontalPadding,
                     vertical: 18,
                   ),
-                  color: AppColors.neutral50,
-                  child: const Row(
+                  color: AppColors.tableHeaderFor(context),
+                  child: Row(
                     children: [
                       _Cell(
                           width: _TodaySalesTableSpec.dateWidth,
@@ -61,12 +61,13 @@ class _OrdersTable extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const Divider(height: 1),
+                Divider(height: 1, color: AppColors.borderFor(context)),
                 Expanded(
                   child: ListView.separated(
                     padding: EdgeInsets.zero,
                     itemCount: orders.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, __) =>
+                        Divider(height: 1, color: AppColors.borderFor(context)),
                     itemBuilder: (ctx, i) => _OrderRow(order: orders[i]),
                   ),
                 ),
@@ -103,7 +104,7 @@ class _HeaderCell extends StatelessWidget {
       label,
       textAlign: align,
       style: AppTextStyles.label.copyWith(
-        color: AppColors.textSecondary,
+        color: AppColors.textSecondaryFor(context),
         fontWeight: FontWeight.w700,
       ),
     );
@@ -118,13 +119,18 @@ class _OrderRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final layout = context.posLayout;
     final isCancelled = order.status == OrderStatus.cancelled;
+    final rowColor = isCancelled
+        ? AppColors.errorLight.withValues(
+            alpha: AppColors.isTraining(context) ? 0.12 : 0.2,
+          )
+        : AppColors.surfaceFor(context);
     final canCancelOrder =
         ref.watch(authProvider).permissions['can_cancel_order'] == true;
 
     return InkWell(
       onTap: () => _showOrderDetails(context, order),
       child: Container(
-        color: isCancelled ? AppColors.errorLight.withValues(alpha: 0.2) : null,
+        color: rowColor,
         padding: EdgeInsets.symmetric(
           horizontal: _TodaySalesTableSpec.horizontalPadding,
           vertical: layout.isCompact ? 16 : 22,
@@ -136,7 +142,7 @@ class _OrderRow extends ConsumerWidget {
               child: Text(
                 DateFormat('dd/MM HH:mm').format(order.createdAt),
                 style: AppTextStyles.body.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.textSecondaryFor(context),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -372,15 +378,21 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.receipt_long_rounded,
-              size: 64, color: AppColors.neutral300),
+          Icon(
+            Icons.receipt_long_rounded,
+            size: 64,
+            color: AppColors.isTraining(context)
+                ? AppColors.neutral500
+                : AppColors.neutral300,
+          ),
           const SizedBox(height: 16),
           Text('No sales today yet',
-              style: AppTextStyles.h4.copyWith(color: AppColors.textSecondary)),
+              style: AppTextStyles.h4
+                  .copyWith(color: AppColors.textSecondaryFor(context))),
           const SizedBox(height: 8),
           Text('Orders will appear here once sales are processed.',
-              style:
-                  AppTextStyles.body.copyWith(color: AppColors.textDisabled)),
+              style: AppTextStyles.body
+                  .copyWith(color: AppColors.textSecondaryFor(context))),
         ],
       ),
     );

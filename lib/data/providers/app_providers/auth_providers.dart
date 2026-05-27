@@ -71,6 +71,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> login(String username, String password) async {
     try {
+      final loginUrl = Uri.parse(
+        apiClient.dio.options.baseUrl,
+      ).resolve(ApiConstants.login);
+      debugPrint('W Burger POS login URL: $loginUrl');
+      debugPrint('W Burger POS app URL: ${Uri.base}');
+      debugPrint('W Burger POS API base URL: ${apiClient.dio.options.baseUrl}');
+
       final res = await apiClient.dio.post(
         ApiConstants.login,
         data: {'username': username, 'password': password},
@@ -115,6 +122,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       }
     } on DioException catch (e) {
+      debugPrint('W Burger POS login failed');
+      debugPrint('  request URL: ${e.requestOptions.uri}');
+      debugPrint('  app URL: ${Uri.base}');
+      debugPrint('  Dio type: ${e.type}');
+      debugPrint('  Dio message: ${e.message}');
+      debugPrint('  raw error: ${e.error}');
+      debugPrint('  status: ${e.response?.statusCode}');
+      debugPrint('  response: ${e.response?.data}');
       apiClient.logError('Login error', e);
       throw apiClient.describeError(
         e,

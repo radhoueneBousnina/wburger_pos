@@ -32,8 +32,7 @@ class PurchasesScreen extends ConsumerWidget {
           Container(
             padding: EdgeInsets.symmetric(
                 horizontal: layout.pagePadding, vertical: 12),
-            color:
-                testMode.isActive ? const Color(0xFF151827) : AppColors.white,
+            color: AppColors.surfaceFor(context),
             child: Row(
               children: [
                 Text(
@@ -55,7 +54,7 @@ class PurchasesScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1, color: AppColors.borderFor(context)),
           // List
           Expanded(
             child: purchases.isEmpty

@@ -21,7 +21,7 @@ class _PlainTextTicketBuilder implements _TicketComposer {
     for (final row in ReceiptTicketBuilder.buildBrandCheckerStripTextRows(
       columns: columns,
     )) {
-      _lines.add(_centerLine(row));
+      _lines.add(row);
     }
   }
 

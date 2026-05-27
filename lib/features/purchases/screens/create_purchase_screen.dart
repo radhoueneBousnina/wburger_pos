@@ -250,11 +250,9 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
       error: (e, st) =>
           Scaffold(body: Center(child: Text('Error loading stock $e'))),
       data: (stocks) => Scaffold(
-        backgroundColor:
-            testMode.isActive ? const Color(0xFF10131F) : AppColors.neutral50,
+        backgroundColor: AppColors.pageBackgroundFor(context),
         appBar: AppBar(
-          backgroundColor:
-              testMode.isActive ? const Color(0xFF151827) : AppColors.white,
+          backgroundColor: AppColors.surfaceFor(context),
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_rounded, color: AppColors.blue),
@@ -295,7 +293,6 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
   }
 
   Widget _buildWideLayout(List<StockItem> stocks, PosLayout layout) {
-    final testMode = ref.watch(testModeProvider);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -311,14 +308,9 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
         Container(
           width: layout.cartPanelWidth,
           decoration: BoxDecoration(
-            color:
-                testMode.isActive ? const Color(0xFF151827) : AppColors.white,
+            color: AppColors.surfaceFor(context),
             border: Border(
-              left: BorderSide(
-                color: testMode.isActive
-                    ? Colors.white.withValues(alpha: 0.12)
-                    : AppColors.border,
-              ),
+              left: BorderSide(color: AppColors.borderFor(context)),
             ),
           ),
           child: Column(
@@ -455,7 +447,7 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
     return Container(
       padding: EdgeInsets.all(layout.pagePadding),
       decoration: BoxDecoration(
-        color: testMode.isActive ? const Color(0xFF151827) : AppColors.white,
+        color: AppColors.surfaceFor(context),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -511,24 +503,28 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 48),
       decoration: BoxDecoration(
-        color: testMode.isActive ? const Color(0xFF191D2E) : AppColors.white,
+        color: AppColors.panelFor(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: testMode.isActive
-              ? Colors.white.withValues(alpha: 0.12)
-              : AppColors.border,
+          color: AppColors.borderFor(context),
         ),
       ),
       child: Column(
         children: [
-          Icon(Icons.inventory_2_outlined,
-              size: 48, color: AppColors.neutral300),
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 48,
+            color:
+                testMode.isActive ? AppColors.neutral500 : AppColors.neutral300,
+          ),
           const SizedBox(height: 16),
           Text('No items added yet',
-              style: AppTextStyles.title.copyWith(color: AppColors.neutral500)),
+              style: AppTextStyles.title
+                  .copyWith(color: AppColors.textSecondaryFor(context))),
           const SizedBox(height: 8),
           Text('Click "Add Item" to start your purchase',
-              style: AppTextStyles.body.copyWith(color: AppColors.neutral400)),
+              style: AppTextStyles.body
+                  .copyWith(color: AppColors.textSecondaryFor(context))),
         ],
       ),
     );

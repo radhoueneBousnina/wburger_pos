@@ -43,13 +43,12 @@ class ReceiptTicketBuilder {
   static Uint8List buildBrandCheckerStripBytes({
     required int columns,
   }) {
-    final squareDots = columns >= 48 ? 20 : 16;
-    final checkerColumns = columns >= 48 ? 14 : 12;
-    final width = squareDots * checkerColumns;
+    final squareDots = columns >= 48 ? 16 : 12;
+    final width = columns >= 48 ? 576 : 384;
     final height = squareDots * 3;
     final widthBytes = (width + 7) ~/ 8;
     final payload = <int>[
-      0x1b, 0x61, 0x01, // Center alignment
+      0x1b, 0x61, 0x00, // Left alignment
       0x1d, 0x76, 0x30, 0x00, // GS v 0, normal raster mode
       widthBytes & 0xff,
       (widthBytes >> 8) & 0xff,
@@ -82,12 +81,12 @@ class ReceiptTicketBuilder {
   static List<String> buildBrandCheckerStripTextRows({
     required int columns,
   }) {
-    final checkerColumns = columns >= 48 ? 14 : 12;
     String rowFor(int row) {
-      return List<String>.generate(
-        checkerColumns,
-        (column) => (row + column).isEven ? '[]' : '  ',
-      ).join().trimRight();
+      final buffer = StringBuffer();
+      for (var column = 0; buffer.length < columns; column++) {
+        buffer.write((row + column).isEven ? '[]' : '  ');
+      }
+      return buffer.toString().substring(0, columns);
     }
 
     return [rowFor(0), rowFor(1), rowFor(2)];
@@ -211,6 +210,7 @@ class ReceiptTicketBuilder {
     if (_hasText(config.subtitle)) {
       builder.center(config.subtitle!.trim());
     }
+    builder.blank();
     builder.brandCheckerStrip();
     if (_hasText(config.address)) {
       builder.wrappedCentered(config.address!.trim());
@@ -303,10 +303,13 @@ class ReceiptTicketBuilder {
     builder.itemRow(
       quantity: quantity,
       name: line.name,
-      price: _formatMoney(line.total),
+      price: line.isDealComponent ? '' : _formatMoney(line.total),
       bold: true,
     );
 
+    if (line.isDealComponent && _hasText(line.parentDealName)) {
+      builder.modifierRow('- From ${line.parentDealName!.trim()}');
+    }
     for (final modifier in line.modifiers) {
       _writeModifier(builder, modifier);
     }

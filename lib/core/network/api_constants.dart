@@ -3,7 +3,11 @@ class ApiConstants {
   // Use http://10.0.2.2:8000 on Android emulator
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://w-burger.com:8000',
+    defaultValue: 'https://w-burger.com',
+  );
+  static const String printBridgeBaseUrl = String.fromEnvironment(
+    'PRINT_BRIDGE_BASE_URL',
+    defaultValue: 'http://127.0.0.1:19100',
   );
   static const String apiPrefix = '/api/v1';
 
@@ -29,8 +33,11 @@ class ApiConstants {
   static const String confirmPayment = '/confirm_payment/';
   static const String addItem = '/add_item/';
   static const String printProxy = '$apiPrefix/sales/print-proxy/';
+  static const String printProxyBridge = '$printBridgeBaseUrl$printProxy';
   static const String drawerStatusProxy =
       '$apiPrefix/sales/drawer-status-proxy/';
+  static const String drawerStatusProxyBridge =
+      '$printBridgeBaseUrl$drawerStatusProxy';
 
   static const String dailySessions = '$apiPrefix/sales/daily-sessions/';
   static const String sessionStatus = '$apiPrefix/sales/daily-sessions/status/';

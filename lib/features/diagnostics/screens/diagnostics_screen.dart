@@ -86,7 +86,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
     final snapshot = _snapshot;
 
     return Scaffold(
-      backgroundColor: AppColors.neutral50,
+      backgroundColor: AppColors.pageBackgroundFor(context),
       body: Padding(
         padding: EdgeInsets.all(layout.isCompact ? 16 : 24),
         child: Column(
@@ -98,12 +98,17 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Diagnostics', style: AppTextStyles.h2),
+                      Text(
+                        'Diagnostics',
+                        style: AppTextStyles.h2.copyWith(
+                          color: AppColors.textPrimaryFor(context),
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         'Device status, backend connection, and local support tools.',
                         style: AppTextStyles.body.copyWith(
-                          color: AppColors.textSecondary,
+                          color: AppColors.textSecondaryFor(context),
                         ),
                       ),
                     ],
@@ -142,7 +147,12 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                       Border.all(color: AppColors.blue.withValues(alpha: 0.18)),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(_message!, style: AppTextStyles.bodySm),
+                child: Text(
+                  _message!,
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.textPrimaryFor(context),
+                  ),
+                ),
               ),
             ],
             const SizedBox(height: 20),
@@ -266,8 +276,8 @@ class _DiagnosticTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        border: Border.all(color: AppColors.border),
+        color: AppColors.panelFor(context),
+        border: Border.all(color: AppColors.borderFor(context)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -290,7 +300,7 @@ class _DiagnosticTile extends StatelessWidget {
                 Text(
                   label.toUpperCase(),
                   style: AppTextStyles.label.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.textSecondaryFor(context),
                     fontSize: 10,
                   ),
                 ),
@@ -300,7 +310,7 @@ class _DiagnosticTile extends StatelessWidget {
                   maxLines: wide ? 3 : 2,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.titleSm
-                      .copyWith(color: AppColors.textPrimary),
+                      .copyWith(color: AppColors.textPrimaryFor(context)),
                 ),
               ],
             ),
