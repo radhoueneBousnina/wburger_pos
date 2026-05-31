@@ -159,23 +159,30 @@ class _CartPanel extends ConsumerWidget {
                       ),
                     ],
                   )
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    itemCount: cart.items.length,
-                    separatorBuilder: (_, __) => Divider(
-                        height: 1,
-                        indent: 14,
-                        endIndent: 14,
-                        color: AppColors.borderFor(context)),
-                    itemBuilder: (ctx, i) => _CartItemTile(
-                      index: i,
-                      item: cart.items[i],
-                      readonly: cart.isLockedForQr,
-                      importedOrderNote: cart.isQrOrder && i == 0
-                          ? cart.customerNote?.trim()
-                          : null,
-                    ),
-                  ),
+                : Builder(builder: (context) {
+                    final itemGroups = groupCartItemsForDisplay(cart.items);
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      itemCount: itemGroups.length,
+                      separatorBuilder: (_, __) => Divider(
+                          height: 1,
+                          indent: 14,
+                          endIndent: 14,
+                          color: AppColors.borderFor(context)),
+                      itemBuilder: (ctx, i) {
+                        final group = itemGroups[i];
+                        return _CartItemTile(
+                          index: group.itemIndex,
+                          item: group.item,
+                          components: group.components,
+                          readonly: cart.isLockedForQr,
+                          importedOrderNote: cart.isQrOrder && i == 0
+                              ? cart.customerNote?.trim()
+                              : null,
+                        );
+                      },
+                    );
+                  }),
           ),
           // Footer
           if (cart.items.isNotEmpty)

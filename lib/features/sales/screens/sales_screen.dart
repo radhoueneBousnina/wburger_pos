@@ -420,37 +420,41 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   void _checkout() {
     final cart = ref.read(cartProvider);
     if (cart.items.isEmpty) return;
+    final isDealRedemption =
+        cart.isQrOrder && cart.paymentType == PaymentType.deal;
 
     PaymentModal.show(
       context,
       total: cart.subtotal,
       initialOrderType: cart.orderType,
       initialPaymentType: cart.paymentType,
-      lockOrderType: false,
-      lockPaymentType: false,
-      title: 'Process Payment',
-      confirmLabel: 'Confirm Payment',
+      lockOrderType: isDealRedemption,
+      lockPaymentType: isDealRedemption,
+      title: isDealRedemption ? 'Confirm Deal Redemption' : 'Process Payment',
+      confirmLabel: isDealRedemption ? 'Confirm Redemption' : 'Confirm Payment',
       customerName: cart.customerName,
       customerNote: cart.customerNote,
       referenceLabel: cart.ticketNumber,
       onConfirm: (paymentType, orderType,
           {amountGiven, changeReturned, staffId}) async {
         final orderNotifier = ref.read(ordersProvider.notifier);
+        final confirmedPaymentType =
+            isDealRedemption ? PaymentType.deal : paymentType;
         final effectiveCart = cart.copyWith(
           orderType: orderType,
-          paymentType: paymentType,
+          paymentType: confirmedPaymentType,
         );
         CheckoutResult result = cart.redemptionToken != null
             ? await orderNotifier.processQrRedemption(
                 effectiveCart,
-                paymentType,
+                confirmedPaymentType,
                 amountGiven: amountGiven,
                 changeReturned: changeReturned,
                 staffId: staffId,
               )
             : await orderNotifier.processCartOrder(
                 effectiveCart,
-                paymentType,
+                confirmedPaymentType,
                 amountGiven: amountGiven,
                 changeReturned: changeReturned,
                 staffId: staffId,
@@ -462,7 +466,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
             result = cart.redemptionToken != null
                 ? await orderNotifier.processQrRedemption(
                     effectiveCart,
-                    paymentType,
+                    confirmedPaymentType,
                     allowNegativeStock: true,
                     amountGiven: amountGiven,
                     changeReturned: changeReturned,
@@ -470,7 +474,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                   )
                 : await orderNotifier.confirmExistingOrder(
                     result.orderId!,
-                    paymentType,
+                    confirmedPaymentType,
                     cart: effectiveCart,
                     orderType: orderType,
                     allowNegativeStock: true,
@@ -497,23 +501,33 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
           throw Exception(result.error ?? 'Unable to process order');
         }
 
-        final ticket = result.ticketNumber ?? 'ORDER';
-        final receiptData = ReceiptData(
-          ticketNumber: ticket,
-          orderId: result.orderId,
-          soldAt: DateTime.now(),
-          lines: effectiveCart.items.map(ReceiptLine.fromCartItem).toList(),
-          orderType: orderType,
-          paymentType: paymentType,
-          sourceLabel: effectiveCart.isQrOrder ? 'Mobile QR order' : 'POS sale',
-          customerName: effectiveCart.customerName,
-          customerNote: effectiveCart.customerNote,
-          subtotal: effectiveCart.originalSubtotal,
-          discountAmount: effectiveCart.discountAmount,
-          totalAmount: effectiveCart.subtotal,
-          amountGiven: amountGiven,
-          changeReturned: changeReturned,
-        );
+        final confirmedOrder = result.confirmedOrder;
+        final ticket =
+            confirmedOrder != null && confirmedOrder.ticketNumber.isNotEmpty
+                ? confirmedOrder.ticketNumber
+                : result.ticketNumber ?? 'ORDER';
+        final receiptData = confirmedOrder != null
+            ? ReceiptData.fromOrder(
+                confirmedOrder,
+                cashierName: ref.read(authProvider).username,
+              )
+            : ReceiptData(
+                ticketNumber: ticket,
+                orderId: result.orderId,
+                soldAt: DateTime.now(),
+                lines: ReceiptLine.fromCartItems(effectiveCart.items),
+                orderType: orderType,
+                paymentType: confirmedPaymentType,
+                sourceLabel:
+                    effectiveCart.isQrOrder ? 'Mobile QR order' : 'POS sale',
+                customerName: effectiveCart.customerName,
+                customerNote: effectiveCart.customerNote,
+                subtotal: effectiveCart.originalSubtotal,
+                discountAmount: effectiveCart.discountAmount,
+                totalAmount: effectiveCart.subtotal,
+                amountGiven: amountGiven,
+                changeReturned: changeReturned,
+              );
         _printTicketInBackground(receiptData);
 
         setState(() {

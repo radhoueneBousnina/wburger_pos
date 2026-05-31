@@ -21,12 +21,14 @@ class CheckoutResult {
   final String? error;
   final String? orderId;
   final String? ticketNumber;
+  final Order? confirmedOrder;
   final List<StockOverrideWarning> warnings;
 
   const CheckoutResult({
     this.error,
     this.orderId,
     this.ticketNumber,
+    this.confirmedOrder,
     this.warnings = const [],
   });
 
@@ -185,21 +187,29 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         },
       );
 
-      final ticketNumber = response.data is Map
-          ? response.data['ticket_number']?.toString()
+      final responseData = _asMap(response.data);
+      final confirmedOrderData = _asMap(responseData?['order']);
+      final confirmedOrder = confirmedOrderData != null
+          ? Order.fromJson(confirmedOrderData)
           : null;
+      final ticketNumber =
+          confirmedOrder != null && confirmedOrder.ticketNumber.isNotEmpty
+              ? confirmedOrder.ticketNumber
+              : responseData?['ticket_number']?.toString();
       _afterConfirmedOrder(
         orderId: orderId,
         paymentType: paymentType,
         orderType: orderType,
         cart: cart,
         ticketNumber: ticketNumber,
+        confirmedOrder: confirmedOrder,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
       );
       return CheckoutResult(
         orderId: orderId,
         ticketNumber: ticketNumber,
+        confirmedOrder: confirmedOrder,
       );
     } on DioException catch (e) {
       return _checkoutResultFromDio(
@@ -554,10 +564,13 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     required OrderType? orderType,
     required CartState? cart,
     required String? ticketNumber,
+    Order? confirmedOrder,
     double? amountGiven,
     double? changeReturned,
   }) {
-    if (cart != null) {
+    if (confirmedOrder != null) {
+      _upsertLocalOrder(confirmedOrder);
+    } else if (cart != null) {
       _upsertLocalOrder(
         _confirmedOrderFromCart(
           orderId: orderId,
@@ -569,9 +582,10 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
           changeReturned: changeReturned,
         ),
       );
-      if (ref.read(testModeProvider).isActive) {
-        ref.read(stockProvider.notifier).applySaleCart(cart);
-      }
+    }
+
+    if (cart != null && ref.read(testModeProvider).isActive) {
+      ref.read(stockProvider.notifier).applySaleCart(cart);
     }
 
     unawaited(fetchTodayOrders(showLoading: false, force: true));

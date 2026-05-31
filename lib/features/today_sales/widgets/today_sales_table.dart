@@ -322,7 +322,8 @@ class _OrderItemsSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
+    final itemGroups = groupCartItemsForDisplay(items);
+    if (itemGroups.isEmpty) {
       return Text(
         'No item details',
         style: AppTextStyles.body.copyWith(
@@ -334,10 +335,13 @@ class _OrderItemsSummary extends StatelessWidget {
       );
     }
 
-    if (items.length <= 1) {
-      final item = items.first;
+    if (itemGroups.length <= 1) {
+      final group = itemGroups.first;
+      final item = group.item;
       return Text(
-        '${item.quantity}x ${item.product.name}',
+        group.components.isEmpty
+            ? '${item.quantity}x ${item.product.name}'
+            : '${item.product.name} - ${group.components.map((component) => '${component.quantity}x ${component.product.name}').join(', ')}',
         style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
@@ -348,7 +352,9 @@ class _OrderItemsSummary extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '${items.first.quantity}x ${items.first.product.name} ...',
+          itemGroups.first.components.isEmpty
+              ? '${itemGroups.first.item.quantity}x ${itemGroups.first.item.product.name} ...'
+              : '${itemGroups.first.item.product.name} ...',
           style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -361,7 +367,7 @@ class _OrderItemsSummary extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
-            '+ ${items.length - 1} more items',
+            '+ ${itemGroups.length - 1} more items',
             style: AppTextStyles.labelSm
                 .copyWith(color: AppColors.blue, fontWeight: FontWeight.w700),
           ),

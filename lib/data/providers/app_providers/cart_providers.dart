@@ -26,7 +26,7 @@ class CartState {
   double get discountAmount =>
       items.fold(0, (sum, i) => sum + i.discountAmount);
   double get subtotal => items.fold(0, (sum, i) => sum + i.total);
-  int get itemCount => items.fold(0, (sum, i) => sum + i.quantity);
+  int get itemCount => displayQuantityForCartItems(items);
   bool get isQrOrder => redemptionToken != null && redemptionToken!.isNotEmpty;
   bool get isLockedForQr => isQrOrder;
 
@@ -87,6 +87,8 @@ class CartNotifier extends StateNotifier<CartState> {
   void updateNote(int index, String? note) {
     final items = [...state.items];
     items[index] = CartItem(
+      lineId: items[index].lineId,
+      parentLineId: items[index].parentLineId,
       product: items[index].product,
       quantity: items[index].quantity,
       note: note,
@@ -100,6 +102,8 @@ class CartNotifier extends StateNotifier<CartState> {
   void updateDiscount(int index, double? percent) {
     final items = [...state.items];
     items[index] = CartItem(
+      lineId: items[index].lineId,
+      parentLineId: items[index].parentLineId,
       product: items[index].product,
       quantity: items[index].quantity,
       note: items[index].note,

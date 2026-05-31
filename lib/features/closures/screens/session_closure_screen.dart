@@ -42,7 +42,6 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
   bool _submittedStock = false;
   bool _isClosingSession = false;
   bool _isCreatingTpeUpload = false;
-  bool _financialDefaultsInitialized = false;
 
   final _actualCashCtrl = TextEditingController();
   final _actualCardCtrl = TextEditingController();
@@ -101,27 +100,6 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
           .valueOrNull
           ?.activeSessionOpeningFund ??
       0.0;
-
-  void _syncFinancialDefaultsIfReady(
-    AsyncValue<List<Order>> ordersAsync,
-    AsyncValue<PosSessionStatus?> sessionStatusAsync,
-  ) {
-    if (_financialDefaultsInitialized ||
-        !ordersAsync.hasValue ||
-        !sessionStatusAsync.hasValue) {
-      return;
-    }
-    _financialDefaultsInitialized = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() {
-        _actualCashCtrl.text = _theoreticalCash.toStringAsFixed(3);
-        _actualCardCtrl.text = _theoreticalCard.toStringAsFixed(3);
-        _actualOtherCtrl.text = _theoreticalOther.toStringAsFixed(3);
-        _actualFloatCtrl.text = _theoreticalFloat.toStringAsFixed(3);
-      });
-    });
-  }
 
   bool get _hasFinancialDiscrepancy {
     final cashEntered = double.tryParse(_actualCashCtrl.text) ?? 0;
@@ -325,9 +303,8 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ordersAsync = ref.watch(ordersProvider);
-    final sessionStatusAsync = ref.watch(activeSessionStatusProvider);
-    _syncFinancialDefaultsIfReady(ordersAsync, sessionStatusAsync);
+    ref.watch(ordersProvider);
+    ref.watch(activeSessionStatusProvider);
     return _buildSessionClosureScreen(context);
   }
 }

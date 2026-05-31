@@ -170,10 +170,10 @@ Future<RawTicketPrinterBackendResult> _printTicketWithRawDevices(
   }
 }
 
-RawTicketPrinterBackendResult _printTicketOnWindows(
+Future<RawTicketPrinterBackendResult> _printTicketOnWindows(
   String jobName,
   Uint8List bytes,
-) {
+) async {
   try {
     final spooler = _WindowsPrinterSpooler();
     final printers = spooler.listTicketPrinters();
@@ -184,25 +184,24 @@ RawTicketPrinterBackendResult _printTicketOnWindows(
       );
     }
 
-    var printedCount = 0;
-    final failedPrinters = <String>[];
-    for (final printer in printers) {
-      try {
-        spooler.printRawBytes(
-          printerName: printer.name,
-          jobName: jobName,
-          bytes: bytes,
-        );
-        printedCount++;
-      } catch (error) {
-        failedPrinters.add('${printer.name} (${error.toString()})');
-      }
-    }
+    final printResults = await Future.wait(
+      printers.map((printer) => Isolate.run(
+            () => _printTicketOnSingleWindowsPrinter(
+              printer.name,
+              jobName,
+              bytes,
+            ),
+          )),
+    );
+    final failedPrinters = printResults.whereType<String>().toList();
 
     return RawTicketPrinterBackendResult(
       printerCount: printers.length,
-      printedCount: printedCount,
+      printedCount: printers.length - failedPrinters.length,
       failedPrinters: failedPrinters,
+      successMessage: failedPrinters.isEmpty
+          ? 'Ticket queued on ${printers.map((printer) => printer.name).join(', ')} (${bytes.length} bytes).'
+          : null,
     );
   } catch (error) {
     return RawTicketPrinterBackendResult(
@@ -210,6 +209,23 @@ RawTicketPrinterBackendResult _printTicketOnWindows(
       printedCount: 0,
       error: 'Direct thermal ticket printing failed: ${error.toString()}',
     );
+  }
+}
+
+String? _printTicketOnSingleWindowsPrinter(
+  String printerName,
+  String jobName,
+  Uint8List bytes,
+) {
+  try {
+    _WindowsPrinterSpooler().printRawBytes(
+      printerName: printerName,
+      jobName: jobName,
+      bytes: bytes,
+    );
+    return null;
+  } catch (error) {
+    return '$printerName (${error.toString()})';
   }
 }
 

@@ -3,12 +3,14 @@ part of '../screens/sales_screen.dart';
 class _CartItemTile extends ConsumerWidget {
   final int index;
   final CartItem item;
+  final List<CartItem> components;
   final bool readonly;
   final String? importedOrderNote;
 
   const _CartItemTile({
     required this.index,
     required this.item,
+    this.components = const [],
     this.readonly = false,
     this.importedOrderNote,
   });
@@ -22,6 +24,7 @@ class _CartItemTile extends ConsumerWidget {
     final effectiveNote = item.note?.trim().isNotEmpty == true
         ? item.note!.trim()
         : (importedOrderNote?.isNotEmpty == true ? importedOrderNote : null);
+    final hasComponents = components.isNotEmpty;
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -31,7 +34,9 @@ class _CartItemTile extends ConsumerWidget {
       child: Row(
         children: [
           // Qty stepper — bigger
-          if (!readonly)
+          if (readonly && hasComponents)
+            SizedBox(width: layout.isCompact ? 54 : 60)
+          else if (!readonly)
             _QtyBtn(
                 icon: Icons.remove_rounded,
                 onTap: () => cart.updateQuantity(index, item.quantity - 1))
@@ -64,9 +69,12 @@ class _CartItemTile extends ConsumerWidget {
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
+                if (hasComponents)
+                  for (final component in components)
+                    _DealComponentLine(component: component),
                 if (effectiveNote != null)
                   Text(
-                    '📝 $effectiveNote',
+                    effectiveNote,
                     style: AppTextStyles.bodySm.copyWith(
                       color: AppColors.textSecondaryFor(context),
                     ),
@@ -242,6 +250,44 @@ class _CartItemTile extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DealComponentLine extends StatelessWidget {
+  final CartItem component;
+
+  const _DealComponentLine({required this.component});
+
+  @override
+  Widget build(BuildContext context) {
+    final note = component.note?.trim();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '- ${component.quantity}x ${component.product.name}',
+            style: AppTextStyles.bodySm.copyWith(
+              color: AppColors.textPrimaryFor(context),
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (note != null && note.isNotEmpty)
+            Text(
+              '  $note',
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.textSecondaryFor(context),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+        ],
       ),
     );
   }

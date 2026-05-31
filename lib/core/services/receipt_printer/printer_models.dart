@@ -116,6 +116,26 @@ class ReceiptModifier {
   });
 }
 
+class ReceiptLineComponent {
+  final String name;
+  final int quantity;
+  final String? note;
+
+  const ReceiptLineComponent({
+    required this.name,
+    required this.quantity,
+    this.note,
+  });
+
+  factory ReceiptLineComponent.fromCartItem(CartItem item) {
+    return ReceiptLineComponent(
+      name: item.product.name,
+      quantity: item.quantity,
+      note: item.note,
+    );
+  }
+}
+
 class ReceiptLine {
   final String name;
   final int quantity;
@@ -124,6 +144,7 @@ class ReceiptLine {
   final String? note;
   final bool isDealComponent;
   final String? parentDealName;
+  final List<ReceiptLineComponent> components;
 
   const ReceiptLine({
     required this.name,
@@ -133,15 +154,17 @@ class ReceiptLine {
     this.note,
     this.isDealComponent = false,
     this.parentDealName,
+    this.components = const [],
   });
 
-  factory ReceiptLine.fromCartItem(CartItem item) {
+  factory ReceiptLine.fromCartItem(
+    CartItem item, {
+    List<CartItem> components = const [],
+  }) {
     final discountAmount = item.discountAmount;
     final discountPercent = item.discountPercent;
     return ReceiptLine(
-      name: item.isDealComponent
-          ? 'Deal item - ${item.product.name}'
-          : item.product.name,
+      name: item.product.name,
       quantity: item.quantity,
       unitPrice: item.isDealComponent
           ? 0
@@ -160,7 +183,19 @@ class ReceiptLine {
       note: item.note,
       isDealComponent: item.isDealComponent,
       parentDealName: item.parentDealName,
+      components: components.map(ReceiptLineComponent.fromCartItem).toList(),
     );
+  }
+
+  static List<ReceiptLine> fromCartItems(List<CartItem> items) {
+    return groupCartItemsForDisplay(items)
+        .map(
+          (group) => ReceiptLine.fromCartItem(
+            group.item,
+            components: group.components,
+          ),
+        )
+        .toList();
   }
 
   double get total => isDealComponent ? 0 : unitPrice * quantity;
@@ -228,7 +263,7 @@ class ReceiptData {
           : 'ORDER-${order.id}',
       orderId: order.id,
       soldAt: order.createdAt,
-      lines: order.items.map(ReceiptLine.fromCartItem).toList(),
+      lines: ReceiptLine.fromCartItems(order.items),
       orderType: order.orderType,
       paymentType: order.paymentType,
       sourceLabel: order.isQrOrder ? 'Mobile QR order' : 'POS sale',

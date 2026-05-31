@@ -196,6 +196,7 @@ class ReceiptPrinterService {
         jobName: 'W Burger Cash Drawer',
         bytes: bytes,
         paperWidthMm: config.paperSize.widthMm,
+        allowBrowserFallback: false,
       );
       final out = ReceiptPrintResult(
         printerCount: result.printerCount,

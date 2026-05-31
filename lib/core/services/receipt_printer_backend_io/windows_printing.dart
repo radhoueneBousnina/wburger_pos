@@ -228,6 +228,9 @@ class _WindowsPrinterSpooler {
       _posPrinterNameConfig,
       _posPrinterNamesConfig,
       _rawPrinterNamesConfig,
+      Platform.environment['POS_PRINTER_NAME'] ?? '',
+      Platform.environment['POS_PRINTER_NAMES'] ?? '',
+      Platform.environment['RAW_PRINT_ALLOWED_PRINTERS'] ?? '',
     ];
 
     return rawValues

@@ -302,8 +302,10 @@ void main() {
         },
         {
           'id': 2,
+          'parent_item': 1,
           'quantity': 2,
           'unit_price': '0.000',
+          'note': 'No onions',
           'is_deal_component': true,
           'parent_deal_details': {
             'id': 10,
@@ -331,9 +333,12 @@ void main() {
     final receipt = ReceiptData.fromOrder(order);
     expect(receipt.subtotal, 0);
     expect(receipt.totalAmount, 0);
-    expect(receipt.lines.last.name, 'Deal item - Classic Burger');
-    expect(receipt.lines.last.quantity, 2);
-    expect(receipt.lines.last.total, 0);
+    expect(receipt.lines, hasLength(1));
+    expect(receipt.lines.single.name, 'Multi Day Burger Pack');
+    expect(receipt.lines.single.components, hasLength(1));
+    expect(receipt.lines.single.components.single.name, 'Classic Burger');
+    expect(receipt.lines.single.components.single.quantity, 2);
+    expect(receipt.lines.single.components.single.note, 'No onions');
 
     final preview = ReceiptPrinterService.instance.buildPreviewText(
       receipt,
@@ -341,8 +346,14 @@ void main() {
     );
 
     expect(preview, contains('Multi Day Burger Pack'));
-    expect(preview, contains('Deal item - Classic Burger'));
-    expect(preview, contains('- From Multi Day Burger Pack'));
+    expect(preview, contains('- 2x Classic Burger'));
+    expect(preview, contains('No onions'));
+    expect(preview, isNot(contains('Note:')));
+    expect(preview, isNot(contains('Deal item')));
+    final packLine = preview
+        .split('\n')
+        .firstWhere((line) => line.contains('Multi Day Burger Pack'));
+    expect(packLine.trimLeft(), isNot(startsWith('1')));
   });
 
   test('builds a conservative hardware smoke test without logo raster bytes',

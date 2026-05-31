@@ -167,6 +167,8 @@ class Product {
 }
 
 class CartItem {
+  final String? lineId;
+  final String? parentLineId;
   final Product product;
   int quantity;
   String? note;
@@ -175,6 +177,8 @@ class CartItem {
   final String? parentDealName;
 
   CartItem({
+    this.lineId,
+    this.parentLineId,
     required this.product,
     this.quantity = 1,
     this.note,
@@ -199,6 +203,8 @@ class CartItem {
   }
 
   CartItem copyWith({
+    String? lineId,
+    String? parentLineId,
     Product? product,
     int? quantity,
     String? note,
@@ -207,6 +213,8 @@ class CartItem {
     String? parentDealName,
   }) {
     return CartItem(
+      lineId: lineId ?? this.lineId,
+      parentLineId: parentLineId ?? this.parentLineId,
       product: product ?? this.product,
       quantity: quantity ?? this.quantity,
       note: note ?? this.note,
@@ -230,6 +238,110 @@ class CartItem {
       if (note != null && note!.isNotEmpty) 'note': note,
     };
   }
+}
+
+class CartItemGroup {
+  final int itemIndex;
+  final CartItem item;
+  final List<CartItem> components;
+
+  const CartItemGroup({
+    required this.itemIndex,
+    required this.item,
+    this.components = const [],
+  });
+}
+
+List<CartItemGroup> groupCartItemsForDisplay(List<CartItem> items) {
+  final rootIndexes = <int>[];
+  final componentsByRootIndex = <int, List<CartItem>>{};
+  final rootIndexByLineId = <String, int>{};
+
+  for (var index = 0; index < items.length; index++) {
+    final item = items[index];
+    if (item.isDealComponent) continue;
+
+    rootIndexes.add(index);
+    final lineId = item.lineId;
+    if (lineId != null && lineId.isNotEmpty) {
+      rootIndexByLineId[lineId] = index;
+    }
+  }
+
+  final standaloneComponentIndexes = <int>[];
+  for (var index = 0; index < items.length; index++) {
+    final component = items[index];
+    if (!component.isDealComponent) continue;
+
+    final rootIndex = _rootIndexForComponent(
+      component,
+      index,
+      items,
+      rootIndexes,
+      rootIndexByLineId,
+    );
+    if (rootIndex == null) {
+      standaloneComponentIndexes.add(index);
+      continue;
+    }
+
+    componentsByRootIndex.putIfAbsent(rootIndex, () => []).add(component);
+  }
+
+  final groups = <CartItemGroup>[
+    for (final index in rootIndexes)
+      CartItemGroup(
+        itemIndex: index,
+        item: items[index],
+        components: componentsByRootIndex[index] ?? const [],
+      ),
+    for (final index in standaloneComponentIndexes)
+      CartItemGroup(itemIndex: index, item: items[index]),
+  ];
+
+  groups.sort((a, b) => a.itemIndex.compareTo(b.itemIndex));
+  return groups;
+}
+
+int displayQuantityForCartItems(List<CartItem> items) {
+  return groupCartItemsForDisplay(items).fold<int>(0, (sum, group) {
+    if (group.components.isEmpty) return sum + group.item.quantity;
+    return sum +
+        group.components.fold<int>(
+          0,
+          (componentSum, component) => componentSum + component.quantity,
+        );
+  });
+}
+
+int? _rootIndexForComponent(
+  CartItem component,
+  int componentIndex,
+  List<CartItem> items,
+  List<int> rootIndexes,
+  Map<String, int> rootIndexByLineId,
+) {
+  final parentLineId = component.parentLineId;
+  if (parentLineId != null && parentLineId.isNotEmpty) {
+    final rootIndex = rootIndexByLineId[parentLineId];
+    if (rootIndex != null) return rootIndex;
+  }
+
+  final parentName = component.parentDealName?.trim().toLowerCase();
+  if (parentName != null && parentName.isNotEmpty) {
+    for (final rootIndex in rootIndexes.reversed) {
+      final root = items[rootIndex];
+      if (rootIndex > componentIndex) continue;
+      if (root.product.name.trim().toLowerCase() == parentName) {
+        return rootIndex;
+      }
+    }
+  }
+
+  for (final rootIndex in rootIndexes.reversed) {
+    if (rootIndex < componentIndex) return rootIndex;
+  }
+  return rootIndexes.isEmpty ? null : rootIndexes.last;
 }
 
 enum OrderType { dineIn, takeaway }
@@ -387,6 +499,8 @@ class Order {
 
           product = product.copyWith(price: isDealComponent ? 0 : unitPrice);
           parsedItems.add(CartItem(
+            lineId: itemMap['id']?.toString(),
+            parentLineId: itemMap['parent_item']?.toString(),
             product: product,
             quantity: _parseInt(itemMap['quantity'], fallback: 1),
             note: itemMap['note']?.toString(),

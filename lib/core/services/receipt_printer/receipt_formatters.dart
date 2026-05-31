@@ -30,6 +30,7 @@ String _centerInColumn(String value, int width) {
 }
 
 String _quantityInColumn(int quantity, int width) {
+  if (quantity <= 0) return ''.padRight(width);
   final clean = math.max(1, quantity).toString();
   final leftWidth = math.min(3, math.max(1, width));
   return clean.padLeft(leftWidth).padRight(width);

@@ -252,8 +252,7 @@ class _OrderTotalsPanel extends StatelessWidget {
       _InfoTileData(
         icon: Icons.shopping_cart_checkout_rounded,
         label: 'Items',
-        value:
-            '${order.items.fold<int>(0, (sum, item) => sum + item.quantity)}',
+        value: '${displayQuantityForCartItems(order.items)}',
       ),
       _InfoTileData(
         icon: Icons.discount_rounded,
@@ -368,6 +367,7 @@ class _ItemsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final itemGroups = groupCartItemsForDisplay(order.items);
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -396,7 +396,7 @@ class _ItemsSection extends StatelessWidget {
                 Text('Ordered items', style: AppTextStyles.titleLg),
                 const Spacer(),
                 Text(
-                  '${order.items.length} line${order.items.length == 1 ? '' : 's'}',
+                  '${itemGroups.length} line${itemGroups.length == 1 ? '' : 's'}',
                   style: AppTextStyles.label.copyWith(
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w800,
@@ -405,7 +405,7 @@ class _ItemsSection extends StatelessWidget {
               ],
             ),
           ),
-          if (order.items.isEmpty)
+          if (itemGroups.isEmpty)
             Padding(
               padding: const EdgeInsets.all(18),
               child: Text(
@@ -450,7 +450,7 @@ class _ItemsSection extends StatelessWidget {
                     ),
                   ],
                 ),
-                for (final item in order.items)
+                for (final group in itemGroups)
                   TableRow(
                     children: [
                       Padding(
@@ -471,7 +471,9 @@ class _ItemsSection extends StatelessWidget {
                                       AppColors.yellow.withValues(alpha: 0.5)),
                             ),
                             child: Text(
-                              'x${item.quantity}',
+                              group.components.isEmpty
+                                  ? 'x${group.item.quantity}'
+                                  : '',
                               style: AppTextStyles.title.copyWith(
                                 color: AppColors.blue,
                                 fontWeight: FontWeight.w900,
@@ -488,22 +490,43 @@ class _ItemsSection extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              item.product.name,
+                              group.item.product.name,
                               style: AppTextStyles.title
                                   .copyWith(fontWeight: FontWeight.w800),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${item.unitPrice.toStringAsFixed(3)} DT each',
+                              '${group.item.unitPrice.toStringAsFixed(3)} DT each',
                               style: AppTextStyles.bodySm.copyWith(
                                 color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            if (item.note?.trim().isNotEmpty == true) ...[
+                            for (final component in group.components) ...[
                               const SizedBox(height: 4),
                               Text(
-                                item.note!.trim(),
+                                '- ${component.quantity}x ${component.product.name}',
+                                style: AppTextStyles.bodySm.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              if (component.note?.trim().isNotEmpty ==
+                                  true) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  '  ${component.note!.trim()}',
+                                  style: AppTextStyles.bodySm.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ],
+                            if (group.item.note?.trim().isNotEmpty == true) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                group.item.note!.trim(),
                                 style: AppTextStyles.bodySm.copyWith(
                                   color: AppColors.textSecondary,
                                   fontWeight: FontWeight.w600,
@@ -520,7 +543,7 @@ class _ItemsSection extends StatelessWidget {
                         child: Align(
                           alignment: Alignment.centerRight,
                           child: Text(
-                            '${item.total.toStringAsFixed(3)} DT',
+                            '${group.item.total.toStringAsFixed(3)} DT',
                             style: AppTextStyles.price
                                 .copyWith(fontSize: compact ? 16 : 18),
                           ),

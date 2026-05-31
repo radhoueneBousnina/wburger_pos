@@ -14,6 +14,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
@@ -221,18 +222,29 @@ class PrintBridgeHandler(BaseHTTPRequestHandler):
             return
 
         job_name = str(payload.get("job_name") or "W Burger Ticket").strip()
-        printed_count = 0
         errors: list[str] = []
-        for printer in printers:
-            completed = _print_raw_bytes(
-                printer=printer,
-                job_name=job_name,
-                raw_bytes=raw_bytes,
-            )
-            if completed.returncode == 0:
-                printed_count += 1
-            else:
-                errors.append(f"{printer}: {_error_text(completed)}")
+        with ThreadPoolExecutor(max_workers=max(1, len(printers))) as executor:
+            futures = {
+                executor.submit(
+                    _print_raw_bytes,
+                    printer=printer,
+                    job_name=job_name,
+                    raw_bytes=raw_bytes,
+                ): printer
+                for printer in printers
+            }
+            for future in as_completed(futures):
+                printer = futures[future]
+                try:
+                    completed = future.result()
+                except Exception as exc:
+                    errors.append(f"{printer}: {exc}")
+                    continue
+
+                if completed.returncode != 0:
+                    errors.append(f"{printer}: {_error_text(completed)}")
+
+        printed_count = len(printers) - len(errors)
 
         if errors:
             self._send_json(

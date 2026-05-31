@@ -130,10 +130,13 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   List<PaymentType> get _availablePaymentTypes {
     final isDeal = widget.initialPaymentType == PaymentType.deal ||
         _selectedType == PaymentType.deal;
+    if (isDeal) {
+      return const [PaymentType.deal];
+    }
     final options = <PaymentType>[
       PaymentType.cash,
       PaymentType.card,
-      if (!isDeal) PaymentType.staff,
+      PaymentType.staff,
       PaymentType.other,
     ];
     return options;
@@ -364,28 +367,42 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       _buildTotalCard(compact: true),
     ];
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 9,
-          child: Column(
-            children: leftChildren
-                .expand((w) => [w, const SizedBox(height: 10)])
-                .toList()
-              ..removeLast(),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          flex: 10,
-          child: _buildCashDetailsSection(
-            dense: true,
-            forceStackedKeypad: false,
-            keypadWidth: 260,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 9,
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: leftChildren
+                        .expand((w) => [w, const SizedBox(height: 10)])
+                        .toList()
+                      ..removeLast(),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              flex: 10,
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: SingleChildScrollView(
+                  child: _buildCashDetailsSection(
+                    dense: true,
+                    forceStackedKeypad: false,
+                    keypadWidth: 260,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

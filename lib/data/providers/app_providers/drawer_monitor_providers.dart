@@ -15,21 +15,24 @@ class CashDrawerKeyMonitor {
   Timer? _timer;
   bool? _lastIsOpen;
   bool _isPolling = false;
+  bool _statusUnsupported = false;
   DateTime? _lastLoggedAt;
 
   CashDrawerKeyMonitor(this._ref);
 
   void start() {
-    unawaited(_poll());
     _timer = Timer.periodic(_pollInterval, (_) => unawaited(_poll()));
+    unawaited(_poll());
   }
 
   void dispose() {
+    _statusUnsupported = true;
     _timer?.cancel();
+    _timer = null;
   }
 
   Future<void> _poll() async {
-    if (_isPolling) return;
+    if (_isPolling || _statusUnsupported) return;
 
     final auth = _ref.read(authProvider);
     if (!auth.isAuthenticated) {
@@ -42,6 +45,7 @@ class CashDrawerKeyMonitor {
       final status =
           await ReceiptPrinterService.instance.readCashDrawerStatus();
       if (!status.supported) {
+        _statusUnsupported = true;
         _timer?.cancel();
         _timer = null;
         return;

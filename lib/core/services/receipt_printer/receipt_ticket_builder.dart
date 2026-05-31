@@ -300,21 +300,33 @@ class ReceiptTicketBuilder {
 
   void _writeItem(_TicketComposer builder, ReceiptLine line) {
     final quantity = math.max(1, line.quantity);
+    final hasComponents = line.components.isNotEmpty;
     builder.itemRow(
-      quantity: quantity,
-      name: line.name,
+      quantity: line.isDealComponent || hasComponents ? 0 : quantity,
+      name:
+          line.isDealComponent ? '- ${line.quantity}x ${line.name}' : line.name,
       price: line.isDealComponent ? '' : _formatMoney(line.total),
       bold: true,
     );
 
-    if (line.isDealComponent && _hasText(line.parentDealName)) {
-      builder.modifierRow('- From ${line.parentDealName!.trim()}');
-    }
     for (final modifier in line.modifiers) {
       _writeModifier(builder, modifier);
     }
     if (_hasText(line.note)) {
-      builder.modifierRow('- Note: ${line.note!.trim()}');
+      builder.modifierRow('- ${line.note!.trim()}');
+    }
+    for (final component in line.components) {
+      _writeComponent(builder, component);
+    }
+  }
+
+  void _writeComponent(
+    _TicketComposer builder,
+    ReceiptLineComponent component,
+  ) {
+    builder.modifierRow('- ${component.quantity}x ${component.name}');
+    if (_hasText(component.note)) {
+      builder.modifierRow('  ${component.note!.trim()}');
     }
   }
 
