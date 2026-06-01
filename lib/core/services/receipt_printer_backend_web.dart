@@ -105,7 +105,7 @@ class RawTicketPrinterBackend {
           }
         }
       } catch (e) {
-        bridgeError = apiClient.describeError(
+        bridgeError = _describeBridgeError(
           e,
           fallback: 'Local USB print bridge is unavailable.',
         );
@@ -210,7 +210,7 @@ class RawTicketPrinterBackend {
       supported: false,
       error: lastError == null
           ? 'Drawer status bridge is not available.'
-          : apiClient.describeError(
+          : _describeBridgeError(
               lastError,
               fallback: 'Drawer status bridge is not available.',
             ),
@@ -223,19 +223,37 @@ RawTicketPrinterBackend createRawTicketPrinterBackend() {
 }
 
 List<String> _localPrintEndpoints() {
-  return _uniqueEndpoints(
-    const [
-      ApiConstants.printProxyBridge,
-    ],
-  );
+  return _bridgeEndpointsForPath(ApiConstants.printProxy);
 }
 
 List<String> _drawerStatusEndpoints() {
-  return _uniqueEndpoints(
-    const [
-      ApiConstants.drawerStatusProxyBridge,
-    ],
-  );
+  return _bridgeEndpointsForPath(ApiConstants.drawerStatusProxy);
+}
+
+List<String> _bridgeEndpointsForPath(String apiPath) {
+  final normalizedPath = apiPath.startsWith('/') ? apiPath : '/$apiPath';
+  final endpoints = <String>[
+    '${_normalizedBridgeBaseUrl()}$normalizedPath',
+  ];
+
+  final configuredUri = Uri.tryParse(ApiConstants.printBridgeBaseUrl.trim());
+  final scheme =
+      configuredUri?.scheme.isNotEmpty == true ? configuredUri!.scheme : 'http';
+  final port = configuredUri?.port ?? 19100;
+
+  endpoints
+    ..add('$scheme://127.0.0.1:$port$normalizedPath')
+    ..add('$scheme://localhost:$port$normalizedPath');
+
+  return _uniqueEndpoints(endpoints);
+}
+
+String _normalizedBridgeBaseUrl() {
+  var value = ApiConstants.printBridgeBaseUrl.trim();
+  while (value.endsWith('/')) {
+    value = value.substring(0, value.length - 1);
+  }
+  return value.isEmpty ? 'http://127.0.0.1:19100' : value;
 }
 
 List<String> _uniqueEndpoints(List<String> endpoints) {
@@ -280,6 +298,28 @@ String? _backendPrintMessage(Map data) {
   if (message == null) return null;
   if (message is List) return message.join('\n');
   return message.toString();
+}
+
+String _describeBridgeError(
+  Object error, {
+  required String fallback,
+}) {
+  if (error is DioException) {
+    switch (error.type) {
+      case DioExceptionType.connectionError:
+        return 'Local USB print bridge is not running on this cashier machine. Start the POS with scripts/run_pos_web_vps.sh and try again.';
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'Local USB print bridge timed out. Check that the printer is connected and CUPS is not stuck.';
+      case DioExceptionType.badResponse:
+      case DioExceptionType.cancel:
+      case DioExceptionType.badCertificate:
+      case DioExceptionType.unknown:
+        break;
+    }
+  }
+  return apiClient.describeError(error, fallback: fallback);
 }
 
 Future<void> _openBrowserPrintPreview({

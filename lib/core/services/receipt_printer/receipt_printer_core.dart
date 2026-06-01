@@ -27,7 +27,10 @@ class ReceiptPrinterService {
     bool? openDrawer,
     bool allowBrowserFallback = true,
   }) async {
-    final shouldOpenDrawer = openDrawer ?? !data.isReprint;
+    final shouldOpenDrawer = shouldOpenDrawerForReceipt(
+      data,
+      explicitOpenDrawer: openDrawer,
+    );
     if (shouldOpenDrawer) {
       markDrawerOpenExpected();
     }
@@ -322,5 +325,13 @@ class ReceiptPrinterService {
     final ticket =
         data.ticketNumber.replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '_');
     return 'W Burger Ticket $ticket';
+  }
+
+  bool shouldOpenDrawerForReceipt(
+    ReceiptData data, {
+    bool? explicitOpenDrawer,
+  }) {
+    if (explicitOpenDrawer != null) return explicitOpenDrawer;
+    return !data.isReprint && data.paymentType == PaymentType.cash;
   }
 }

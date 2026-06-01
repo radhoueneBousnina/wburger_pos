@@ -11,6 +11,7 @@ import argparse
 import base64
 import json
 import os
+import select
 import shutil
 import subprocess
 import tempfile
@@ -50,10 +51,10 @@ def _configured_printers() -> set[str]:
     }
 
 
-def _usb_cups_printers() -> list[str]:
+def _cups_printer_devices() -> dict[str, str]:
     lpstat_path = shutil.which("lpstat")
     if not lpstat_path:
-        return []
+        return {}
 
     try:
         output = subprocess.check_output(
@@ -62,20 +63,191 @@ def _usb_cups_printers() -> list[str]:
             timeout=4,
         ).decode(errors="ignore")
     except Exception:
-        return []
+        return {}
 
-    printers: list[str] = []
+    printers: dict[str, str] = {}
     for line in output.splitlines():
-        if "device for" not in line or "usb://" not in line:
+        if "device for" not in line:
             continue
-        name = line.split("device for ", 1)[1].split(":", 1)[0].strip()
+        raw = line.split("device for ", 1)[1]
+        name, _, device_uri = raw.partition(":")
+        name = name.strip()
         if name:
-            printers.append(name)
+            printers[name] = device_uri.strip()
+    return printers
+
+
+def _is_virtual_printer(name: str, device_uri: str) -> bool:
+    value = f"{name} {device_uri}".lower()
+    return any(
+        marker in value
+        for marker in (
+            "pdf",
+            "xps",
+            "fax",
+            "onenote",
+            "cups-pdf",
+            "print-to-file",
+            "file:/",
+        )
+    )
+
+
+def _is_ticket_printer(name: str, device_uri: str) -> bool:
+    value = f"{name} {device_uri}".lower()
+    return any(
+        marker in value
+        for marker in (
+            "80mm",
+            "58mm",
+            "thermal",
+            "receipt",
+            "escpos",
+            "esc-pos",
+            "esc_pos",
+            "pos",
+            "sprt",
+            "xprinter",
+            "xp-",
+            "rongta",
+            "rp-",
+            "zjiang",
+            "sunmi",
+            "bixolon",
+            "star",
+            "citizen",
+            "epson%20tm",
+            "epson tm",
+            "tm-t",
+            "tm-u",
+            "tsp",
+            "ct-s",
+            "usb",
+            "ticket",
+        )
+    )
+
+
+def _cups_ticket_printers() -> list[str]:
+    devices = _cups_printer_devices()
 
     allowed = _configured_printers()
     if allowed:
-        printers = [printer for printer in printers if printer in allowed]
-    return printers
+        return sorted(allowed)
+
+    real_printers = [
+        name
+        for name, device_uri in devices.items()
+        if not _is_virtual_printer(name, device_uri)
+    ]
+    ticket_printers = [
+        name
+        for name in real_printers
+        if _is_ticket_printer(name, devices.get(name, ""))
+    ]
+    if ticket_printers:
+        return sorted(ticket_printers)
+    return sorted(real_printers)
+
+
+def _raw_printer_devices() -> list[str]:
+    candidates: list[str] = []
+    for directory, names in (
+        ("/dev/usb", lambda value: value.startswith("lp")),
+        ("/dev", lambda value: value.startswith("lp")),
+    ):
+        try:
+            for name in os.listdir(directory):
+                if names(name):
+                    candidates.append(os.path.join(directory, name))
+        except OSError:
+            continue
+
+    seen: set[str] = set()
+    devices: list[str] = []
+    for path in candidates:
+        if path not in seen and os.path.exists(path):
+            seen.add(path)
+            devices.append(path)
+    return sorted(devices)
+
+
+def _query_status_byte(path: str, command: bytes, timeout: float = 0.35) -> int | None:
+    fd = os.open(path, os.O_RDWR | os.O_NONBLOCK)
+    try:
+        os.write(fd, command)
+        ready, _, _ = select.select([fd], [], [], timeout)
+        if not ready:
+            return None
+        data = os.read(fd, 1)
+        if not data:
+            return None
+        return data[0]
+    finally:
+        os.close(fd)
+
+
+def _bool_env(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _read_drawer_status() -> tuple[dict[str, Any], int]:
+    devices = _raw_printer_devices()
+    if not devices:
+        return (
+            {
+                "status": "unsupported",
+                "supported": False,
+                "message": (
+                    "Cash drawer status needs a bidirectional raw printer device "
+                    "such as /dev/usb/lp0. None was available."
+                ),
+            },
+            200,
+        )
+
+    errors: list[str] = []
+    for device in devices:
+        try:
+            dle_eot_status = _query_status_byte(device, b"\x10\x04\x01")
+            gs_r_status = None
+            if dle_eot_status is None:
+                gs_r_status = _query_status_byte(device, b"\x1d\x72\x02")
+            if dle_eot_status is None and gs_r_status is None:
+                raise RuntimeError("No drawer status byte returned.")
+
+            pin3_high = (
+                bool(dle_eot_status & 0x04)
+                if dle_eot_status is not None
+                else bool(gs_r_status & 0x01)
+            )
+            open_when_high = _bool_env("CASH_DRAWER_OPEN_WHEN_PIN3_HIGH", True)
+            is_open = pin3_high if open_when_high else not pin3_high
+            return (
+                {
+                    "status": "success",
+                    "supported": True,
+                    "is_open": is_open,
+                    "pin3_high": pin3_high,
+                    "source": device,
+                },
+                200,
+            )
+        except Exception as exc:
+            errors.append(f"{device}: {exc}")
+
+    return (
+        {
+            "status": "unsupported",
+            "supported": False,
+            "message": "Cash drawer status was not available from the connected printer.",
+            "details": errors,
+        },
+        200,
+    )
 
 
 def _print_raw_bytes(
@@ -144,7 +316,7 @@ class PrintBridgeHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path = self.path.split("?", 1)[0]
         if path in HEALTH_PATHS:
-            printers = _usb_cups_printers()
+            printers = _cups_ticket_printers()
             self._send_json(
                 {
                     "status": "success",
@@ -159,13 +331,8 @@ class PrintBridgeHandler(BaseHTTPRequestHandler):
             self._send_json({"detail": "Not found"}, status=404)
             return
 
-        self._send_json(
-            {
-                "status": "unsupported",
-                "supported": False,
-                "message": "Cash drawer status is not available from the local print bridge.",
-            }
-        )
+        payload, status = _read_drawer_status()
+        self._send_json(payload, status=status)
 
     def do_POST(self) -> None:
         if self.path.split("?", 1)[0] != PRINT_PATH:
@@ -208,13 +375,13 @@ class PrintBridgeHandler(BaseHTTPRequestHandler):
             return
 
         requested_printer = str(payload.get("printer") or "").strip()
-        printers = [requested_printer] if requested_printer else _usb_cups_printers()
+        printers = [requested_printer] if requested_printer else _cups_ticket_printers()
         if not printers:
             self._send_json(
                 {
                     "status": "error",
                     "message": (
-                        "No USB thermal printer was detected by local CUPS. "
+                        "No thermal/ticket printer was detected by local CUPS. "
                         "Check lpstat -v and set POS_PRINTER_NAME=80mm-Series if needed."
                     ),
                 }
@@ -311,8 +478,8 @@ def main() -> None:
         f"for {PRINT_PATH}"
     )
     print(
-        "[local-print-bridge] detected USB CUPS printers: "
-        f"{', '.join(_usb_cups_printers()) or 'none'}"
+        "[local-print-bridge] detected CUPS ticket printers: "
+        f"{', '.join(_cups_ticket_printers()) or 'none'}"
     )
     server.serve_forever()
 

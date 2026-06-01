@@ -385,6 +385,48 @@ void main() {
     expect(_containsBytes(bytes, const [0x1d, 0x56]), isFalse);
   });
 
+  test('opens the cash drawer automatically only for cash receipts', () {
+    final service = ReceiptPrinterService.instance;
+    final sampleReceipt = ReceiptData.sampleTestReceipt();
+    final cashReceipt = ReceiptData(
+      ticketNumber: 'W-020526-104',
+      soldAt: DateTime(2026, 5, 2, 18, 42),
+      lines: const [
+        ReceiptLine(name: 'Classic Burger', quantity: 1, unitPrice: 12),
+      ],
+      orderType: OrderType.takeaway,
+      paymentType: PaymentType.cash,
+      sourceLabel: 'POS sale',
+      subtotal: 12,
+      discountAmount: 0,
+      totalAmount: 12,
+    );
+    final cardReceipt = ReceiptData(
+      ticketNumber: 'W-020526-105',
+      soldAt: DateTime(2026, 5, 2, 18, 42),
+      lines: const [
+        ReceiptLine(name: 'Classic Burger', quantity: 1, unitPrice: 12),
+      ],
+      orderType: OrderType.takeaway,
+      paymentType: PaymentType.card,
+      sourceLabel: 'POS sale',
+      subtotal: 12,
+      discountAmount: 0,
+      totalAmount: 12,
+    );
+
+    expect(service.shouldOpenDrawerForReceipt(sampleReceipt), isFalse);
+    expect(service.shouldOpenDrawerForReceipt(cashReceipt), isTrue);
+    expect(service.shouldOpenDrawerForReceipt(cardReceipt), isFalse);
+    expect(
+      service.shouldOpenDrawerForReceipt(
+        cardReceipt,
+        explicitOpenDrawer: true,
+      ),
+      isTrue,
+    );
+  });
+
   test('prefers explicit success messages for non-native web print flows', () {
     const result = ReceiptPrintResult(
       printerCount: 1,

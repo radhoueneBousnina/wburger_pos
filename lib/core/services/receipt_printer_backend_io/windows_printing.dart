@@ -269,6 +269,7 @@ class _WindowsPrinterSpooler {
       'tm-u',
       'tsp',
       'ct-s',
+      'usb',
       'pos58',
       'pos80',
       'pos-58',

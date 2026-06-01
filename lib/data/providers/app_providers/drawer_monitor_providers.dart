@@ -10,13 +10,15 @@ final cashDrawerKeyMonitorProvider = Provider<CashDrawerKeyMonitor>((ref) {
 class CashDrawerKeyMonitor {
   static const Duration _pollInterval = Duration(seconds: 1);
   static const Duration _logCooldown = Duration(seconds: 4);
+  static const Duration _unsupportedRetryInterval = Duration(seconds: 15);
 
   final Ref _ref;
   Timer? _timer;
   bool? _lastIsOpen;
   bool _isPolling = false;
-  bool _statusUnsupported = false;
+  bool _disposed = false;
   DateTime? _lastLoggedAt;
+  DateTime? _nextStatusProbeAt;
 
   CashDrawerKeyMonitor(this._ref);
 
@@ -26,13 +28,19 @@ class CashDrawerKeyMonitor {
   }
 
   void dispose() {
-    _statusUnsupported = true;
+    _disposed = true;
     _timer?.cancel();
     _timer = null;
   }
 
   Future<void> _poll() async {
-    if (_isPolling || _statusUnsupported) return;
+    if (_isPolling || _disposed) return;
+
+    final nextStatusProbeAt = _nextStatusProbeAt;
+    if (nextStatusProbeAt != null &&
+        DateTime.now().isBefore(nextStatusProbeAt)) {
+      return;
+    }
 
     final auth = _ref.read(authProvider);
     if (!auth.isAuthenticated) {
@@ -45,11 +53,11 @@ class CashDrawerKeyMonitor {
       final status =
           await ReceiptPrinterService.instance.readCashDrawerStatus();
       if (!status.supported) {
-        _statusUnsupported = true;
-        _timer?.cancel();
-        _timer = null;
+        _lastIsOpen = null;
+        _nextStatusProbeAt = DateTime.now().add(_unsupportedRetryInterval);
         return;
       }
+      _nextStatusProbeAt = null;
       if (!status.isReliable) return;
 
       final isOpen = status.isOpen!;

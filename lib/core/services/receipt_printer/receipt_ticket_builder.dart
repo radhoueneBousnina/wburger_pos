@@ -177,15 +177,15 @@ class ReceiptTicketBuilder {
     Uint8List? ticketNumberImageBytes,
     bool openDrawer = false,
   }) {
+    if (openDrawer) {
+      builder.openCashDrawer();
+    }
     _buildLogoSection(builder, data, config, logoBytes);
     _buildOrderInfoSection(builder, data, ticketNumberImageBytes);
     _buildItemsSection(builder, data.lines);
     _buildTotalsSection(builder, data, config);
     _buildNotesSection(builder, data);
     _buildFooterSection(builder);
-    if (openDrawer) {
-      builder.openCashDrawer();
-    }
   }
 
   void _buildLogoSection(
