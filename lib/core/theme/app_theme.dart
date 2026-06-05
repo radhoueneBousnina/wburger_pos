@@ -48,8 +48,8 @@ class AppTheme {
           backgroundColor: AppColors.blue,
           foregroundColor: AppColors.white,
           textStyle: AppTextStyles.button,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-          minimumSize: const Size(132, 56),
+          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 20),
+          minimumSize: const Size(144, 64),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -62,8 +62,8 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.blue,
           textStyle: AppTextStyles.button,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-          minimumSize: const Size(132, 56),
+          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 20),
+          minimumSize: const Size(144, 64),
           side: const BorderSide(color: AppColors.blue, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -76,8 +76,8 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: AppColors.blue,
           textStyle: AppTextStyles.button,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          minimumSize: const Size(92, 52),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          minimumSize: const Size(104, 60),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -86,8 +86,8 @@ class AppTheme {
 
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
-          minimumSize: const Size(52, 52),
-          padding: const EdgeInsets.all(12),
+          minimumSize: const Size(60, 60),
+          padding: const EdgeInsets.all(14),
           foregroundColor: AppColors.blue,
           backgroundColor: Colors.transparent,
           shape: RoundedRectangleBorder(

@@ -61,9 +61,10 @@ class _PaymentChoiceTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         child: Container(
           width: compact ? 128 : 150,
+          constraints: BoxConstraints(minHeight: compact ? 64 : 70),
           padding: EdgeInsets.symmetric(
-            horizontal: compact ? 12 : 14,
-            vertical: compact ? 11 : 14,
+            horizontal: compact ? 14 : 16,
+            vertical: compact ? 14 : 16,
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
@@ -252,8 +253,8 @@ class _CashNumberPad extends StatelessWidget {
               TextButton(
                 onPressed: onClear,
                 style: TextButton.styleFrom(
-                  minimumSize: const Size(0, 30),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size(96, context.posLayout.touchTarget - 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
                 child: const Text('Clear'),
               ),
@@ -268,7 +269,7 @@ class _CashNumberPad extends StatelessWidget {
               crossAxisCount: 3,
               mainAxisSpacing: dense ? 6 : 8,
               crossAxisSpacing: dense ? 6 : 8,
-              childAspectRatio: dense ? 1.35 : 1.25,
+              childAspectRatio: dense ? 1.18 : 1.12,
             ),
             itemBuilder: (context, index) {
               if (index == 11) {

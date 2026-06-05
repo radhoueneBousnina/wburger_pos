@@ -123,6 +123,23 @@ base class _PrinterInfo2 extends Struct {
   external int averagePpm;
 }
 
+base class _CommTimeouts extends Struct {
+  @Uint32()
+  external int readIntervalTimeout;
+
+  @Uint32()
+  external int readTotalTimeoutMultiplier;
+
+  @Uint32()
+  external int readTotalTimeoutConstant;
+
+  @Uint32()
+  external int writeTotalTimeoutMultiplier;
+
+  @Uint32()
+  external int writeTotalTimeoutConstant;
+}
+
 typedef _EnumPrintersNative = Int32 Function(
   Uint32 flags,
   Pointer<Utf16> name,
@@ -140,15 +157,6 @@ typedef _EnumPrintersDart = int Function(
   int bufferBytes,
   Pointer<Uint32> bytesNeeded,
   Pointer<Uint32> printersReturned,
-);
-
-typedef _GetDefaultPrinterNative = Int32 Function(
-  Pointer<Utf16> buffer,
-  Pointer<Uint32> bufferChars,
-);
-typedef _GetDefaultPrinterDart = int Function(
-  Pointer<Utf16> buffer,
-  Pointer<Uint32> bufferChars,
 );
 
 typedef _OpenPrinterNative = Int32 Function(
@@ -200,3 +208,64 @@ typedef _ClosePrinterDart = int Function(int printerHandle);
 
 typedef _GetLastErrorNative = Uint32 Function();
 typedef _GetLastErrorDart = int Function();
+
+typedef _CreateFileNative = IntPtr Function(
+  Pointer<Utf16> fileName,
+  Uint32 desiredAccess,
+  Uint32 shareMode,
+  Pointer<Void> securityAttributes,
+  Uint32 creationDisposition,
+  Uint32 flagsAndAttributes,
+  IntPtr templateFile,
+);
+typedef _CreateFileDart = int Function(
+  Pointer<Utf16> fileName,
+  int desiredAccess,
+  int shareMode,
+  Pointer<Void> securityAttributes,
+  int creationDisposition,
+  int flagsAndAttributes,
+  int templateFile,
+);
+
+typedef _ReadFileNative = Int32 Function(
+  IntPtr fileHandle,
+  Pointer<Void> buffer,
+  Uint32 bytesToRead,
+  Pointer<Uint32> bytesRead,
+  Pointer<Void> overlapped,
+);
+typedef _ReadFileDart = int Function(
+  int fileHandle,
+  Pointer<Void> buffer,
+  int bytesToRead,
+  Pointer<Uint32> bytesRead,
+  Pointer<Void> overlapped,
+);
+
+typedef _WriteFileNative = Int32 Function(
+  IntPtr fileHandle,
+  Pointer<Void> buffer,
+  Uint32 bytesToWrite,
+  Pointer<Uint32> bytesWritten,
+  Pointer<Void> overlapped,
+);
+typedef _WriteFileDart = int Function(
+  int fileHandle,
+  Pointer<Void> buffer,
+  int bytesToWrite,
+  Pointer<Uint32> bytesWritten,
+  Pointer<Void> overlapped,
+);
+
+typedef _CloseHandleNative = Int32 Function(IntPtr handle);
+typedef _CloseHandleDart = int Function(int handle);
+
+typedef _SetCommTimeoutsNative = Int32 Function(
+  IntPtr fileHandle,
+  Pointer<_CommTimeouts> timeouts,
+);
+typedef _SetCommTimeoutsDart = int Function(
+  int fileHandle,
+  Pointer<_CommTimeouts> timeouts,
+);

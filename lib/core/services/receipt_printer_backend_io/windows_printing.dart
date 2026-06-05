@@ -1,5 +1,185 @@
 part of '../receipt_printer_backend_io.dart';
 
+Future<RawCashDrawerStatusResult> _readCashDrawerStatusOnWindows() async {
+  final portName = _WindowsCashDrawerStatusReader.configuredPortName();
+  if (portName == null) {
+    return const RawCashDrawerStatusResult(
+      supported: false,
+      error:
+          'Windows cash drawer key-open detection needs CASH_DRAWER_STATUS_PORT when the printer exposes a bidirectional COM status port.',
+    );
+  }
+
+  try {
+    return _WindowsCashDrawerStatusReader().read(portName);
+  } catch (error) {
+    return RawCashDrawerStatusResult(
+      supported: false,
+      error:
+          'Windows cash drawer status was not available from $portName: ${error.toString()}',
+      source: portName,
+    );
+  }
+}
+
+class _WindowsCashDrawerStatusReader {
+  static const String _statusPortConfig =
+      String.fromEnvironment('CASH_DRAWER_STATUS_PORT');
+  static const String _statusComPortConfig =
+      String.fromEnvironment('CASH_DRAWER_STATUS_COM_PORT');
+  static const int _genericRead = 0x80000000;
+  static const int _genericWrite = 0x40000000;
+  static const int _openExisting = 3;
+  static const int _invalidHandleValue = -1;
+
+  final DynamicLibrary _kernel32 = DynamicLibrary.open('kernel32.dll');
+
+  late final _CreateFileDart _createFile = _kernel32
+      .lookupFunction<_CreateFileNative, _CreateFileDart>('CreateFileW');
+  late final _ReadFileDart _readFile =
+      _kernel32.lookupFunction<_ReadFileNative, _ReadFileDart>('ReadFile');
+  late final _WriteFileDart _writeFile =
+      _kernel32.lookupFunction<_WriteFileNative, _WriteFileDart>('WriteFile');
+  late final _CloseHandleDart _closeHandle =
+      _kernel32.lookupFunction<_CloseHandleNative, _CloseHandleDart>(
+    'CloseHandle',
+  );
+  late final _SetCommTimeoutsDart _setCommTimeouts =
+      _kernel32.lookupFunction<_SetCommTimeoutsNative, _SetCommTimeoutsDart>(
+          'SetCommTimeouts');
+  late final _GetLastErrorDart _getLastError = _kernel32
+      .lookupFunction<_GetLastErrorNative, _GetLastErrorDart>('GetLastError');
+
+  static String? configuredPortName() {
+    final rawValues = [
+      _statusPortConfig,
+      _statusComPortConfig,
+      Platform.environment['CASH_DRAWER_STATUS_PORT'] ?? '',
+      Platform.environment['CASH_DRAWER_STATUS_COM_PORT'] ?? '',
+    ];
+
+    for (final rawValue in rawValues) {
+      final value = rawValue.trim();
+      if (value.isNotEmpty) return value;
+    }
+    return null;
+  }
+
+  RawCashDrawerStatusResult read(String rawPortName) {
+    return using((Arena alloc) {
+      final source = _displayPortName(rawPortName);
+      final portNamePtr =
+          _normalizePortName(rawPortName).toNativeUtf16(allocator: alloc);
+      final handle = _createFile(
+        portNamePtr,
+        _genericRead | _genericWrite,
+        0,
+        nullptr.cast<Void>(),
+        _openExisting,
+        0,
+        0,
+      );
+
+      if (handle == _invalidHandleValue) {
+        throw StateError(_windowsError('CreateFile'));
+      }
+
+      try {
+        _configureTimeouts(handle, alloc);
+        final dleEotStatus = _queryStatusByte(
+          handle,
+          alloc,
+          const [0x10, 0x04, 0x01],
+        );
+        final gsRStatus = dleEotStatus == null
+            ? _queryStatusByte(handle, alloc, const [0x1d, 0x72, 0x02])
+            : null;
+
+        if (dleEotStatus == null && gsRStatus == null) {
+          throw StateError('No drawer status byte returned.');
+        }
+
+        final pin3High = dleEotStatus != null
+            ? (dleEotStatus & 0x04) != 0
+            : (gsRStatus! & 0x01) != 0;
+
+        return RawCashDrawerStatusResult(
+          supported: true,
+          pin3High: pin3High,
+          source: source,
+        );
+      } finally {
+        _closeHandle(handle);
+      }
+    });
+  }
+
+  void _configureTimeouts(int handle, Arena alloc) {
+    final timeouts = alloc<_CommTimeouts>()
+      ..ref.readIntervalTimeout = 50
+      ..ref.readTotalTimeoutMultiplier = 0
+      ..ref.readTotalTimeoutConstant = 250
+      ..ref.writeTotalTimeoutMultiplier = 0
+      ..ref.writeTotalTimeoutConstant = 250;
+    final ok = _setCommTimeouts(handle, timeouts);
+    if (ok == 0) {
+      throw StateError(_windowsError('SetCommTimeouts'));
+    }
+  }
+
+  int? _queryStatusByte(
+    int handle,
+    Arena alloc,
+    List<int> command,
+  ) {
+    final commandBytes = alloc<Uint8>(command.length);
+    commandBytes.asTypedList(command.length).setAll(0, command);
+    final bytesWritten = alloc<Uint32>();
+    final writeOk = _writeFile(
+      handle,
+      commandBytes.cast<Void>(),
+      command.length,
+      bytesWritten,
+      nullptr.cast<Void>(),
+    );
+    if (writeOk == 0 || bytesWritten.value != command.length) {
+      throw StateError(_windowsError('WriteFile'));
+    }
+
+    sleep(const Duration(milliseconds: 80));
+
+    final response = alloc<Uint8>(1);
+    final bytesRead = alloc<Uint32>();
+    final readOk = _readFile(
+      handle,
+      response.cast<Void>(),
+      1,
+      bytesRead,
+      nullptr.cast<Void>(),
+    );
+    if (readOk == 0) {
+      throw StateError(_windowsError('ReadFile'));
+    }
+    if (bytesRead.value == 0) return null;
+    return response.value;
+  }
+
+  String _normalizePortName(String value) {
+    final trimmed = value.trim();
+    if (trimmed.startsWith(r'\\.')) return trimmed;
+    return '\\\\.\\$trimmed';
+  }
+
+  String _displayPortName(String value) {
+    final trimmed = value.trim();
+    return trimmed.startsWith(r'\\.') ? trimmed.substring(4) : trimmed;
+  }
+
+  String _windowsError(String operation) {
+    return '$operation failed with Windows error ${_getLastError()}';
+  }
+}
+
 class _WindowsPrinterSpooler {
   static const int _printerEnumLocal = 0x00000002;
   static const int _printerEnumConnections = 0x00000004;
@@ -19,9 +199,6 @@ class _WindowsPrinterSpooler {
 
   late final _EnumPrintersDart _enumPrinters = _winspool
       .lookupFunction<_EnumPrintersNative, _EnumPrintersDart>('EnumPrintersW');
-  late final _GetDefaultPrinterDart _getDefaultPrinter = _winspool
-      .lookupFunction<_GetDefaultPrinterNative, _GetDefaultPrinterDart>(
-          'GetDefaultPrinterW');
   late final _OpenPrinterDart _openPrinter = _winspool
       .lookupFunction<_OpenPrinterNative, _OpenPrinterDart>('OpenPrinterW');
   late final _StartDocPrinterDart _startDocPrinter =
@@ -111,45 +288,11 @@ class _WindowsPrinterSpooler {
       final ticketPrinters = printers.where(_isTicketPrinter).toList();
       if (ticketPrinters.isNotEmpty) return ticketPrinters;
 
-      final defaultPrinter = _defaultPrinter(printers, alloc);
-      if (defaultPrinter != null) return [defaultPrinter];
-
-      // Many Windows POS installs expose a receipt printer with a generic
-      // driver/name. If it is the only real printer, use it; otherwise fail
-      // closed unless Windows has an explicit default real printer.
-      if (printers.length == 1) return printers;
-
-      return const <_WindowsPrinter>[];
+      // Some receipt printers are installed with very generic Windows names
+      // and drivers. If the machine has real non-virtual printers connected,
+      // send the RAW ticket to them directly rather than requiring a bridge.
+      return printers;
     });
-  }
-
-  _WindowsPrinter? _defaultPrinter(
-    List<_WindowsPrinter> printers,
-    Arena alloc,
-  ) {
-    final defaultName = _defaultPrinterName(alloc);
-    if (defaultName == null) return null;
-
-    final normalizedDefault = _normalizePrinterName(defaultName);
-    for (final printer in printers) {
-      if (_normalizePrinterName(printer.name) == normalizedDefault) {
-        return printer;
-      }
-    }
-    return null;
-  }
-
-  String? _defaultPrinterName(Arena alloc) {
-    final bufferChars = alloc<Uint32>();
-    _getDefaultPrinter(nullptr.cast<Utf16>(), bufferChars);
-    if (bufferChars.value == 0) return null;
-
-    final buffer = alloc<Uint16>(bufferChars.value).cast<Utf16>();
-    final ok = _getDefaultPrinter(buffer, bufferChars);
-    if (ok == 0) return null;
-
-    final name = buffer.toDartString().trim();
-    return name.isEmpty ? null : name;
   }
 
   void printRawBytes({
@@ -244,6 +387,7 @@ class _WindowsPrinterSpooler {
     final value = _normalizePrinterSearchValue(
       printer.name,
       printer.driverName,
+      printer.portName,
     );
     final keywords = const [
       '80mm',

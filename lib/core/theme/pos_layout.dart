@@ -25,11 +25,11 @@ class PosLayout {
   double get pagePadding => isCompact ? 16 : 24;
   double get sectionGap => isCompact ? 16 : 24;
   double get cardRadius => isCompact ? 16 : 20;
-  double get touchTarget => isCompact ? 56 : 64;
-  double get iconTouchTarget => isCompact ? 52 : 60;
-  double get topBarHeight => isCompact ? 60 : 68;
+  double get touchTarget => isCompact ? 64 : 72;
+  double get iconTouchTarget => isCompact ? 60 : 68;
+  double get topBarHeight => isCompact ? 72 : 80;
   double get drawerWidth => isCompact ? 284 : 320;
-  double get sidebarItemHeight => isCompact ? 60 : 68;
+  double get sidebarItemHeight => isCompact ? 64 : 72;
   double get cartPanelWidth => isCompact ? 360 : 410;
   double get dialogWidth => math.min(width - (pagePadding * 2), 880);
 

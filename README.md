@@ -52,8 +52,11 @@ WEB_PORT=3000 ./scripts/run_pos_web_vps.sh
 ```
 
 For the installed Windows build, the app defaults to `https://w-burger.com` and
-prints through the Windows spooler on the POS machine. To target both cashier
-and kitchen printers, set a Windows environment variable on the POS machine:
+prints directly through the Windows spooler on the POS machine. No local print
+bridge is used on Windows. By default, the app sends the RAW ESC/POS ticket to
+all connected real, non-virtual printers that Windows reports. To target only
+specific cashier/kitchen printers, set a Windows environment variable on the POS
+machine:
 
 ```sh
 setx POS_PRINTER_NAMES "CashierPrinter,KitchenPrinter"
@@ -66,13 +69,38 @@ names into the release at build time:
 flutter build windows --release --dart-define=POS_PRINTER_NAMES=CashierPrinter,KitchenPrinter
 ```
 
-If `POS_PRINTER_NAMES` is not provided, the app prints to all detected thermal
-ticket printers. If only one printer should be used, set it as the Windows
-default printer, then build:
+If `POS_PRINTER_NAMES` is not provided, the app prints to all detected
+thermal/ticket printers, and falls back to every real non-virtual Windows
+printer if the printers have generic names. If only one printer should be used,
+set `POS_PRINTER_NAMES` to that exact Windows printer name, then restart the app
+or bake it into the build:
 
 ```sh
-flutter build windows --release
+flutter build windows --release --dart-define=POS_PRINTER_NAMES=CashierPrinter
 ```
+
+Cash drawer opening is sent through the printer using ESC/POS drawer-pulse
+commands. The POS sends that pulse when the Cash Drawer button is used and at
+the start of a paid cash receipt. Manual button openings are logged before the
+pulse is sent.
+
+Physical key-open logging needs a drawer-status signal from the printer/drawer.
+On Linux web testing, the bridge polls raw bidirectional printer devices such as
+`/dev/usb/lp0` when the OS exposes them. On Windows, configure the status COM
+port only if the printer exposes one:
+
+```sh
+setx CASH_DRAWER_STATUS_PORT COM3
+```
+
+or bake it into the Windows build:
+
+```sh
+flutter build windows --release --dart-define=CASH_DRAWER_STATUS_PORT=COM3
+```
+
+If the printer does not expose drawer status, printing and drawer opening still
+work; only automatic physical-key-open logging remains unavailable.
 
 ## Getting Started
 

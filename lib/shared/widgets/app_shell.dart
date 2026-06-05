@@ -126,6 +126,7 @@ class _TrainingModeBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final testMode = ref.watch(testModeProvider);
+    final layout = context.posLayout;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
@@ -156,8 +157,8 @@ class _TrainingModeBanner extends ConsumerWidget {
             label: const Text('Stop'),
             style: TextButton.styleFrom(
               foregroundColor: AppColors.yellow,
-              minimumSize: const Size(88, 38),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              minimumSize: Size(112, layout.touchTarget - 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
           ),
         ],

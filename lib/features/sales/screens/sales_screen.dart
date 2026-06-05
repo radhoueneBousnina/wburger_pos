@@ -143,10 +143,16 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(
+              minimumSize: Size.fromHeight(context.posLayout.touchTarget),
+            ),
             onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Keep Current'),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              minimumSize: Size.fromHeight(context.posLayout.touchTarget),
+            ),
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Replace'),
           ),
@@ -347,26 +353,29 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    OutlinedButton(
-                      onPressed: () => Navigator.pop(dialogContext, false),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize:
+                              Size.fromHeight(context.posLayout.touchTarget),
+                        ),
+                        child: const Text('Cancel Sale'),
                       ),
-                      child: const Text('Cancel Sale'),
                     ),
                     const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(dialogContext, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.warning,
-                        foregroundColor: AppColors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(dialogContext, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.warning,
+                          foregroundColor: AppColors.white,
+                          minimumSize:
+                              Size.fromHeight(context.posLayout.touchTarget),
+                        ),
+                        child: const Text('Confirm Anyway'),
                       ),
-                      child: const Text('Confirm Anyway'),
                     ),
                   ],
                 ),

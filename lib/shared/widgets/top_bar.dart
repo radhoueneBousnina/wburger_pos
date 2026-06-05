@@ -242,9 +242,10 @@ class _CashDrawerButton extends ConsumerWidget {
                 .withValues(alpha: 0.5),
             width: 1.5),
         padding: EdgeInsets.symmetric(
-          horizontal: layout.isCompact ? 18 : 20,
-          vertical: layout.isCompact ? 14 : 16,
+          horizontal: layout.isCompact ? 20 : 22,
+          vertical: layout.isCompact ? 16 : 18,
         ),
+        minimumSize: Size(0, layout.touchTarget),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 0,
       ),
@@ -288,6 +289,7 @@ class _CashDrawerButton extends ConsumerWidget {
               ),
             ],
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           content: SizedBox(
             width: context.posLayout.dialogWidth,
             child: Column(
@@ -359,11 +361,19 @@ class _CashDrawerButton extends ConsumerWidget {
             ),
           ),
           actions: [
-            TextButton(
-                onPressed: isOpening ? null : () => Navigator.pop(ctx),
-                child: const Text('Cancel')),
             Row(
               children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: isOpening ? null : () => Navigator.pop(ctx),
+                    style: TextButton.styleFrom(
+                      minimumSize:
+                          Size.fromHeight(context.posLayout.touchTarget),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: isOpening
@@ -411,6 +421,10 @@ class _CashDrawerButton extends ConsumerWidget {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.lock_open_rounded, size: 16),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize:
+                          Size.fromHeight(context.posLayout.touchTarget),
+                    ),
                     label: Text(isOpening ? 'Opening...' : 'Open Drawer'),
                   ),
                 ),
@@ -473,7 +487,10 @@ class _ReasonButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          constraints: BoxConstraints(
+            minHeight: context.posLayout.touchTarget + 20,
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 18),
           decoration: BoxDecoration(
             border: Border.all(
               color: isSelected ? AppColors.blue : AppColors.border,

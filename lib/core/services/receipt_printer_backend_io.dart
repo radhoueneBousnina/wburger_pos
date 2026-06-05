@@ -72,6 +72,23 @@ class RawTicketPrinterBackend {
   Future<bool> connectPrinter() async => true;
 
   Future<RawCashDrawerStatusResult> readCashDrawerStatus() async {
+    if (Platform.isWindows) {
+      try {
+        return await Isolate.run(_readCashDrawerStatusOnWindows)
+            .timeout(const Duration(seconds: 2));
+      } on TimeoutException {
+        return const RawCashDrawerStatusResult(
+          supported: false,
+          error: 'Cash drawer status query timed out.',
+        );
+      } catch (error) {
+        return RawCashDrawerStatusResult(
+          supported: false,
+          error: 'Cash drawer status query failed: ${error.toString()}',
+        );
+      }
+    }
+
     if (Platform.isLinux || Platform.isMacOS) {
       try {
         return await Isolate.run(_readCashDrawerStatusOnUnix)

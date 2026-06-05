@@ -208,18 +208,20 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   void _insertCashCharacter(String value) {
     final text = _cashGivenController.text;
     final selection = _cashGivenController.selection;
-    final start = selection.start < 0 ? text.length : selection.start;
-    final end = selection.end < 0 ? text.length : selection.end;
+    final useCaret = selection.isValid && selection.isCollapsed;
+    final start = useCaret ? selection.start : text.length;
+    final end = useCaret ? selection.end : text.length;
 
     if (value == '.' && text.contains('.') && start == end) return;
 
     final nextText = text.replaceRange(start, end, value);
     if (nextText.split('.').length > 2) return;
+    if (!RegExp(r'^\d*\.?\d{0,3}$').hasMatch(nextText)) return;
 
     _cashGivenController
       ..text = nextText
       ..selection = TextSelection.collapsed(offset: start + value.length);
-    _cashFocusNode.requestFocus();
+    _focusCashFieldAtEndIfNeeded();
     setState(() {});
   }
 
@@ -228,25 +230,37 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
     final selection = _cashGivenController.selection;
     if (text.isEmpty) return;
 
-    final start = selection.start < 0 ? text.length : selection.start;
-    final end = selection.end < 0 ? text.length : selection.end;
-    if (start != end) {
-      _cashGivenController
-        ..text = text.replaceRange(start, end, '')
-        ..selection = TextSelection.collapsed(offset: start);
-    } else if (start > 0) {
+    final useCaret = selection.isValid && selection.isCollapsed;
+    final start = useCaret ? selection.start : text.length;
+    if (start > 0) {
       _cashGivenController
         ..text = text.replaceRange(start - 1, start, '')
         ..selection = TextSelection.collapsed(offset: start - 1);
     }
-    _cashFocusNode.requestFocus();
+    _focusCashFieldAtEndIfNeeded();
     setState(() {});
   }
 
   void _clearCashAmount() {
     _cashGivenController.clear();
-    _cashFocusNode.requestFocus();
+    _focusCashFieldAtEndIfNeeded();
     setState(() {});
+  }
+
+  void _focusCashFieldAtEndIfNeeded() {
+    if (!_cashFocusNode.hasFocus) {
+      _cashFocusNode.requestFocus();
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final length = _cashGivenController.text.length;
+      if (_cashGivenController.selection.isValid &&
+          _cashGivenController.selection.isCollapsed &&
+          _cashGivenController.selection.end == length) {
+        return;
+      }
+      _cashGivenController.selection = TextSelection.collapsed(offset: length);
+    });
   }
 
   @override
@@ -313,6 +327,9 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
                     child: OutlinedButton(
                       onPressed:
                           _isSubmitting ? null : () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: Size.fromHeight(layout.touchTarget),
+                      ),
                       child: const Text('Cancel'),
                     ),
                   ),
@@ -323,6 +340,9 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
                       onPressed: _selectedType == null || _isSubmitting
                           ? null
                           : _handleConfirm,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: Size.fromHeight(layout.touchTarget),
+                      ),
                       icon: _isSubmitting
                           ? const SizedBox(
                               width: 18,
