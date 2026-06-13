@@ -13,6 +13,7 @@ import 'package:dio/dio.dart';
 
 part 'app_providers/auth_providers.dart';
 part 'app_providers/session_providers.dart';
+part 'app_providers/settings_providers.dart';
 part 'app_providers/catalog_providers.dart';
 part 'app_providers/cart_providers.dart';
 part 'app_providers/order_providers.dart';

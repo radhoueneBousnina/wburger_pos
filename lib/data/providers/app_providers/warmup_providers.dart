@@ -18,6 +18,7 @@ class PosWarmupService {
       () => ref.read(categoriesProvider.notifier).refreshIfStale(),
       () => ref.read(productsProvider.notifier).refreshIfStale(),
       () => ref.read(staffListProvider.notifier).refreshIfStale(),
+      () => ref.read(posSettingsProvider.notifier).refreshIfStale(),
     ];
 
     await Future.wait(tasks.map((task) => _runTask(task)));

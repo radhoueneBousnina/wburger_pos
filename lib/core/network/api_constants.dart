@@ -38,6 +38,7 @@ class ApiConstants {
       '$apiPrefix/sales/drawer-status-proxy/';
   static const String drawerStatusProxyBridge =
       '$printBridgeBaseUrl$drawerStatusProxy';
+  static const String posSettings = '$apiPrefix/reporting/settings/pos/';
 
   static const String dailySessions = '$apiPrefix/sales/daily-sessions/';
   static const String sessionStatus = '$apiPrefix/sales/daily-sessions/status/';

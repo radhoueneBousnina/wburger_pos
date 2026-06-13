@@ -26,6 +26,37 @@ class CartState {
   double get discountAmount =>
       items.fold(0, (sum, i) => sum + i.discountAmount);
   double get subtotal => items.fold(0, (sum, i) => sum + i.total);
+  double staffDiscountAmount(double staffDiscountPercent) {
+    final percent = staffDiscountPercent.clamp(0, 100).toDouble();
+    final discount = originalSubtotal * percent / 100;
+    return discount > originalSubtotal ? originalSubtotal : discount;
+  }
+
+  double staffTotal(double staffDiscountPercent) {
+    final total = originalSubtotal - staffDiscountAmount(staffDiscountPercent);
+    return total > 0 ? total : 0;
+  }
+
+  double payableTotalFor(
+    PaymentType? type, {
+    double staffDiscountPercent = 0,
+  }) {
+    if (type == PaymentType.points) return 0;
+    if (type == PaymentType.staff) return staffTotal(staffDiscountPercent);
+    return subtotal;
+  }
+
+  double discountAmountFor(
+    PaymentType? type, {
+    double staffDiscountPercent = 0,
+  }) {
+    if (type == PaymentType.points) return 0;
+    if (type == PaymentType.staff) {
+      return staffDiscountAmount(staffDiscountPercent);
+    }
+    return discountAmount;
+  }
+
   int get itemCount => displayQuantityForCartItems(items);
   bool get isQrOrder => redemptionToken != null && redemptionToken!.isNotEmpty;
   bool get isLockedForQr => isQrOrder;

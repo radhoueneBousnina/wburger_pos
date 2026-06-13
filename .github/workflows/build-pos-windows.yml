@@ -2,6 +2,23 @@ name: Build POS Windows Installer
 
 on:
   workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "Production backend origin used by the POS app"
+        required: true
+        default: "https://w-burger.com"
+      pos_printer_names:
+        description: "Optional comma-separated Windows receipt printer names"
+        required: false
+        default: ""
+      cash_drawer_status_port:
+        description: "Optional Windows COM port for physical-key drawer status, for example COM3"
+        required: false
+        default: ""
+      cash_drawer_open_when_pin3_high:
+        description: "Whether pin 3 high means drawer open for the connected printer"
+        required: true
+        default: "true"
 
 jobs:
   build-windows:
@@ -27,8 +44,25 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Analyze POS app
+        run: flutter analyze
+
+      - name: Run POS production smoke tests
+        run: flutter test test/receipt_printer_service_test.dart test/cart_state_test.dart test/payment_modal_test.dart
+
       - name: Build Windows release
-        run: flutter build windows --release
+        shell: pwsh
+        env:
+          API_BASE_URL: ${{ inputs.api_base_url }}
+          POS_PRINTER_NAMES: ${{ inputs.pos_printer_names }}
+          CASH_DRAWER_STATUS_PORT: ${{ inputs.cash_drawer_status_port }}
+          CASH_DRAWER_OPEN_WHEN_PIN3_HIGH: ${{ inputs.cash_drawer_open_when_pin3_high }}
+        run: |
+          flutter build windows --release `
+            --dart-define=API_BASE_URL="$env:API_BASE_URL" `
+            --dart-define=POS_PRINTER_NAMES="$env:POS_PRINTER_NAMES" `
+            --dart-define=CASH_DRAWER_STATUS_PORT="$env:CASH_DRAWER_STATUS_PORT" `
+            --dart-define=CASH_DRAWER_OPEN_WHEN_PIN3_HIGH="$env:CASH_DRAWER_OPEN_WHEN_PIN3_HIGH"
 
       - name: Install Inno Setup
         shell: pwsh

@@ -408,6 +408,28 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
           receiptData,
           allowBrowserFallback: false,
         );
+        final drawerOpenedForCashOrder = result.isSuccess &&
+            ReceiptPrinterService.instance
+                .shouldOpenDrawerForReceipt(receiptData);
+        if (drawerOpenedForCashOrder) {
+          final logResult =
+              await ref.read(ordersProvider.notifier).logOrderDrawerOpening(
+                    ticketNumber: receiptData.ticketNumber,
+                    orderId: receiptData.orderId,
+                  );
+          if (!logResult.logSaved && kDebugMode) {
+            debugPrint('Cash order drawer log failed: ${logResult.message}');
+          }
+          if (!logResult.logSaved && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(logResult.message),
+                backgroundColor: AppColors.warning,
+                duration: const Duration(seconds: 6),
+              ),
+            );
+          }
+        }
         _showPrintResult(result);
       } catch (error, stackTrace) {
         if (kDebugMode) {
@@ -435,6 +457,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     PaymentModal.show(
       context,
       total: cart.subtotal,
+      staffDiscountBaseTotal: cart.originalSubtotal,
       initialOrderType: cart.orderType,
       initialPaymentType: cart.paymentType,
       lockOrderType: isDealRedemption,
@@ -449,6 +472,9 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
         final orderNotifier = ref.read(ordersProvider.notifier);
         final confirmedPaymentType =
             isDealRedemption ? PaymentType.deal : paymentType;
+        final staffDiscountPercent =
+            ref.read(posSettingsProvider).valueOrNull?.staffDiscountPercent ??
+                0;
         final effectiveCart = cart.copyWith(
           orderType: orderType,
           paymentType: confirmedPaymentType,
@@ -532,8 +558,14 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 customerName: effectiveCart.customerName,
                 customerNote: effectiveCart.customerNote,
                 subtotal: effectiveCart.originalSubtotal,
-                discountAmount: effectiveCart.discountAmount,
-                totalAmount: effectiveCart.subtotal,
+                discountAmount: effectiveCart.discountAmountFor(
+                  confirmedPaymentType,
+                  staffDiscountPercent: staffDiscountPercent,
+                ),
+                totalAmount: effectiveCart.payableTotalFor(
+                  confirmedPaymentType,
+                  staffDiscountPercent: staffDiscountPercent,
+                ),
                 amountGiven: amountGiven,
                 changeReturned: changeReturned,
               );

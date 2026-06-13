@@ -94,6 +94,16 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         DateTime.now().difference(lastFetchedAt) < maxAge;
   }
 
+  double _staffDiscountPercent() {
+    return ref
+            .read(posSettingsProvider)
+            .valueOrNull
+            ?.staffDiscountPercent
+            .clamp(0, 100)
+            .toDouble() ??
+        0;
+  }
+
   Future<void> refreshIfStale({
     Duration maxAge = const Duration(seconds: 15),
     bool showLoading = false,
@@ -551,8 +561,14 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       customerNote: cart.customerNote,
       isQrOrder: cart.isQrOrder,
       redemptionToken: cart.redemptionToken,
-      totalAmount: cart.subtotal,
-      discountAmount: cart.discountAmount,
+      totalAmount: cart.payableTotalFor(
+        paymentType,
+        staffDiscountPercent: _staffDiscountPercent(),
+      ),
+      discountAmount: cart.discountAmountFor(
+        paymentType,
+        staffDiscountPercent: _staffDiscountPercent(),
+      ),
       amountGiven: amountGiven ?? 0,
       changeReturned: changeReturned ?? 0,
     );
@@ -681,6 +697,52 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         error: apiClient.describeError(
           e,
           fallback: 'Key opening was not logged.',
+        ),
+      );
+    }
+  }
+
+  Future<CashDrawerOpenResult> logOrderDrawerOpening({
+    required String ticketNumber,
+    String? orderId,
+  }) async {
+    if (ref.read(testModeProvider).isActive) {
+      return const CashDrawerOpenResult(logSaved: true);
+    }
+
+    final cleanTicket = ticketNumber.trim();
+    final cleanOrderId = orderId?.trim();
+    final reason = cleanTicket.isNotEmpty
+        ? 'Cash payment drawer opening for ticket $cleanTicket.'
+        : cleanOrderId != null && cleanOrderId.isNotEmpty
+            ? 'Cash payment drawer opening for order $cleanOrderId.'
+            : 'Cash payment drawer opening.';
+
+    try {
+      await apiClient.dio.post(
+        ApiConstants.drawerLogs,
+        data: {
+          'opening_type': 'order',
+          'reason': reason,
+        },
+      );
+      return const CashDrawerOpenResult(logSaved: true);
+    } on DioException catch (e) {
+      apiClient.logError('Log cash order drawer opening error', e);
+      return CashDrawerOpenResult(
+        logSaved: false,
+        error: apiClient.describeError(
+          e,
+          fallback: 'Cash order drawer opening was not logged.',
+        ),
+      );
+    } catch (e) {
+      apiClient.logError('Log cash order drawer opening error', e);
+      return CashDrawerOpenResult(
+        logSaved: false,
+        error: apiClient.describeError(
+          e,
+          fallback: 'Cash order drawer opening was not logged.',
         ),
       );
     }

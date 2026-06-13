@@ -3,7 +3,46 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wburger_pos/core/theme/app_theme.dart';
 import 'package:wburger_pos/data/models/order_models.dart';
+import 'package:wburger_pos/data/providers/app_providers.dart';
 import 'package:wburger_pos/shared/widgets/payment_modal.dart';
+
+class _StaticPosSettingsNotifier extends PosSettingsNotifier {
+  _StaticPosSettingsNotifier() : super() {
+    state = const AsyncValue.data(PosSettings(staffDiscountPercent: 40));
+  }
+
+  @override
+  Future<void> fetchSettings({
+    bool silent = false,
+    bool force = false,
+  }) async {
+    state = const AsyncValue.data(PosSettings(staffDiscountPercent: 40));
+  }
+}
+
+class _StaticStaffListNotifier extends StaffListNotifier {
+  _StaticStaffListNotifier() : super() {
+    state = const AsyncValue.data(_staff);
+  }
+
+  static const _staff = [
+    StaffMember(
+      id: '7',
+      username: 'staff7',
+      firstName: 'Staff',
+      lastName: 'Member',
+      role: 'staff',
+    ),
+  ];
+
+  @override
+  Future<void> fetchStaff({
+    bool silent = false,
+    bool force = false,
+  }) async {
+    state = const AsyncValue.data(_staff);
+  }
+}
 
 void main() {
   testWidgets('cash keypad appends when the amount field is selected',
@@ -43,5 +82,41 @@ void main() {
     await tester.pump();
 
     expect(editableText.controller.text, '12');
+  });
+
+  testWidgets('staff payment displays configured discounted total',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 760));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          posSettingsProvider.overrideWith(
+            (_) => _StaticPosSettingsNotifier(),
+          ),
+          staffListProvider.overrideWith(
+            (_) => _StaticStaffListNotifier(),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: PaymentModal(
+              total: 20,
+              staffDiscountBaseTotal: 20,
+              onConfirm: (_, __, {amountGiven, changeReturned, staffId}) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Staff'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Staff total: 12.000 DT'), findsOneWidget);
+    expect(find.text('Discount 40.00%: -8.000 DT'), findsOneWidget);
   });
 }

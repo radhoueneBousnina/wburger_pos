@@ -31,6 +31,21 @@ class StaffMember {
   }
 }
 
+class PosSettings {
+  final double staffDiscountPercent;
+
+  const PosSettings({
+    this.staffDiscountPercent = 0,
+  });
+
+  factory PosSettings.fromJson(Map<String, dynamic> json) {
+    final percent = _parseNullableDouble(json['staff_discount_percent']) ?? 0;
+    return PosSettings(
+      staffDiscountPercent: percent.clamp(0, 100).toDouble(),
+    );
+  }
+}
+
 class Category {
   final String id;
   final String name;
@@ -577,6 +592,12 @@ String? _firstNonEmptyString(Iterable<Object?> values) {
 int _parseInt(Object? value, {required int fallback}) {
   if (value is int) return value;
   return int.tryParse(value?.toString() ?? '') ?? fallback;
+}
+
+double? _parseNullableDouble(Object? value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
 }
 
 String displayTicketNumberFrom(String ticketNumber) {

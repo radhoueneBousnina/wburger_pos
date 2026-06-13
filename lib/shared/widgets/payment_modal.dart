@@ -31,6 +31,7 @@ class PaymentModal extends ConsumerStatefulWidget {
   final String? customerName;
   final String? customerNote;
   final String? referenceLabel;
+  final double? staffDiscountBaseTotal;
 
   const PaymentModal({
     super.key,
@@ -45,6 +46,7 @@ class PaymentModal extends ConsumerStatefulWidget {
     this.customerName,
     this.customerNote,
     this.referenceLabel,
+    this.staffDiscountBaseTotal,
   });
 
   static Future<void> show(
@@ -66,6 +68,7 @@ class PaymentModal extends ConsumerStatefulWidget {
     String? customerName,
     String? customerNote,
     String? referenceLabel,
+    double? staffDiscountBaseTotal,
   }) {
     return showDialog(
       context: context,
@@ -82,6 +85,7 @@ class PaymentModal extends ConsumerStatefulWidget {
         customerName: customerName,
         customerNote: customerNote,
         referenceLabel: referenceLabel,
+        staffDiscountBaseTotal: staffDiscountBaseTotal,
       ),
     );
   }
@@ -126,6 +130,24 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       double.tryParse(_cashGivenController.text.trim()) ?? 0;
   double get _changeReturned =>
       _cashGiven > widget.total ? _cashGiven - widget.total : 0;
+  double get _staffDiscountBaseTotal =>
+      widget.staffDiscountBaseTotal ?? widget.total;
+  double get _staffDiscountPercent =>
+      ref.watch(posSettingsProvider).valueOrNull?.staffDiscountPercent ?? 0;
+  double get _staffDiscountAmount {
+    if (_selectedType != PaymentType.staff) return 0;
+    final percent = _staffDiscountPercent.clamp(0, 100).toDouble();
+    final discount = _staffDiscountBaseTotal * percent / 100;
+    return discount > _staffDiscountBaseTotal
+        ? _staffDiscountBaseTotal
+        : discount;
+  }
+
+  double get _displayTotal {
+    if (_selectedType != PaymentType.staff) return widget.total;
+    final total = _staffDiscountBaseTotal - _staffDiscountAmount;
+    return total > 0 ? total : 0;
+  }
 
   List<PaymentType> get _availablePaymentTypes {
     final isDeal = widget.initialPaymentType == PaymentType.deal ||
@@ -620,6 +642,14 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   }
 
   Widget _buildTotalCard({bool compact = false}) {
+    final isStaffPayment = _selectedType == PaymentType.staff;
+    final totalLabel = isStaffPayment
+        ? 'Staff total: ${_displayTotal.toStringAsFixed(3)} DT'
+        : 'Total: ${widget.total.toStringAsFixed(3)} DT';
+    final discountLabel = isStaffPayment && _staffDiscountAmount > 0
+        ? 'Discount ${_staffDiscountPercent.toStringAsFixed(2)}%: -${_staffDiscountAmount.toStringAsFixed(3)} DT'
+        : null;
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(compact ? 14 : 18),
@@ -627,10 +657,24 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
         color: AppColors.yellow.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Text(
-        'Total: ${widget.total.toStringAsFixed(3)} DT',
-        style: (compact ? AppTextStyles.h4 : AppTextStyles.h3)
-            .copyWith(color: AppColors.blue),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            totalLabel,
+            style: (compact ? AppTextStyles.h4 : AppTextStyles.h3)
+                .copyWith(color: AppColors.blue),
+          ),
+          if (discountLabel != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              discountLabel,
+              style: AppTextStyles.titleSm.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
