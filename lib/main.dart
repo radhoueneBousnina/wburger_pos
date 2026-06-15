@@ -9,6 +9,7 @@ import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'core/network/api_client.dart';
 import 'core/services/monitoring_service.dart';
+import 'core/services/windows_fullscreen_shortcuts.dart';
 import 'data/providers/app_providers.dart';
 
 void main() async {
@@ -26,12 +27,13 @@ void main() async {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
       await windowManager.ensureInitialized();
       const windowOptions = WindowOptions(
-        title: 'W Burger - POS',
+        title: 'W Burger POS',
         center: true,
         size: Size(1280, 720),
         fullScreen: true,
       );
       await windowManager.waitUntilReadyToShow(windowOptions, () async {
+        await windowManager.setFullScreen(true);
         await windowManager.show();
         await windowManager.focus();
       });
@@ -76,7 +78,7 @@ class WBurgerPosApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
-      title: 'W Burger - POS',
+      title: 'W Burger POS',
       theme: AppTheme.lightTheme,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
@@ -111,9 +113,7 @@ class _DesktopShellShortcuts extends StatefulWidget {
 }
 
 class _DesktopShellShortcutsState extends State<_DesktopShellShortcuts> {
-  static const _escapeHoldDuration = Duration(milliseconds: 700);
-
-  Timer? _escapeHoldTimer;
+  WindowsFullscreenShortcuts? _shortcuts;
 
   bool get _isWindowsDesktop =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
@@ -122,41 +122,21 @@ class _DesktopShellShortcutsState extends State<_DesktopShellShortcuts> {
   void initState() {
     super.initState();
     if (_isWindowsDesktop) {
-      HardwareKeyboard.instance.addHandler(_handleKey);
+      _shortcuts = WindowsFullscreenShortcuts(
+        setFullScreen: windowManager.setFullScreen,
+      );
+      HardwareKeyboard.instance.addHandler(_shortcuts!.handleKey);
     }
   }
 
   @override
   void dispose() {
-    if (_isWindowsDesktop) {
-      HardwareKeyboard.instance.removeHandler(_handleKey);
+    final shortcuts = _shortcuts;
+    if (shortcuts != null) {
+      HardwareKeyboard.instance.removeHandler(shortcuts.handleKey);
+      shortcuts.dispose();
     }
-    _escapeHoldTimer?.cancel();
     super.dispose();
-  }
-
-  bool _handleKey(KeyEvent event) {
-    if (!_isWindowsDesktop) return false;
-
-    if (event.logicalKey == LogicalKeyboardKey.f11 && event is KeyDownEvent) {
-      unawaited(windowManager.setFullScreen(true));
-      return true;
-    }
-
-    if (event.logicalKey == LogicalKeyboardKey.escape) {
-      if (event is KeyDownEvent) {
-        _escapeHoldTimer ??= Timer(_escapeHoldDuration, () {
-          _escapeHoldTimer = null;
-          unawaited(windowManager.setFullScreen(false));
-        });
-      } else if (event is KeyUpEvent) {
-        _escapeHoldTimer?.cancel();
-        _escapeHoldTimer = null;
-      }
-      return true;
-    }
-
-    return false;
   }
 
   @override

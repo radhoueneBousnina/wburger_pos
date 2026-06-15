@@ -59,6 +59,8 @@ flutter_launcher_icons:
     generate: true
   windows:
     generate: true
+    image_path: "assets/logos/wburger_windows_icon.png"
+    icon_size: 256
   macos:
     generate: true
   linux: true

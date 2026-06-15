@@ -54,7 +54,7 @@ class _TopBarState extends ConsumerState<TopBar> {
       case AppRoutes.sessionClosure:
         return 'Session Closure';
       default:
-        return 'W Burger - POS';
+        return 'W Burger POS';
     }
   }
 

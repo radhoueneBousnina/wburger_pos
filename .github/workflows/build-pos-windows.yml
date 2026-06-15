@@ -47,8 +47,8 @@ jobs:
       - name: Analyze POS app
         run: flutter analyze
 
-      - name: Run POS production smoke tests
-        run: flutter test test/receipt_printer_service_test.dart test/cart_state_test.dart test/payment_modal_test.dart
+      - name: Run POS tests
+        run: flutter test
 
       - name: Build Windows release
         shell: pwsh
@@ -58,11 +58,49 @@ jobs:
           CASH_DRAWER_STATUS_PORT: ${{ inputs.cash_drawer_status_port }}
           CASH_DRAWER_OPEN_WHEN_PIN3_HIGH: ${{ inputs.cash_drawer_open_when_pin3_high }}
         run: |
-          flutter build windows --release `
-            --dart-define=API_BASE_URL="$env:API_BASE_URL" `
-            --dart-define=POS_PRINTER_NAMES="$env:POS_PRINTER_NAMES" `
-            --dart-define=CASH_DRAWER_STATUS_PORT="$env:CASH_DRAWER_STATUS_PORT" `
-            --dart-define=CASH_DRAWER_OPEN_WHEN_PIN3_HIGH="$env:CASH_DRAWER_OPEN_WHEN_PIN3_HIGH"
+          $buildArgs = @(
+            "build"
+            "windows"
+            "--release"
+            "--dart-define=API_BASE_URL=$env:API_BASE_URL"
+            "--dart-define=POS_PRINTER_NAMES=$env:POS_PRINTER_NAMES"
+            "--dart-define=CASH_DRAWER_STATUS_PORT=$env:CASH_DRAWER_STATUS_PORT"
+            "--dart-define=CASH_DRAWER_OPEN_WHEN_PIN3_HIGH=$env:CASH_DRAWER_OPEN_WHEN_PIN3_HIGH"
+          )
+          & flutter @buildArgs
+          if ($LASTEXITCODE -ne 0) {
+            throw "Flutter Windows release build failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Validate Windows release bundle
+        shell: pwsh
+        run: |
+          $releaseDir = "build\windows\x64\runner\Release"
+          $requiredFiles = @(
+            "$releaseDir\wburger_pos.exe"
+            "$releaseDir\flutter_windows.dll"
+            "$releaseDir\data\app.so"
+            "$releaseDir\data\icudtl.dat"
+            "$releaseDir\data\flutter_assets\AssetManifest.bin"
+          )
+          foreach ($file in $requiredFiles) {
+            if (-not (Test-Path $file -PathType Leaf)) {
+              throw "Required Windows release file is missing: $file"
+            }
+          }
+
+      - name: Download Microsoft Visual C++ runtime
+        shell: pwsh
+        run: |
+          $runtimePath = "installer\vc_redist.x64.exe"
+          Invoke-WebRequest `
+            -Uri "https://aka.ms/vc14/vc_redist.x64.exe" `
+            -OutFile $runtimePath
+          $signature = Get-AuthenticodeSignature $runtimePath
+          if ($signature.Status -ne "Valid" -or
+              $signature.SignerCertificate.Subject -notmatch "Microsoft") {
+            throw "Downloaded Visual C++ runtime does not have a valid Microsoft signature"
+          }
 
       - name: Install Inno Setup
         shell: pwsh
@@ -72,11 +110,31 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path installer-output | Out-Null
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer\wburger_pos.iss"
+          $versionMatch = Select-String `
+            -Path "pubspec.yaml" `
+            -Pattern '^version:\s*(?<version>[0-9]+\.[0-9]+\.[0-9]+)' |
+            Select-Object -First 1
+          if ($null -eq $versionMatch) {
+            throw "Could not read the application version from pubspec.yaml"
+          }
+          $appVersion = $versionMatch.Matches[0].Groups["version"].Value
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            "/DMyAppVersion=$appVersion" `
+            "installer\wburger_pos.iss"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE"
+          }
+          $installer = "installer-output\W-Burger-POS-Setup.exe"
+          if (-not (Test-Path $installer -PathType Leaf) -or
+              (Get-Item $installer).Length -lt 1MB) {
+            throw "The Windows installer was not generated correctly"
+          }
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: W-Burger-POS-Installer
           path: installer-output/W-Burger-POS-Setup.exe
+          if-no-files-found: error
+          compression-level: 0
           retention-days: 14
