@@ -95,7 +95,7 @@ class _CartPanel extends ConsumerWidget {
                           ),
                         const SizedBox(height: 4),
                         Text(
-                          '${cart.orderType == OrderType.dineIn ? 'Dine In' : 'Takeaway'} • ${_salesPaymentLabel(cart.paymentType)}',
+                          '${_salesOrderTypeLabel(cart.orderType)} • ${_salesPaymentLabel(cart.paymentType)}',
                           style: AppTextStyles.bodySm.copyWith(
                             color: AppColors.textSecondaryFor(context),
                           ),

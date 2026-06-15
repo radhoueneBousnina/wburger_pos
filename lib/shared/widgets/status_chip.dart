@@ -69,6 +69,11 @@ class PaymentTypeChip extends StatelessWidget {
     final (label, icon, color) = switch (type!) {
       PaymentType.cash => ('Cash', Icons.payments_rounded, AppColors.success),
       PaymentType.card => ('Card', Icons.credit_card_rounded, AppColors.blue),
+      PaymentType.glovo => (
+          'Glovo',
+          Icons.delivery_dining_rounded,
+          AppColors.blue
+        ),
       PaymentType.staff => ('Staff', Icons.badge_rounded, AppColors.warning),
       PaymentType.other => (
           'Other',

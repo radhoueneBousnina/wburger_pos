@@ -59,7 +59,7 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
                 context,
                 total: total,
                 onConfirm: (pType, oType,
-                    {amountGiven, changeReturned, staffId}) {
+                    {amountGiven, changeReturned, staffId, glovoOrderId}) {
                   setState(() => _state = QrState.success);
                   Future.delayed(const Duration(seconds: 3), _reset);
                 },

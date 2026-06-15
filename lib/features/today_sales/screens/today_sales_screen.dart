@@ -70,10 +70,14 @@ class _TodaySalesScreenState extends ConsumerState<TodaySalesScreen> {
         final cardTotal = validated
             .where((o) => o.paymentType == PaymentType.card)
             .fold<double>(0, (s, o) => s + o.total);
+        final glovoTotal = validated
+            .where((o) => o.paymentType == PaymentType.glovo)
+            .fold<double>(0, (s, o) => s + o.total);
         final otherTotal = validated
             .where((o) =>
                 o.paymentType != PaymentType.cash &&
-                o.paymentType != PaymentType.card)
+                o.paymentType != PaymentType.card &&
+                o.paymentType != PaymentType.glovo)
             .fold<double>(0, (s, o) => s + o.total);
         final totalRevenue = validated.fold<double>(0, (s, o) => s + o.total);
 
@@ -104,6 +108,12 @@ class _TodaySalesScreenState extends ConsumerState<TodaySalesScreen> {
                     value: '${cardTotal.toStringAsFixed(3)} DT',
                     icon: Icons.credit_card_rounded,
                     color: AppColors.info,
+                  ),
+                  _SummaryCard(
+                    label: 'Glovo',
+                    value: '${glovoTotal.toStringAsFixed(3)} DT',
+                    icon: Icons.delivery_dining_rounded,
+                    color: AppColors.blue,
                   ),
                   _SummaryCard(
                     label: 'Other',

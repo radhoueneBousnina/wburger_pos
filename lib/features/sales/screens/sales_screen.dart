@@ -468,7 +468,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       customerNote: cart.customerNote,
       referenceLabel: cart.ticketNumber,
       onConfirm: (paymentType, orderType,
-          {amountGiven, changeReturned, staffId}) async {
+          {amountGiven, changeReturned, staffId, glovoOrderId}) async {
         final orderNotifier = ref.read(ordersProvider.notifier);
         final confirmedPaymentType =
             isDealRedemption ? PaymentType.deal : paymentType;
@@ -486,6 +486,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 amountGiven: amountGiven,
                 changeReturned: changeReturned,
                 staffId: staffId,
+                glovoOrderId: glovoOrderId,
               )
             : await orderNotifier.processCartOrder(
                 effectiveCart,
@@ -493,6 +494,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 amountGiven: amountGiven,
                 changeReturned: changeReturned,
                 staffId: staffId,
+                glovoOrderId: glovoOrderId,
               );
 
         if (result.requiresStockOverride) {
@@ -506,6 +508,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                     amountGiven: amountGiven,
                     changeReturned: changeReturned,
                     staffId: staffId,
+                    glovoOrderId: glovoOrderId,
                   )
                 : await orderNotifier.confirmExistingOrder(
                     result.orderId!,
@@ -516,6 +519,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                     amountGiven: amountGiven,
                     changeReturned: changeReturned,
                     staffId: staffId,
+                    glovoOrderId: glovoOrderId,
                   );
           } else {
             if (cart.redemptionToken == null && result.orderId != null) {

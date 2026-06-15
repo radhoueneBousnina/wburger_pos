@@ -21,6 +21,7 @@ class PaymentModal extends ConsumerStatefulWidget {
     double? amountGiven,
     double? changeReturned,
     String? staffId,
+    String? glovoOrderId,
   }) onConfirm;
   final OrderType initialOrderType;
   final PaymentType? initialPaymentType;
@@ -58,6 +59,7 @@ class PaymentModal extends ConsumerStatefulWidget {
       double? amountGiven,
       double? changeReturned,
       String? staffId,
+      String? glovoOrderId,
     }) onConfirm,
     OrderType initialOrderType = OrderType.dineIn,
     PaymentType? initialPaymentType,
@@ -99,6 +101,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   late OrderType _orderType;
   bool _isSubmitting = false;
   final TextEditingController _cashGivenController = TextEditingController();
+  final TextEditingController _glovoOrderIdController = TextEditingController();
   final TextEditingController _staffSearchController = TextEditingController();
   final FocusNode _cashFocusNode = FocusNode();
   String? _selectedStaffId;
@@ -121,6 +124,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   @override
   void dispose() {
     _cashGivenController.dispose();
+    _glovoOrderIdController.dispose();
     _staffSearchController.dispose();
     _cashFocusNode.dispose();
     super.dispose();
@@ -134,6 +138,9 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       widget.staffDiscountBaseTotal ?? widget.total;
   double get _staffDiscountPercent =>
       ref.watch(posSettingsProvider).valueOrNull?.staffDiscountPercent ?? 0;
+  bool get _isGlovoOrder => _orderType == OrderType.glovo;
+  PaymentType? get _effectivePaymentType =>
+      _isGlovoOrder ? PaymentType.glovo : _selectedType;
   double get _staffDiscountAmount {
     if (_selectedType != PaymentType.staff) return 0;
     final percent = _staffDiscountPercent.clamp(0, 100).toDouble();
@@ -150,6 +157,9 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   }
 
   List<PaymentType> get _availablePaymentTypes {
+    if (_isGlovoOrder) {
+      return const [];
+    }
     final isDeal = widget.initialPaymentType == PaymentType.deal ||
         _selectedType == PaymentType.deal;
     if (isDeal) {
@@ -165,8 +175,8 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   }
 
   Future<void> _handleConfirm() async {
-    if (_selectedType == null || _isSubmitting) return;
-    final selectedType = _selectedType!;
+    final selectedType = _effectivePaymentType;
+    if (selectedType == null || _isSubmitting) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
 
     if (selectedType == PaymentType.cash &&
@@ -185,6 +195,14 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       return;
     }
 
+    if (selectedType == PaymentType.glovo &&
+        _glovoOrderIdController.text.trim().isEmpty) {
+      messenger?.showSnackBar(
+        const SnackBar(content: Text('Enter the Glovo order ID.')),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     try {
       await widget.onConfirm(
@@ -194,6 +212,9 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
         changeReturned:
             selectedType == PaymentType.cash ? _changeReturned : null,
         staffId: selectedType == PaymentType.staff ? _selectedStaffId : null,
+        glovoOrderId: selectedType == PaymentType.glovo
+            ? _glovoOrderIdController.text.trim()
+            : null,
       );
       if (mounted) Navigator.pop(context);
     } catch (error) {
@@ -223,6 +244,20 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
         if (mounted) _cashFocusNode.requestFocus();
       });
     } else {
+      _cashFocusNode.unfocus();
+    }
+  }
+
+  void _selectOrderType(OrderType orderType) {
+    setState(() {
+      _orderType = orderType;
+      if (orderType == OrderType.glovo) {
+        _selectedType = PaymentType.glovo;
+      } else if (_selectedType == PaymentType.glovo) {
+        _selectedType = null;
+      }
+    });
+    if (orderType == OrderType.glovo) {
       _cashFocusNode.unfocus();
     }
   }
@@ -359,7 +394,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
                   Expanded(
                     flex: 2,
                     child: ElevatedButton.icon(
-                      onPressed: _selectedType == null || _isSubmitting
+                      onPressed: _effectivePaymentType == null || _isSubmitting
                           ? null
                           : _handleConfirm,
                       style: ElevatedButton.styleFrom(
@@ -391,6 +426,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       _buildOrderTypeSection(),
       _buildPaymentMethodSection(),
       if (_selectedType == PaymentType.cash) _buildCashDetailsSection(),
+      if (_isGlovoOrder) _buildGlovoSection(),
       if (_selectedType == PaymentType.staff) _buildStaffSection(),
       _buildTotalCard(),
     ];
@@ -406,6 +442,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       if (_hasCustomerOrderInfo) _buildCustomerOrderSection(dense: true),
       _buildOrderTypeSection(dense: true, compactChoices: true),
       _buildPaymentMethodSection(dense: true, compactChoices: true),
+      if (_isGlovoOrder) _buildGlovoSection(),
       _buildTotalCard(compact: true),
     ];
 
@@ -501,7 +538,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
             selected: _orderType == OrderType.dineIn,
             enabled: !widget.lockOrderType,
             compact: compactChoices,
-            onTap: () => setState(() => _orderType = OrderType.dineIn),
+            onTap: () => _selectOrderType(OrderType.dineIn),
           ),
           _PaymentChoiceTile(
             label: 'Takeaway',
@@ -509,7 +546,15 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
             selected: _orderType == OrderType.takeaway,
             enabled: !widget.lockOrderType,
             compact: compactChoices,
-            onTap: () => setState(() => _orderType = OrderType.takeaway),
+            onTap: () => _selectOrderType(OrderType.takeaway),
+          ),
+          _PaymentChoiceTile(
+            label: 'Glovo',
+            icon: Icons.delivery_dining_rounded,
+            selected: _orderType == OrderType.glovo,
+            enabled: !widget.lockOrderType,
+            compact: compactChoices,
+            onTap: () => _selectOrderType(OrderType.glovo),
           ),
         ],
       ),
@@ -520,6 +565,18 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
     bool dense = false,
     bool compactChoices = false,
   }) {
+    if (_isGlovoOrder) {
+      return _PaymentSectionCard(
+        title: 'Payment Method',
+        dense: dense,
+        child: _PaymentInfoPill(
+          icon: Icons.delivery_dining_rounded,
+          text: 'Glovo payment will be used automatically.',
+          color: AppColors.blue,
+        ),
+      );
+    }
+
     return _PaymentSectionCard(
       title: 'Payment Method',
       dense: dense,
@@ -537,6 +594,25 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
               onTap: () => _selectPaymentType(type),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGlovoSection() {
+    return _PaymentSectionCard(
+      title: 'Glovo Details',
+      child: TextField(
+        controller: _glovoOrderIdController,
+        textInputAction: TextInputAction.done,
+        decoration: InputDecoration(
+          labelText: 'Glovo order ID',
+          prefixIcon: const Icon(Icons.confirmation_number_rounded),
+          filled: true,
+          fillColor: AppColors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
       ),
     );
   }
@@ -686,6 +762,8 @@ String _paymentLabel(PaymentType type) {
       return 'Cash';
     case PaymentType.card:
       return 'Card';
+    case PaymentType.glovo:
+      return 'Glovo';
     case PaymentType.staff:
       return 'Staff';
     case PaymentType.other:
@@ -703,6 +781,8 @@ IconData _paymentIcon(PaymentType type) {
       return Icons.payments_rounded;
     case PaymentType.card:
       return Icons.credit_card_rounded;
+    case PaymentType.glovo:
+      return Icons.delivery_dining_rounded;
     case PaymentType.staff:
       return Icons.badge_rounded;
     case PaymentType.other:

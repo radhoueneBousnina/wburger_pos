@@ -36,6 +36,21 @@ class CheckoutResult {
   bool get requiresStockOverride => warnings.isNotEmpty;
 }
 
+String _serviceTypePayload(OrderType orderType) {
+  switch (orderType) {
+    case OrderType.dineIn:
+      return 'dine_in';
+    case OrderType.takeaway:
+      return 'takeaway';
+    case OrderType.glovo:
+      return 'delivery';
+  }
+}
+
+PaymentType _paymentTypeForOrder(OrderType orderType, PaymentType paymentType) {
+  return orderType == OrderType.glovo ? PaymentType.glovo : paymentType;
+}
+
 // ============================================================
 // ORDERS PROVIDER (Today's Sales)
 // ============================================================
@@ -146,13 +161,24 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         else
           'period': 'today',
       };
-      final res = await apiClient.dio.get(
-        ApiConstants.orders,
-        queryParameters: queryParameters,
-      );
-      final List data =
-          res.data is List ? res.data : (res.data['results'] ?? []);
-      final orders = data.map((j) => Order.fromJson(j)).toList();
+      final orders = <Order>[];
+      var page = 1;
+      while (true) {
+        final res = await apiClient.dio.get(
+          ApiConstants.orders,
+          queryParameters: {
+            ...queryParameters,
+            'page': page.toString(),
+          },
+        );
+        final List data =
+            res.data is List ? res.data : (res.data['results'] ?? []);
+        orders.addAll(data.map((j) => Order.fromJson(j)));
+        if (res.data is List || res.data['next'] == null) {
+          break;
+        }
+        page += 1;
+      }
       if (!mounted) return;
       _lastFetchedAt = DateTime.now();
       state = AsyncValue.data(orders);
@@ -181,15 +207,19 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? amountGiven,
     double? changeReturned,
     String? staffId,
+    String? glovoOrderId,
   }) async {
     try {
+      final effectivePaymentType = orderType == null
+          ? paymentType
+          : _paymentTypeForOrder(orderType, paymentType);
       final response = await apiClient.dio.post(
         '${ApiConstants.orders}$orderId${ApiConstants.confirmPayment}',
         data: {
-          'payment_type': paymentType.name,
-          if (orderType != null)
-            'service_type':
-                orderType == OrderType.dineIn ? 'dine_in' : 'takeaway',
+          'payment_type': effectivePaymentType.name,
+          if (orderType != null) 'service_type': _serviceTypePayload(orderType),
+          if (glovoOrderId != null && glovoOrderId.trim().isNotEmpty)
+            'glovo_order_id': glovoOrderId.trim(),
           if (allowNegativeStock) 'allow_negative_stock': true,
           if (amountGiven != null) 'amount_given': amountGiven,
           if (changeReturned != null) 'change_returned': changeReturned,
@@ -208,7 +238,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
               : responseData?['ticket_number']?.toString();
       _afterConfirmedOrder(
         orderId: orderId,
-        paymentType: paymentType,
+        paymentType: effectivePaymentType,
         orderType: orderType,
         cart: cart,
         ticketNumber: ticketNumber,
@@ -235,14 +265,17 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? amountGiven,
     double? changeReturned,
     String? staffId,
+    String? glovoOrderId,
   }) async {
     if (ref.read(testModeProvider).isActive) {
+      final effectivePaymentType =
+          _paymentTypeForOrder(cart.orderType, paymentType);
       final orderId = 'test-${DateTime.now().microsecondsSinceEpoch}';
       final ticketNumber =
           'TEST-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
       _afterConfirmedOrder(
         orderId: orderId,
-        paymentType: paymentType,
+        paymentType: effectivePaymentType,
         orderType: cart.orderType,
         cart: cart,
         ticketNumber: ticketNumber,
@@ -254,11 +287,12 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
 
     String? orderId;
     try {
+      final effectivePaymentType =
+          _paymentTypeForOrder(cart.orderType, paymentType);
       // 1. Create order
       final res = await apiClient.dio.post(ApiConstants.orders, data: {
-        'service_type':
-            cart.orderType == OrderType.dineIn ? 'dine_in' : 'takeaway',
-        'payment_type': paymentType.name,
+        'service_type': _serviceTypePayload(cart.orderType),
+        'payment_type': effectivePaymentType.name,
       });
       orderId = res.data['id'].toString();
 
@@ -279,12 +313,13 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       // 3. Confirm payment
       return await _confirmOrder(
         orderId,
-        paymentType,
+        effectivePaymentType,
         orderType: cart.orderType,
         cart: cart,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
         staffId: staffId,
+        glovoOrderId: glovoOrderId,
       );
     } on DioException catch (e) {
       apiClient.logError('Process order error', e);
@@ -327,14 +362,17 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? amountGiven,
     double? changeReturned,
     String? staffId,
+    String? glovoOrderId,
   }) async {
     if (ref.read(testModeProvider).isActive) {
+      final effectivePaymentType =
+          _paymentTypeForOrder(cart.orderType, paymentType);
       final orderId = 'test-qr-${DateTime.now().microsecondsSinceEpoch}';
       final ticketNumber =
           'TEST-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
       _afterConfirmedOrder(
         orderId: orderId,
-        paymentType: paymentType,
+        paymentType: effectivePaymentType,
         orderType: cart.orderType,
         cart: cart,
         ticketNumber: ticketNumber,
@@ -358,6 +396,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         amountGiven: amountGiven,
         changeReturned: changeReturned,
         staffId: staffId,
+        glovoOrderId: glovoOrderId,
       );
     } on DioException catch (e) {
       apiClient.logError('Process QR order error', e);
@@ -397,14 +436,18 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? amountGiven,
     double? changeReturned,
     String? staffId,
+    String? glovoOrderId,
   }) {
     if (ref.read(testModeProvider).isActive && cart != null) {
+      final localOrderType = orderType ?? cart.orderType;
+      final effectivePaymentType =
+          _paymentTypeForOrder(localOrderType, paymentType);
       final ticketNumber =
           'TEST-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
       _afterConfirmedOrder(
         orderId: orderId,
-        paymentType: paymentType,
-        orderType: orderType ?? cart.orderType,
+        paymentType: effectivePaymentType,
+        orderType: localOrderType,
         cart: cart,
         ticketNumber: ticketNumber,
         amountGiven: amountGiven,
@@ -423,6 +466,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       amountGiven: amountGiven,
       changeReturned: changeReturned,
       staffId: staffId,
+      glovoOrderId: glovoOrderId,
     );
   }
 

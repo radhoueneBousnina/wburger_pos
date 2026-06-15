@@ -359,9 +359,9 @@ int? _rootIndexForComponent(
   return rootIndexes.isEmpty ? null : rootIndexes.last;
 }
 
-enum OrderType { dineIn, takeaway }
+enum OrderType { dineIn, takeaway, glovo }
 
-enum PaymentType { cash, card, staff, other, points, deal }
+enum PaymentType { cash, card, glovo, staff, other, points, deal }
 
 enum OrderStatus { pending, validated, cancelled }
 
@@ -450,7 +450,9 @@ class Order {
 
   factory Order.fromJson(Map<String, dynamic> json) {
     OrderType parsedType = OrderType.dineIn;
-    if (json['service_type'] == 'takeaway') {
+    if (json['payment_type'] == 'glovo' || json['service_type'] == 'delivery') {
+      parsedType = OrderType.glovo;
+    } else if (json['service_type'] == 'takeaway') {
       parsedType = OrderType.takeaway;
     }
 
@@ -460,6 +462,8 @@ class Order {
       parsedPayment = PaymentType.cash;
     } else if (pt == 'card') {
       parsedPayment = PaymentType.card;
+    } else if (pt == 'glovo') {
+      parsedPayment = PaymentType.glovo;
     } else if (pt == 'points') {
       parsedPayment = PaymentType.points;
     } else if (pt == 'deal') {

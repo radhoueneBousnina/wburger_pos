@@ -7,6 +7,8 @@ String _salesPaymentLabel(PaymentType? type) {
       return 'Cash';
     case PaymentType.card:
       return 'Card';
+    case PaymentType.glovo:
+      return 'Glovo';
     case PaymentType.staff:
       return 'Staff';
     case PaymentType.other:
@@ -15,5 +17,16 @@ String _salesPaymentLabel(PaymentType? type) {
       return 'Points';
     case PaymentType.deal:
       return 'Deal';
+  }
+}
+
+String _salesOrderTypeLabel(OrderType type) {
+  switch (type) {
+    case OrderType.dineIn:
+      return 'Dine In';
+    case OrderType.takeaway:
+      return 'Takeaway';
+    case OrderType.glovo:
+      return 'Glovo';
   }
 }

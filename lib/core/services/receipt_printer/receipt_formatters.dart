@@ -11,6 +11,8 @@ String _orderTypeLabel(OrderType type) {
       return 'Dine-in';
     case OrderType.takeaway:
       return 'Takeaway';
+    case OrderType.glovo:
+      return 'Glovo';
   }
 }
 

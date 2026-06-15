@@ -267,7 +267,8 @@ class _CashDrawerButton extends ConsumerWidget {
     final other = validated
         .where((o) =>
             o.paymentType != PaymentType.cash &&
-            o.paymentType != PaymentType.card)
+            o.paymentType != PaymentType.card &&
+            o.paymentType != PaymentType.glovo)
         .fold<double>(0, (s, o) => s + o.total);
     final reasonCtrl = TextEditingController();
     var isOpening = false;

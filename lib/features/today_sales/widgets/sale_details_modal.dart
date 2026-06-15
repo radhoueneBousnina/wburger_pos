@@ -166,12 +166,8 @@ class _OrderDetailsHeader extends StatelessWidget {
                       label: order.isQrOrder ? 'Mobile QR' : 'POS Sale',
                     ),
                     _SoftChip(
-                      icon: order.orderType == OrderType.dineIn
-                          ? Icons.restaurant_rounded
-                          : Icons.shopping_bag_rounded,
-                      label: order.orderType == OrderType.dineIn
-                          ? 'Dine In'
-                          : 'Takeaway',
+                      icon: _todaySaleOrderTypeIcon(order.orderType),
+                      label: _todaySaleOrderTypeLabel(order.orderType),
                     ),
                   ],
                 ),
@@ -190,6 +186,28 @@ class _OrderDetailsHeader extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+String _todaySaleOrderTypeLabel(OrderType type) {
+  switch (type) {
+    case OrderType.dineIn:
+      return 'Dine In';
+    case OrderType.takeaway:
+      return 'Takeaway';
+    case OrderType.glovo:
+      return 'Glovo';
+  }
+}
+
+IconData _todaySaleOrderTypeIcon(OrderType type) {
+  switch (type) {
+    case OrderType.dineIn:
+      return Icons.restaurant_rounded;
+    case OrderType.takeaway:
+      return Icons.shopping_bag_rounded;
+    case OrderType.glovo:
+      return Icons.delivery_dining_rounded;
   }
 }
 
