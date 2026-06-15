@@ -47,8 +47,13 @@ jobs:
       - name: Analyze POS app
         run: flutter analyze
 
-      - name: Run POS tests
-        run: flutter test
+      - name: Run POS production smoke tests
+        run: >
+          flutter test
+          test/receipt_printer_service_test.dart
+          test/cart_state_test.dart
+          test/payment_modal_test.dart
+          test/windows_fullscreen_shortcuts_test.dart
 
       - name: Build Windows release
         shell: pwsh

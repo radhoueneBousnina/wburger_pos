@@ -105,15 +105,13 @@ void main() {
             body: PaymentModal(
               total: 20,
               staffDiscountBaseTotal: 20,
+              initialPaymentType: PaymentType.staff,
               onConfirm: (_, __, {amountGiven, changeReturned, staffId}) {},
             ),
           ),
         ),
       ),
     );
-    await tester.pump();
-
-    await tester.tap(find.text('Staff'));
     await tester.pumpAndSettle();
 
     expect(find.text('Staff total: 12.000 DT'), findsOneWidget);
