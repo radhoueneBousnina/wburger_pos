@@ -76,6 +76,47 @@ jobs:
             throw "Flutter Windows release build failed with exit code $LASTEXITCODE"
           }
 
+      - name: Validate baked production API URL
+        shell: pwsh
+        env:
+          API_BASE_URL: ${{ inputs.api_base_url }}
+        run: |
+          $releaseDir = "build\windows\x64\runner\Release"
+          $appSo = "$releaseDir\data\app.so"
+          if (-not (Test-Path $appSo -PathType Leaf)) {
+            throw "Required Windows release file is missing: $appSo"
+          }
+
+          $appText = [System.Text.Encoding]::Latin1.GetString(
+            [System.IO.File]::ReadAllBytes($appSo)
+          )
+
+          if (-not $appText.Contains($env:API_BASE_URL)) {
+            throw "The Windows build does not contain API_BASE_URL=$env:API_BASE_URL"
+          }
+
+          $forbiddenUrls = @(
+            "http://localhost:8000"
+            "http://127.0.0.1:8000"
+            "http://10.0.2.2:8000"
+          )
+          foreach ($url in $forbiddenUrls) {
+            if ($appText.Contains($url)) {
+              throw "The Windows build still contains forbidden development API URL: $url"
+            }
+          }
+
+          $buildInfo = [ordered]@{
+            apiBaseUrl = $env:API_BASE_URL
+            gitSha = $env:GITHUB_SHA
+            builtAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+          }
+          $buildInfo |
+            ConvertTo-Json |
+            Set-Content -Path "$releaseDir\wburger_pos_build_info.json" -Encoding UTF8
+
+          Write-Host "Verified Windows POS API base URL: $env:API_BASE_URL"
+
       - name: Validate Windows release bundle
         shell: pwsh
         run: |
@@ -86,6 +127,7 @@ jobs:
             "$releaseDir\data\app.so"
             "$releaseDir\data\icudtl.dat"
             "$releaseDir\data\flutter_assets\AssetManifest.bin"
+            "$releaseDir\wburger_pos_build_info.json"
           )
           foreach ($file in $requiredFiles) {
             if (-not (Test-Path $file -PathType Leaf)) {
@@ -141,4 +183,12 @@ jobs:
           path: installer-output/W-Burger-POS-Setup.exe
           if-no-files-found: error
           compression-level: 0
+          retention-days: 14
+
+      - name: Upload release bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: W-Burger-POS-Release-Bundle
+          path: build/windows/x64/runner/Release
+          if-no-files-found: error
           retention-days: 14

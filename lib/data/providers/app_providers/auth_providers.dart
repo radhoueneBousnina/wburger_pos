@@ -77,6 +77,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint('W Burger POS login URL: $loginUrl');
       debugPrint('W Burger POS app URL: ${Uri.base}');
       debugPrint('W Burger POS API base URL: ${apiClient.dio.options.baseUrl}');
+      unawaited(PosMonitoringService.instance.logLocal(
+        'Login started. api_base=${apiClient.dio.options.baseUrl} '
+        'login_url=$loginUrl',
+      ));
 
       final res = await apiClient.dio.post(
         ApiConstants.login,
@@ -130,11 +134,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint('  raw error: ${e.error}');
       debugPrint('  status: ${e.response?.statusCode}');
       debugPrint('  response: ${e.response?.data}');
-      apiClient.logError('Login error', e);
-      throw apiClient.describeError(
+      final statusCode = e.response?.statusCode?.toString() ?? 'none';
+      final errorMessage = apiClient.describeError(
         e,
         fallback: 'Unable to sign in right now.',
       );
+      unawaited(PosMonitoringService.instance.logLocal(
+        'Login failed. url=${e.requestOptions.uri} type=${e.type.name} '
+        'status=$statusCode message=$errorMessage',
+      ));
+      apiClient.logError('Login error', e);
+      throw errorMessage;
     } catch (e) {
       apiClient.logError('Login generic error', e);
       throw e.toString().replaceFirst('Exception: ', '');

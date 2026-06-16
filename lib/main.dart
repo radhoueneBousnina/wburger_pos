@@ -8,6 +8,7 @@ import 'package:window_manager/window_manager.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'core/network/api_client.dart';
+import 'core/network/api_constants.dart';
 import 'core/services/monitoring_service.dart';
 import 'core/services/windows_fullscreen_shortcuts.dart';
 import 'data/providers/app_providers.dart';
@@ -52,6 +53,9 @@ void main() async {
     );
 
     await PosMonitoringService.instance.init();
+    unawaited(PosMonitoringService.instance.logLocal(
+      'POS app started with API base URL: ${ApiConstants.baseUrl}',
+    ));
 
     // POS access must be explicit for each app launch. If the app is closed,
     // crashes, or the browser tab is reopened, do not restore the previous
