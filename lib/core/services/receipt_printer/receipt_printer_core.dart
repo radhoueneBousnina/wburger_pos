@@ -140,6 +140,17 @@ class ReceiptPrinterService {
     );
   }
 
+  Future<ReceiptPrintResult> printLoginHardwareTest({
+    ReceiptPrinterConfig config = defaultReceiptPrinterConfig,
+  }) {
+    return printReceipt(
+      ReceiptData.sampleTestReceipt(),
+      config: config,
+      openDrawer: true,
+      allowBrowserFallback: false,
+    );
+  }
+
   Future<ReceiptPrintResult> printHardwareSmokeTest({
     ReceiptPrinterConfig config = const ReceiptPrinterConfig.mm80(),
   }) async {

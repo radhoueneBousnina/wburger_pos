@@ -20,7 +20,11 @@ class PosLayout {
   bool get isMedium => width >= 1280 && width < 1600;
   bool get isLarge => width >= 1600;
   bool get stackPanels => width < 1180;
-  bool get showWideLoginLayout => width >= 1120;
+  bool get showWideLoginLayout {
+    final landscapePosTerminal =
+        width >= 800 && height >= 540 && width / height >= 1.2;
+    return width >= 1120 || landscapePosTerminal;
+  }
 
   double get pagePadding => isCompact ? 16 : 24;
   double get sectionGap => isCompact ? 16 : 24;

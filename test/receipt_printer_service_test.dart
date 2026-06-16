@@ -385,6 +385,21 @@ void main() {
     expect(_containsBytes(bytes, const [0x1d, 0x56]), isFalse);
   });
 
+  test('can combine a sample receipt with the cash drawer pulse', () async {
+    final bytes = await ReceiptPrinterService.instance.buildReceiptTicketBytes(
+      ReceiptData.sampleTestReceipt(),
+      openDrawer: true,
+    );
+    final printableText = String.fromCharCodes(
+      bytes.where((byte) => byte >= 32 && byte <= 126),
+    );
+
+    expect(_containsBytes(bytes, const [0x1b, 0x70, 0x00]), isTrue);
+    expect(_containsBytes(bytes, const [0x1b, 0x70, 0x01]), isTrue);
+    expect(printableText, contains('Double Cheeseburger'));
+    expect(printableText, contains('Total:'));
+  });
+
   test('opens the cash drawer automatically only for cash receipts', () {
     final service = ReceiptPrinterService.instance;
     final sampleReceipt = ReceiptData.sampleTestReceipt();

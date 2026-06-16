@@ -4,6 +4,8 @@ part of '../screens/login_screen.dart';
 
 extension _LoginScreenActions on _LoginScreenState {
   Future<void> _handleLogin() async {
+    if (_isPrintingTest) return;
+
     if (_usernameCtrl.text.trim().isEmpty ||
         _passwordCtrl.text.trim().isEmpty) {
       setState(() {
@@ -53,6 +55,37 @@ extension _LoginScreenActions on _LoginScreenState {
       setState(() {
         _isLoading = false;
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _handlePrinterDrawerTest() async {
+    if (_isPrintingTest) return;
+
+    setState(() {
+      _isPrintingTest = true;
+      _printerTestMessage = null;
+      _errorMessage = null;
+    });
+
+    try {
+      final result =
+          await ReceiptPrinterService.instance.printLoginHardwareTest();
+      if (!mounted) return;
+      setState(() {
+        _isPrintingTest = false;
+        _printerTestSucceeded = result.isSuccess;
+        _printerTestMessage = result.isSuccess
+            ? '${result.message} Cash drawer pulse sent.'
+            : result.message;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isPrintingTest = false;
+        _printerTestSucceeded = false;
+        _printerTestMessage =
+            'Printer and drawer test failed: ${error.toString()}';
       });
     }
   }

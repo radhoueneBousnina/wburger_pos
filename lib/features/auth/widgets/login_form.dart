@@ -9,33 +9,43 @@ extension _LoginForm on _LoginScreenState {
     return Scaffold(
       backgroundColor: AppColors.blue,
       body: LayoutBuilder(
-        builder: (context, constraints) => layout.showWideLoginLayout
-            ? Row(
-                children: [
-                  const Expanded(child: _BrandingPanel()),
-                  Container(
-                    width: constraints.maxWidth >= 1400 ? 520 : 470,
-                    color: AppColors.white,
-                    child: _buildLoginForm(),
-                  ),
-                ],
-              )
-            : Container(
-                color: AppColors.white,
-                child: Column(
+        builder: (context, constraints) {
+          final compactWideFormWidth =
+              (constraints.maxWidth * 0.48).clamp(390.0, 470.0).toDouble();
+          final formWidth = constraints.maxWidth >= 1400
+              ? 520.0
+              : constraints.maxWidth < 1120
+                  ? compactWideFormWidth
+                  : 470.0;
+
+          return layout.showWideLoginLayout
+              ? Row(
                   children: [
-                    const Expanded(flex: 3, child: _BrandingPanel()),
-                    Expanded(
-                      flex: 4,
-                      child: Container(
-                        width: double.infinity,
-                        color: AppColors.white,
-                        child: _buildLoginForm(),
-                      ),
+                    const Expanded(child: _BrandingPanel()),
+                    Container(
+                      width: formWidth,
+                      color: AppColors.white,
+                      child: _buildLoginForm(),
                     ),
                   ],
-                ),
-              ),
+                )
+              : Container(
+                  color: AppColors.white,
+                  child: Column(
+                    children: [
+                      const Expanded(flex: 3, child: _BrandingPanel()),
+                      Expanded(
+                        flex: 4,
+                        child: Container(
+                          width: double.infinity,
+                          color: AppColors.white,
+                          child: _buildLoginForm(),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+        },
       ),
     );
   }
@@ -201,12 +211,56 @@ extension _LoginForm on _LoginScreenState {
                   ),
                 ),
               ],
+              if (_printerTestMessage != null) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _printerTestSucceeded
+                        ? AppColors.successLight
+                        : AppColors.errorLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: (_printerTestSucceeded
+                              ? AppColors.success
+                              : AppColors.error)
+                          .withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _printerTestSucceeded
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.error_outline_rounded,
+                        color: _printerTestSucceeded
+                            ? AppColors.success
+                            : AppColors.error,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _printerTestMessage!,
+                          style: AppTextStyles.bodySm.copyWith(
+                            color: _printerTestSucceeded
+                                ? AppColors.success
+                                : AppColors.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
                 height: layout.touchTarget + 4,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _handleLogin,
+                  onPressed:
+                      _isLoading || _isPrintingTest ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.yellow,
                     foregroundColor: AppColors.blue,
@@ -236,6 +290,42 @@ extension _LoginForm on _LoginScreenState {
                             Icon(Icons.arrow_forward_rounded, size: 20),
                           ],
                         ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: layout.touchTarget - 8,
+                child: OutlinedButton.icon(
+                  onPressed: _isLoading || _isPrintingTest
+                      ? null
+                      : _handlePrinterDrawerTest,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.blue,
+                    side: BorderSide(
+                      color: AppColors.blue.withValues(alpha: 0.35),
+                      width: 1.5,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    textStyle: AppTextStyles.button.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  icon: _isPrintingTest
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.print_rounded, size: 20),
+                  label: Text(
+                    _isPrintingTest
+                        ? 'Testing Printer & Drawer...'
+                        : 'Test Printer & Drawer',
+                  ),
                 ),
               ),
               if (shortViewport) const SizedBox(height: 20) else const Spacer(),

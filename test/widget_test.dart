@@ -8,5 +8,6 @@ void main() {
     await tester.pump();
     // Basic smoke test - app renders
     expect(find.byType(ProviderScope), findsOneWidget);
+    expect(find.text('Test Printer & Drawer'), findsOneWidget);
   });
 }
