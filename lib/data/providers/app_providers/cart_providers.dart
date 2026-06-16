@@ -42,6 +42,7 @@ class CartState {
     double staffDiscountPercent = 0,
   }) {
     if (type == PaymentType.points) return 0;
+    if (type == PaymentType.gift) return 0;
     if (type == PaymentType.staff) return staffTotal(staffDiscountPercent);
     return subtotal;
   }
@@ -51,6 +52,7 @@ class CartState {
     double staffDiscountPercent = 0,
   }) {
     if (type == PaymentType.points) return 0;
+    if (type == PaymentType.gift) return originalSubtotal;
     if (type == PaymentType.staff) {
       return staffDiscountAmount(staffDiscountPercent);
     }

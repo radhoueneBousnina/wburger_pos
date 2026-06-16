@@ -8,76 +8,77 @@ class _OrdersTable extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const spec = _TodaySalesTableSpec();
-        final tableWidth = constraints.maxWidth > spec.minWidth
-            ? constraints.maxWidth
-            : spec.minWidth;
+        final metrics = _TodaySalesTableMetrics.forWidth(
+          constraints.maxWidth,
+        );
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: tableWidth,
-            height: constraints.maxHeight,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: _TodaySalesTableSpec.horizontalPadding,
-                    vertical: 18,
-                  ),
-                  color: AppColors.tableHeaderFor(context),
-                  child: Row(
-                    children: [
-                      _Cell(
-                          width: _TodaySalesTableSpec.dateWidth,
-                          child: _HeaderCell('Date')),
-                      Spacer(flex: 1),
-                      _Cell(
-                          width: _TodaySalesTableSpec.ticketWidth,
-                          child: _HeaderCell('Ticket #')),
-                      Spacer(flex: 1),
-                      _Cell(
-                          width: _TodaySalesTableSpec.itemsWidth,
-                          child: _HeaderCell('Items')),
-                      Spacer(flex: 1),
-                      _Cell(
-                          width: _TodaySalesTableSpec.amountWidth,
-                          child: _HeaderCell('Amount', align: TextAlign.right)),
-                      Spacer(flex: 1),
-                      _Cell(
-                          width: _TodaySalesTableSpec.paymentWidth,
-                          child:
-                              _HeaderCell('Payment', align: TextAlign.center)),
-                      Spacer(flex: 1),
-                      _Cell(
-                          width: _TodaySalesTableSpec.statusWidth,
-                          child: _HeaderCell('Status')),
-                      Spacer(flex: 1),
-                      _Cell(
-                          width: _TodaySalesTableSpec.actionsWidth,
-                          child:
-                              _HeaderCell('Actions', align: TextAlign.center)),
-                    ],
-                  ),
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: metrics.horizontalPadding,
+                  vertical: metrics.headerVerticalPadding,
                 ),
-                Divider(height: 1, color: AppColors.borderFor(context)),
-                Expanded(
-                  child: ListView.separated(
-                    padding: EdgeInsets.zero,
-                    itemCount: orders.length,
-                    separatorBuilder: (_, __) =>
-                        Divider(height: 1, color: AppColors.borderFor(context)),
-                    itemBuilder: (ctx, i) => _OrderRow(order: orders[i]),
-                  ),
+                color: AppColors.tableHeaderFor(context),
+                child: Row(
+                  children: [
+                    _Cell(width: metrics.dateWidth, child: _HeaderCell('Date')),
+                    _TableGap(metrics),
+                    _Cell(
+                        width: metrics.ticketWidth,
+                        child: _HeaderCell('Ticket #')),
+                    _TableGap(metrics),
+                    _Cell(
+                        width: metrics.itemsWidth, child: _HeaderCell('Items')),
+                    _TableGap(metrics),
+                    _Cell(
+                        width: metrics.amountWidth,
+                        child: _HeaderCell('Amount', align: TextAlign.right)),
+                    _TableGap(metrics),
+                    _Cell(
+                        width: metrics.paymentWidth,
+                        child: _HeaderCell('Payment', align: TextAlign.center)),
+                    _TableGap(metrics),
+                    _Cell(
+                        width: metrics.statusWidth,
+                        child: _HeaderCell('Status', align: TextAlign.center)),
+                    _TableGap(metrics),
+                    _Cell(
+                        width: metrics.actionsWidth,
+                        child: _HeaderCell('Actions', align: TextAlign.center)),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Divider(height: 1, color: AppColors.borderFor(context)),
+              Expanded(
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: orders.length,
+                  separatorBuilder: (_, __) =>
+                      Divider(height: 1, color: AppColors.borderFor(context)),
+                  itemBuilder: (ctx, i) =>
+                      _OrderRow(order: orders[i], metrics: metrics),
+                ),
+              ),
+            ],
           ),
         );
       },
     );
   }
+}
+
+class _TableGap extends StatelessWidget {
+  final _TodaySalesTableMetrics metrics;
+
+  const _TableGap(this.metrics);
+
+  @override
+  Widget build(BuildContext context) => SizedBox(width: metrics.columnGap);
 }
 
 class _Cell extends StatelessWidget {
@@ -103,6 +104,8 @@ class _HeaderCell extends StatelessWidget {
     return Text(
       label,
       textAlign: align,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: AppTextStyles.label.copyWith(
         color: AppColors.textSecondaryFor(context),
         fontWeight: FontWeight.w700,
@@ -113,11 +116,12 @@ class _HeaderCell extends StatelessWidget {
 
 class _OrderRow extends ConsumerWidget {
   final Order order;
-  const _OrderRow({required this.order});
+  final _TodaySalesTableMetrics metrics;
+
+  const _OrderRow({required this.order, required this.metrics});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final layout = context.posLayout;
     final isCancelled = order.status == OrderStatus.cancelled;
     final rowColor = isCancelled
         ? AppColors.errorLight.withValues(
@@ -132,24 +136,26 @@ class _OrderRow extends ConsumerWidget {
       child: Container(
         color: rowColor,
         padding: EdgeInsets.symmetric(
-          horizontal: _TodaySalesTableSpec.horizontalPadding,
-          vertical: layout.isCompact ? 16 : 22,
+          horizontal: metrics.horizontalPadding,
+          vertical: metrics.rowVerticalPadding,
         ),
         child: Row(
           children: [
             _Cell(
-              width: _TodaySalesTableSpec.dateWidth,
+              width: metrics.dateWidth,
               child: Text(
                 DateFormat('dd/MM HH:mm').format(order.createdAt),
                 style: AppTextStyles.body.copyWith(
                   color: AppColors.textSecondaryFor(context),
                   fontWeight: FontWeight.w500,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Spacer(flex: 1),
+            _TableGap(metrics),
             _Cell(
-              width: _TodaySalesTableSpec.ticketWidth,
+              width: metrics.ticketWidth,
               child: Row(
                 children: [
                   Flexible(
@@ -168,44 +174,58 @@ class _OrderRow extends ConsumerWidget {
                 ],
               ),
             ),
-            const Spacer(flex: 1),
+            _TableGap(metrics),
             _Cell(
-              width: _TodaySalesTableSpec.itemsWidth,
+              width: metrics.itemsWidth,
               child: _OrderItemsSummary(items: order.items),
             ),
-            const Spacer(flex: 1),
+            _TableGap(metrics),
             _Cell(
-              width: _TodaySalesTableSpec.amountWidth,
-              child: Text(
-                '${order.total.toStringAsFixed(3)} DT',
-                textAlign: TextAlign.right,
-                style: AppTextStyles.price.copyWith(
-                  color: isCancelled ? AppColors.textDisabled : AppColors.blue,
-                  decoration: isCancelled ? TextDecoration.lineThrough : null,
-                  decorationColor: AppColors.error,
-                  decorationThickness: 2,
+              width: metrics.amountWidth,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '${order.total.toStringAsFixed(3)} DT',
+                    textAlign: TextAlign.right,
+                    style: AppTextStyles.price.copyWith(
+                      color:
+                          isCancelled ? AppColors.textDisabled : AppColors.blue,
+                      decoration:
+                          isCancelled ? TextDecoration.lineThrough : null,
+                      decorationColor: AppColors.error,
+                      decorationThickness: 2,
+                    ),
+                  ),
                 ),
               ),
             ),
-            const Spacer(flex: 1),
+            _TableGap(metrics),
             _Cell(
-              width: _TodaySalesTableSpec.paymentWidth,
+              width: metrics.paymentWidth,
               child: Align(
                 alignment: Alignment.center,
-                child: PaymentTypeChip(type: order.paymentType),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: PaymentTypeChip(type: order.paymentType),
+                ),
               ),
             ),
-            const Spacer(flex: 1),
+            _TableGap(metrics),
             _Cell(
-              width: _TodaySalesTableSpec.statusWidth,
+              width: metrics.statusWidth,
               child: Align(
-                alignment: Alignment.centerLeft,
-                child: StatusChip(status: order.status),
+                alignment: Alignment.center,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: StatusChip(status: order.status),
+                ),
               ),
             ),
-            const Spacer(flex: 1),
+            _TableGap(metrics),
             _Cell(
-              width: _TodaySalesTableSpec.actionsWidth,
+              width: metrics.actionsWidth,
               child: Align(
                 alignment: Alignment.center,
                 child: order.status == OrderStatus.validated && canCancelOrder
@@ -215,12 +235,22 @@ class _OrderRow extends ConsumerWidget {
                           backgroundColor: AppColors.error,
                           foregroundColor: AppColors.white,
                           elevation: 0,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: metrics.compact ? 10 : 16,
+                            vertical: metrics.compact ? 9 : 12,
+                          ),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const Text('Cancel'),
+                        child: Text(
+                          'Cancel',
+                          style: AppTextStyles.labelSm.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       )
                     : order.cancellationReason != null
                         ? Tooltip(

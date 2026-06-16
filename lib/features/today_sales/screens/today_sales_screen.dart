@@ -149,26 +149,108 @@ class _TodaySalesScreenState extends ConsumerState<TodaySalesScreen> {
   }
 }
 
-class _TodaySalesTableSpec {
-  const _TodaySalesTableSpec();
+class _TodaySalesTableMetrics {
+  const _TodaySalesTableMetrics({
+    required this.compact,
+    required this.horizontalPadding,
+    required this.columnGap,
+    required this.dateWidth,
+    required this.ticketWidth,
+    required this.itemsWidth,
+    required this.amountWidth,
+    required this.paymentWidth,
+    required this.statusWidth,
+    required this.actionsWidth,
+  });
 
-  static const double horizontalPadding = 24;
-  static const double dateWidth = 100;
-  static const double ticketWidth = 80;
-  static const double itemsWidth = 320;
-  static const double amountWidth = 90;
-  static const double paymentWidth = 120;
-  static const double statusWidth = 120;
-  static const double actionsWidth = 120;
+  final bool compact;
+  final double horizontalPadding;
+  final double columnGap;
+  final double dateWidth;
+  final double ticketWidth;
+  final double itemsWidth;
+  final double amountWidth;
+  final double paymentWidth;
+  final double statusWidth;
+  final double actionsWidth;
 
-  double get minWidth =>
-      (horizontalPadding * 2) +
-      dateWidth +
-      ticketWidth +
-      itemsWidth +
-      amountWidth +
-      paymentWidth +
-      statusWidth +
-      actionsWidth +
-      (16 * 7);
+  double get headerVerticalPadding => compact ? 14 : 18;
+  double get rowVerticalPadding => compact ? 14 : 22;
+
+  factory _TodaySalesTableMetrics.forWidth(double availableWidth) {
+    final compact = availableWidth < 1100;
+    final veryCompact = availableWidth < 760;
+
+    final horizontalPadding = veryCompact
+        ? 8.0
+        : compact
+            ? 10.0
+            : 24.0;
+    final columnGap = veryCompact
+        ? 4.0
+        : compact
+            ? 6.0
+            : 16.0;
+    final dateWidth = veryCompact
+        ? 68.0
+        : compact
+            ? 76.0
+            : 100.0;
+    final ticketWidth = veryCompact
+        ? 44.0
+        : compact
+            ? 56.0
+            : 80.0;
+    final amountWidth = veryCompact
+        ? 72.0
+        : compact
+            ? 82.0
+            : 90.0;
+    final paymentWidth = veryCompact
+        ? 64.0
+        : compact
+            ? 74.0
+            : 120.0;
+    final statusWidth = veryCompact
+        ? 72.0
+        : compact
+            ? 84.0
+            : 120.0;
+    final actionsWidth = veryCompact
+        ? 64.0
+        : compact
+            ? 74.0
+            : 120.0;
+
+    final fixedWidth = (horizontalPadding * 2) +
+        (columnGap * 6) +
+        dateWidth +
+        ticketWidth +
+        amountWidth +
+        paymentWidth +
+        statusWidth +
+        actionsWidth;
+    final minItemsWidth = veryCompact
+        ? 96.0
+        : compact
+            ? 130.0
+            : 260.0;
+    final remainingItemsWidth = availableWidth - fixedWidth;
+    final itemsWidth = remainingItemsWidth < minItemsWidth
+        ? minItemsWidth
+        : remainingItemsWidth;
+
+    return _TodaySalesTableMetrics(
+      compact: compact,
+      horizontalPadding: horizontalPadding,
+      columnGap: columnGap,
+      dateWidth: dateWidth,
+      ticketWidth: ticketWidth,
+      itemsWidth: itemsWidth,
+      amountWidth: amountWidth,
+      paymentWidth: paymentWidth,
+      statusWidth: statusWidth,
+      actionsWidth: actionsWidth,
+    );
+  }
 }

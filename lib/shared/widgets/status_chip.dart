@@ -75,6 +75,11 @@ class PaymentTypeChip extends StatelessWidget {
           AppColors.blue
         ),
       PaymentType.staff => ('Staff', Icons.badge_rounded, AppColors.warning),
+      PaymentType.gift => (
+          'Gift',
+          Icons.card_giftcard_rounded,
+          AppColors.success
+        ),
       PaymentType.other => (
           'Other',
           Icons.more_horiz_rounded,

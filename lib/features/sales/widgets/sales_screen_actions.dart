@@ -11,6 +11,8 @@ String _salesPaymentLabel(PaymentType? type) {
       return 'Glovo';
     case PaymentType.staff:
       return 'Staff';
+    case PaymentType.gift:
+      return 'Gift';
     case PaymentType.other:
       return 'Other';
     case PaymentType.points:

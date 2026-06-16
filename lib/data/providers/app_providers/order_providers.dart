@@ -208,6 +208,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? changeReturned,
     String? staffId,
     String? glovoOrderId,
+    String? giftRecipient,
   }) async {
     try {
       final effectivePaymentType = orderType == null
@@ -224,6 +225,8 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
           if (amountGiven != null) 'amount_given': amountGiven,
           if (changeReturned != null) 'change_returned': changeReturned,
           if (staffId != null) 'staff_member': staffId,
+          if (giftRecipient != null && giftRecipient.trim().isNotEmpty)
+            'gift_recipient': giftRecipient.trim(),
         },
       );
 
@@ -245,6 +248,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         confirmedOrder: confirmedOrder,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
+        giftRecipient: giftRecipient,
       );
       return CheckoutResult(
         orderId: orderId,
@@ -266,6 +270,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? changeReturned,
     String? staffId,
     String? glovoOrderId,
+    String? giftRecipient,
   }) async {
     if (ref.read(testModeProvider).isActive) {
       final effectivePaymentType =
@@ -281,6 +286,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         ticketNumber: ticketNumber,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
+        giftRecipient: giftRecipient,
       );
       return CheckoutResult(orderId: orderId, ticketNumber: ticketNumber);
     }
@@ -320,6 +326,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         changeReturned: changeReturned,
         staffId: staffId,
         glovoOrderId: glovoOrderId,
+        giftRecipient: giftRecipient,
       );
     } on DioException catch (e) {
       apiClient.logError('Process order error', e);
@@ -363,6 +370,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? changeReturned,
     String? staffId,
     String? glovoOrderId,
+    String? giftRecipient,
   }) async {
     if (ref.read(testModeProvider).isActive) {
       final effectivePaymentType =
@@ -378,6 +386,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         ticketNumber: ticketNumber,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
+        giftRecipient: giftRecipient,
       );
       return CheckoutResult(orderId: orderId, ticketNumber: ticketNumber);
     }
@@ -397,6 +406,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         changeReturned: changeReturned,
         staffId: staffId,
         glovoOrderId: glovoOrderId,
+        giftRecipient: giftRecipient,
       );
     } on DioException catch (e) {
       apiClient.logError('Process QR order error', e);
@@ -437,6 +447,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? changeReturned,
     String? staffId,
     String? glovoOrderId,
+    String? giftRecipient,
   }) {
     if (ref.read(testModeProvider).isActive && cart != null) {
       final localOrderType = orderType ?? cart.orderType;
@@ -452,6 +463,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         ticketNumber: ticketNumber,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
+        giftRecipient: giftRecipient,
       );
       return Future.value(
         CheckoutResult(orderId: orderId, ticketNumber: ticketNumber),
@@ -467,6 +479,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       changeReturned: changeReturned,
       staffId: staffId,
       glovoOrderId: glovoOrderId,
+      giftRecipient: giftRecipient,
     );
   }
 
@@ -587,6 +600,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     required String? ticketNumber,
     double? amountGiven,
     double? changeReturned,
+    String? giftRecipient,
   }) {
     return Order(
       id: orderId,
@@ -603,6 +617,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       customerName: cart.customerName,
       customerId: cart.customerId,
       customerNote: cart.customerNote,
+      giftRecipient: giftRecipient,
       isQrOrder: cart.isQrOrder,
       redemptionToken: cart.redemptionToken,
       totalAmount: cart.payableTotalFor(
@@ -627,6 +642,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     Order? confirmedOrder,
     double? amountGiven,
     double? changeReturned,
+    String? giftRecipient,
   }) {
     if (confirmedOrder != null) {
       _upsertLocalOrder(confirmedOrder);
@@ -640,6 +656,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
           ticketNumber: ticketNumber,
           amountGiven: amountGiven,
           changeReturned: changeReturned,
+          giftRecipient: giftRecipient,
         ),
       );
     }

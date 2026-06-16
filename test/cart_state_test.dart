@@ -34,5 +34,9 @@ void main() {
       ),
       8,
     );
+    expect(cart.payableTotalFor(PaymentType.gift), 0);
+    expect(cart.discountAmountFor(PaymentType.gift), 20);
+    expect(cart.payableTotalFor(PaymentType.other), 10);
+    expect(cart.discountAmountFor(PaymentType.other), 10);
   });
 }

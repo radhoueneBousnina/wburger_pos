@@ -19,11 +19,13 @@ class PosLayout {
   bool get isCompact => width < 1280;
   bool get isMedium => width >= 1280 && width < 1600;
   bool get isLarge => width >= 1600;
-  bool get stackPanels => width < 1180;
+  bool get isLandscapePosTerminal =>
+      width >= 800 && height >= 540 && width / height >= 1.2;
+  bool get hasSideBySidePanelRoom =>
+      width >= 980 && height >= 600 && width / height >= 1.2;
+  bool get stackPanels => width < 1180 && !hasSideBySidePanelRoom;
   bool get showWideLoginLayout {
-    final landscapePosTerminal =
-        width >= 800 && height >= 540 && width / height >= 1.2;
-    return width >= 1120 || landscapePosTerminal;
+    return width >= 1120 || isLandscapePosTerminal;
   }
 
   double get pagePadding => isCompact ? 16 : 24;

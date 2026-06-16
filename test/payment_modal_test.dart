@@ -59,7 +59,13 @@ void main() {
               total: 12,
               initialPaymentType: PaymentType.cash,
               onConfirm: (_, __,
-                  {amountGiven, changeReturned, staffId, glovoOrderId}) {},
+                  {
+                  amountGiven,
+                  changeReturned,
+                  staffId,
+                  glovoOrderId,
+                  giftRecipient,
+                }) {},
             ),
           ),
         ),
@@ -108,7 +114,13 @@ void main() {
               staffDiscountBaseTotal: 20,
               initialPaymentType: PaymentType.staff,
               onConfirm: (_, __,
-                  {amountGiven, changeReturned, staffId, glovoOrderId}) {},
+                  {
+                  amountGiven,
+                  changeReturned,
+                  staffId,
+                  glovoOrderId,
+                  giftRecipient,
+                }) {},
             ),
           ),
         ),
@@ -118,5 +130,48 @@ void main() {
 
     expect(find.text('Staff total: 12.000 DT'), findsOneWidget);
     expect(find.text('Discount 40.00%: -8.000 DT'), findsOneWidget);
+  });
+
+  testWidgets('gift payment requires a recipient and reports zero total',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 760));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    String? receivedGiftRecipient;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: PaymentModal(
+              total: 20,
+              staffDiscountBaseTotal: 20,
+              initialPaymentType: PaymentType.gift,
+              onConfirm: (_, __,
+                  {
+                  amountGiven,
+                  changeReturned,
+                  staffId,
+                  glovoOrderId,
+                  giftRecipient,
+                }) {
+                receivedGiftRecipient = giftRecipient;
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gift total: 0.000 DT'), findsOneWidget);
+    expect(find.text('Gift discount: -20.000 DT'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'Sami');
+    await tester.tap(find.text('Confirm Payment'));
+    await tester.pumpAndSettle();
+
+    expect(receivedGiftRecipient, 'Sami');
   });
 }

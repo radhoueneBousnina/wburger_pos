@@ -17,6 +17,7 @@ import '../../../data/providers/app_providers.dart';
 import '../../../shared/widgets/app_image.dart';
 import '../../../shared/widgets/brand_patterns.dart';
 import '../../../shared/widgets/payment_modal.dart';
+import '../utils/qr_order_token.dart';
 
 part '../widgets/cart_panel.dart';
 part '../widgets/cart_item_tile.dart';
@@ -34,13 +35,14 @@ class SalesScreen extends ConsumerStatefulWidget {
 
 class _SalesScreenState extends ConsumerState<SalesScreen> {
   static const bool _enableTestWebcamScanner = false;
-  static final RegExp _qrTokenPattern = RegExp(
-    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
-  );
+  static const Duration _scannerCharacterGap = Duration(milliseconds: 350);
+  static const Duration _scannerIdleFlushDelay = Duration(milliseconds: 180);
+  static const int _scannerBufferMaxLength = 512;
 
   final _searchCtrl = TextEditingController();
   final _salesFocusNode = FocusNode(debugLabel: 'sales-screen-focus');
   final StringBuffer _scanBuffer = StringBuffer();
+  Timer? _scanIdleTimer;
   DateTime? _lastScanCharacterAt;
   bool _showSuccess = false;
   bool _isProcessingQr = false;
@@ -49,11 +51,14 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   @override
   void initState() {
     super.initState();
+    HardwareKeyboard.instance.addHandler(_handleScannerHardwareKey);
     _refocusSalesScanner();
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleScannerHardwareKey);
+    _scanIdleTimer?.cancel();
     _searchCtrl.dispose();
     _salesFocusNode.dispose();
     super.dispose();
@@ -66,10 +71,11 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     }
   }
 
-  bool _looksLikeQrToken(String value) =>
-      _qrTokenPattern.hasMatch(value.trim());
+  bool _looksLikeQrToken(String value) => extractQrOrderToken(value) != null;
 
   void _resetScanBuffer() {
+    _scanIdleTimer?.cancel();
+    _scanIdleTimer = null;
     _scanBuffer.clear();
     _lastScanCharacterAt = null;
   }
@@ -81,41 +87,84 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     });
   }
 
-  KeyEventResult _handleSalesKey(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+  bool _canAcceptScannerInput() {
+    if (!mounted || _isProcessingQr) return false;
+    final route = ModalRoute.of(context);
+    return route?.isCurrent ?? true;
+  }
 
-    if (event.logicalKey == LogicalKeyboardKey.enter ||
-        event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-      final scannedValue = _scanBuffer.toString().trim();
-      _resetScanBuffer();
-      if (_looksLikeQrToken(scannedValue)) {
-        unawaited(_importQrOrder(scannedValue));
-      }
-      return KeyEventResult.ignored;
+  bool _handleScannerHardwareKey(KeyEvent event) {
+    if (!_canAcceptScannerInput()) return false;
+    if (event is! KeyDownEvent) return false;
+
+    if (_isScannerTerminator(event)) {
+      return _flushScannerBuffer();
     }
 
     if (HardwareKeyboard.instance.isControlPressed ||
         HardwareKeyboard.instance.isMetaPressed ||
         HardwareKeyboard.instance.isAltPressed) {
-      return KeyEventResult.ignored;
+      return false;
     }
 
     final character = event.character;
-    if (character == null || character.isEmpty) return KeyEventResult.ignored;
+    if (character == null ||
+        character.isEmpty ||
+        character.codeUnits.any((unit) => unit < 0x20)) {
+      return false;
+    }
+
     final now = DateTime.now();
     if (_lastScanCharacterAt != null &&
-        now.difference(_lastScanCharacterAt!).inMilliseconds > 200) {
+        now.difference(_lastScanCharacterAt!) > _scannerCharacterGap) {
       _resetScanBuffer();
     }
 
-    if (RegExp(r'^[0-9a-fA-F-]$').hasMatch(character)) {
-      _scanBuffer.write(character);
-      _lastScanCharacterAt = now;
-    } else if (_scanBuffer.isNotEmpty) {
+    if (_scanBuffer.length + character.length > _scannerBufferMaxLength) {
       _resetScanBuffer();
     }
 
-    return KeyEventResult.ignored;
+    _scanBuffer.write(character);
+    _lastScanCharacterAt = now;
+    _scheduleScannerIdleFlush();
+    return false;
+  }
+
+  bool _isScannerTerminator(KeyEvent event) {
+    return event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.numpadEnter ||
+        event.logicalKey == LogicalKeyboardKey.tab ||
+        event.character == '\n' ||
+        event.character == '\r' ||
+        event.character == '\t';
+  }
+
+  void _scheduleScannerIdleFlush() {
+    _scanIdleTimer?.cancel();
+    _scanIdleTimer = Timer(_scannerIdleFlushDelay, () {
+      if (!_canAcceptScannerInput()) {
+        _resetScanBuffer();
+        return;
+      }
+      _flushScannerBuffer();
+    });
+  }
+
+  bool _flushScannerBuffer() {
+    final scannedValue = _scanBuffer.toString();
+    _resetScanBuffer();
+    return _queueQrImportFromPayload(scannedValue);
+  }
+
+  bool _queueQrImportFromPayload(String value) {
+    final token = extractQrOrderToken(value);
+    if (token == null) return false;
+
+    _searchCtrl.clear();
+    ref.read(searchQueryProvider.notifier).state = '';
+    ref.read(selectedCategoryProvider.notifier).state = null;
+    unawaited(_importQrOrder(token));
+    return true;
   }
 
   void _onCategorySelected(String? id) {
@@ -127,9 +176,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   void _handleSearchSubmitted(String value) {
     final trimmedValue = value.trim();
     if (_looksLikeQrToken(trimmedValue)) {
-      _searchCtrl.clear();
-      _onSearch('');
-      unawaited(_importQrOrder(trimmedValue));
+      _queueQrImportFromPayload(trimmedValue);
     }
   }
 
@@ -218,7 +265,19 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     if (!mounted) return;
     _refocusSalesScanner();
     if (scannedToken == null || scannedToken.trim().isEmpty) return;
-    await _importQrOrder(scannedToken.trim());
+
+    final token = extractQrOrderToken(scannedToken);
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This QR code is not a W Burger mobile order.'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    await _importQrOrder(token);
   }
 
   Future<void> _printSampleReceipt() async {
@@ -468,7 +527,13 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       customerNote: cart.customerNote,
       referenceLabel: cart.ticketNumber,
       onConfirm: (paymentType, orderType,
-          {amountGiven, changeReturned, staffId, glovoOrderId}) async {
+          {
+          amountGiven,
+          changeReturned,
+          staffId,
+          glovoOrderId,
+          giftRecipient,
+        }) async {
         final orderNotifier = ref.read(ordersProvider.notifier);
         final confirmedPaymentType =
             isDealRedemption ? PaymentType.deal : paymentType;
@@ -487,6 +552,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 changeReturned: changeReturned,
                 staffId: staffId,
                 glovoOrderId: glovoOrderId,
+                giftRecipient: giftRecipient,
               )
             : await orderNotifier.processCartOrder(
                 effectiveCart,
@@ -495,6 +561,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 changeReturned: changeReturned,
                 staffId: staffId,
                 glovoOrderId: glovoOrderId,
+                giftRecipient: giftRecipient,
               );
 
         if (result.requiresStockOverride) {
@@ -509,6 +576,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                     changeReturned: changeReturned,
                     staffId: staffId,
                     glovoOrderId: glovoOrderId,
+                    giftRecipient: giftRecipient,
                   )
                 : await orderNotifier.confirmExistingOrder(
                     result.orderId!,
@@ -520,6 +588,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                     changeReturned: changeReturned,
                     staffId: staffId,
                     glovoOrderId: glovoOrderId,
+                    giftRecipient: giftRecipient,
                   );
           } else {
             if (cart.redemptionToken == null && result.orderId != null) {
@@ -598,7 +667,6 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     return Focus(
       focusNode: _salesFocusNode,
       autofocus: true,
-      onKeyEvent: _handleSalesKey,
       child: Scaffold(
         backgroundColor:
             testMode.isActive ? AppColors.trainingBackground : AppColors.white,

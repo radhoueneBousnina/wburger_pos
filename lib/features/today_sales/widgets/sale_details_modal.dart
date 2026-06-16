@@ -223,6 +223,7 @@ class _OrderDetailsContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cancelledReason = order.cancellationReason?.trim();
+    final giftRecipient = order.giftRecipient?.trim();
     final hasCustomerInfo = order.customerName?.trim().isNotEmpty == true ||
         order.customerPhone?.trim().isNotEmpty == true ||
         order.customerNote?.trim().isNotEmpty == true;
@@ -247,6 +248,18 @@ class _OrderDetailsContent extends StatelessWidget {
         if (hasCustomerInfo) ...[
           const SizedBox(height: 12),
           _CustomerPanel(order: order),
+        ],
+        if (order.paymentType == PaymentType.gift &&
+            giftRecipient != null &&
+            giftRecipient.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _NoticePanel(
+            icon: Icons.card_giftcard_rounded,
+            title: 'Gift order',
+            message: giftRecipient,
+            color: AppColors.success,
+            background: AppColors.successLight,
+          ),
         ],
         const SizedBox(height: 14),
         _ItemsSection(order: order, compact: compact),

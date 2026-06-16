@@ -361,7 +361,7 @@ int? _rootIndexForComponent(
 
 enum OrderType { dineIn, takeaway, glovo }
 
-enum PaymentType { cash, card, glovo, staff, other, points, deal }
+enum PaymentType { cash, card, glovo, staff, gift, other, points, deal }
 
 enum OrderStatus { pending, validated, cancelled }
 
@@ -378,6 +378,7 @@ class Order {
   final String? customerPhone;
   final String? customerId;
   final String? customerNote;
+  final String? giftRecipient;
   final bool isQrOrder;
   final String? redemptionToken;
   final double totalAmount; // Actual total from backend calculation
@@ -399,6 +400,7 @@ class Order {
     this.customerPhone,
     this.customerId,
     this.customerNote,
+    this.giftRecipient,
     this.isQrOrder = false,
     this.redemptionToken,
     this.totalAmount = 0.0,
@@ -424,6 +426,7 @@ class Order {
     double? amountGiven,
     double? changeReturned,
     List<CartItem>? items,
+    String? giftRecipient,
   }) {
     return Order(
       id: id,
@@ -438,6 +441,7 @@ class Order {
       customerPhone: customerPhone,
       customerId: customerId,
       customerNote: customerNote,
+      giftRecipient: giftRecipient ?? this.giftRecipient,
       isQrOrder: isQrOrder,
       redemptionToken: redemptionToken,
       totalAmount: totalAmount ?? this.totalAmount,
@@ -470,6 +474,8 @@ class Order {
       parsedPayment = PaymentType.deal;
     } else if (pt == 'staff') {
       parsedPayment = PaymentType.staff;
+    } else if (pt == 'gift') {
+      parsedPayment = PaymentType.gift;
     } else if (pt == 'other') {
       parsedPayment = PaymentType.other;
     }
@@ -564,6 +570,7 @@ class Order {
       customerPhone: phone?.isNotEmpty == true ? phone : null,
       customerId: json['customer']?.toString(),
       customerNote: json['customer_note']?.toString(),
+      giftRecipient: json['gift_recipient']?.toString(),
       isQrOrder: json['redemption_token'] != null,
       redemptionToken: json['redemption_token'],
       totalAmount:

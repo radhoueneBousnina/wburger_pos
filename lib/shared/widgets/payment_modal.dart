@@ -22,6 +22,7 @@ class PaymentModal extends ConsumerStatefulWidget {
     double? changeReturned,
     String? staffId,
     String? glovoOrderId,
+    String? giftRecipient,
   }) onConfirm;
   final OrderType initialOrderType;
   final PaymentType? initialPaymentType;
@@ -60,6 +61,7 @@ class PaymentModal extends ConsumerStatefulWidget {
       double? changeReturned,
       String? staffId,
       String? glovoOrderId,
+      String? giftRecipient,
     }) onConfirm,
     OrderType initialOrderType = OrderType.dineIn,
     PaymentType? initialPaymentType,
@@ -102,6 +104,8 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   bool _isSubmitting = false;
   final TextEditingController _cashGivenController = TextEditingController();
   final TextEditingController _glovoOrderIdController = TextEditingController();
+  final TextEditingController _giftRecipientController =
+      TextEditingController();
   final TextEditingController _staffSearchController = TextEditingController();
   final FocusNode _cashFocusNode = FocusNode();
   String? _selectedStaffId;
@@ -125,6 +129,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   void dispose() {
     _cashGivenController.dispose();
     _glovoOrderIdController.dispose();
+    _giftRecipientController.dispose();
     _staffSearchController.dispose();
     _cashFocusNode.dispose();
     super.dispose();
@@ -139,8 +144,11 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   double get _staffDiscountPercent =>
       ref.watch(posSettingsProvider).valueOrNull?.staffDiscountPercent ?? 0;
   bool get _isGlovoOrder => _orderType == OrderType.glovo;
+  bool get _isGiftPayment => !_isGlovoOrder && _selectedType == PaymentType.gift;
   PaymentType? get _effectivePaymentType =>
       _isGlovoOrder ? PaymentType.glovo : _selectedType;
+  double get _giftDiscountAmount =>
+      _isGiftPayment ? _staffDiscountBaseTotal : 0;
   double get _staffDiscountAmount {
     if (_selectedType != PaymentType.staff) return 0;
     final percent = _staffDiscountPercent.clamp(0, 100).toDouble();
@@ -151,6 +159,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   }
 
   double get _displayTotal {
+    if (_isGiftPayment) return 0;
     if (_selectedType != PaymentType.staff) return widget.total;
     final total = _staffDiscountBaseTotal - _staffDiscountAmount;
     return total > 0 ? total : 0;
@@ -169,6 +178,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       PaymentType.cash,
       PaymentType.card,
       PaymentType.staff,
+      PaymentType.gift,
       PaymentType.other,
     ];
     return options;
@@ -181,7 +191,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
 
     if (selectedType == PaymentType.cash &&
         (_cashGivenController.text.trim().isEmpty ||
-            _cashGiven < widget.total)) {
+            _cashGiven < _displayTotal)) {
       messenger?.showSnackBar(
         const SnackBar(content: Text('Enter enough cash before confirming.')),
       );
@@ -195,10 +205,10 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       return;
     }
 
-    if (selectedType == PaymentType.glovo &&
-        _glovoOrderIdController.text.trim().isEmpty) {
+    if (selectedType == PaymentType.gift &&
+        _giftRecipientController.text.trim().isEmpty) {
       messenger?.showSnackBar(
-        const SnackBar(content: Text('Enter the Glovo order ID.')),
+        const SnackBar(content: Text('Enter who this gift is for.')),
       );
       return;
     }
@@ -214,6 +224,9 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
         staffId: selectedType == PaymentType.staff ? _selectedStaffId : null,
         glovoOrderId: selectedType == PaymentType.glovo
             ? _glovoOrderIdController.text.trim()
+            : null,
+        giftRecipient: selectedType == PaymentType.gift
+            ? _giftRecipientController.text.trim()
             : null,
       );
       if (mounted) Navigator.pop(context);
@@ -428,6 +441,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       if (_selectedType == PaymentType.cash) _buildCashDetailsSection(),
       if (_isGlovoOrder) _buildGlovoSection(),
       if (_selectedType == PaymentType.staff) _buildStaffSection(),
+      if (_isGiftPayment) _buildGiftSection(),
       _buildTotalCard(),
     ];
     return Column(
@@ -443,6 +457,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       _buildOrderTypeSection(dense: true, compactChoices: true),
       _buildPaymentMethodSection(dense: true, compactChoices: true),
       if (_isGlovoOrder) _buildGlovoSection(),
+      if (_isGiftPayment) _buildGiftSection(),
       _buildTotalCard(compact: true),
     ];
 
@@ -605,8 +620,28 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
         controller: _glovoOrderIdController,
         textInputAction: TextInputAction.done,
         decoration: InputDecoration(
-          labelText: 'Glovo order ID',
+          labelText: 'Glovo order ID (optional)',
           prefixIcon: const Icon(Icons.confirmation_number_rounded),
+          filled: true,
+          fillColor: AppColors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGiftSection() {
+    return _PaymentSectionCard(
+      title: 'Gift Details',
+      child: TextField(
+        controller: _giftRecipientController,
+        textInputAction: TextInputAction.done,
+        textCapitalization: TextCapitalization.words,
+        decoration: InputDecoration(
+          labelText: 'Gift recipient',
+          prefixIcon: const Icon(Icons.card_giftcard_rounded),
           filled: true,
           fillColor: AppColors.white,
           border: OutlineInputBorder(
@@ -719,10 +754,15 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
 
   Widget _buildTotalCard({bool compact = false}) {
     final isStaffPayment = _selectedType == PaymentType.staff;
-    final totalLabel = isStaffPayment
+    final isGiftPayment = _isGiftPayment;
+    final totalLabel = isGiftPayment
+        ? 'Gift total: 0.000 DT'
+        : isStaffPayment
         ? 'Staff total: ${_displayTotal.toStringAsFixed(3)} DT'
         : 'Total: ${widget.total.toStringAsFixed(3)} DT';
-    final discountLabel = isStaffPayment && _staffDiscountAmount > 0
+    final discountLabel = isGiftPayment && _giftDiscountAmount > 0
+        ? 'Gift discount: -${_giftDiscountAmount.toStringAsFixed(3)} DT'
+        : isStaffPayment && _staffDiscountAmount > 0
         ? 'Discount ${_staffDiscountPercent.toStringAsFixed(2)}%: -${_staffDiscountAmount.toStringAsFixed(3)} DT'
         : null;
 
@@ -766,6 +806,8 @@ String _paymentLabel(PaymentType type) {
       return 'Glovo';
     case PaymentType.staff:
       return 'Staff';
+    case PaymentType.gift:
+      return 'Gift';
     case PaymentType.other:
       return 'Other';
     case PaymentType.points:
@@ -785,6 +827,8 @@ IconData _paymentIcon(PaymentType type) {
       return Icons.delivery_dining_rounded;
     case PaymentType.staff:
       return Icons.badge_rounded;
+    case PaymentType.gift:
+      return Icons.card_giftcard_rounded;
     case PaymentType.other:
       return Icons.more_horiz_rounded;
     case PaymentType.points:

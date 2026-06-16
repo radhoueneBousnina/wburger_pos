@@ -211,56 +211,12 @@ extension _LoginForm on _LoginScreenState {
                   ),
                 ),
               ],
-              if (_printerTestMessage != null) ...[
-                const SizedBox(height: 14),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: _printerTestSucceeded
-                        ? AppColors.successLight
-                        : AppColors.errorLight,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: (_printerTestSucceeded
-                              ? AppColors.success
-                              : AppColors.error)
-                          .withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _printerTestSucceeded
-                            ? Icons.check_circle_outline_rounded
-                            : Icons.error_outline_rounded,
-                        color: _printerTestSucceeded
-                            ? AppColors.success
-                            : AppColors.error,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _printerTestMessage!,
-                          style: AppTextStyles.bodySm.copyWith(
-                            color: _printerTestSucceeded
-                                ? AppColors.success
-                                : AppColors.error,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
                 height: layout.touchTarget + 4,
                 child: ElevatedButton(
-                  onPressed:
-                      _isLoading || _isPrintingTest ? null : _handleLogin,
+                  onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.yellow,
                     foregroundColor: AppColors.blue,
@@ -290,42 +246,6 @@ extension _LoginForm on _LoginScreenState {
                             Icon(Icons.arrow_forward_rounded, size: 20),
                           ],
                         ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: layout.touchTarget - 8,
-                child: OutlinedButton.icon(
-                  onPressed: _isLoading || _isPrintingTest
-                      ? null
-                      : _handlePrinterDrawerTest,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.blue,
-                    side: BorderSide(
-                      color: AppColors.blue.withValues(alpha: 0.35),
-                      width: 1.5,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    textStyle: AppTextStyles.button.copyWith(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  icon: _isPrintingTest
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.print_rounded, size: 20),
-                  label: Text(
-                    _isPrintingTest
-                        ? 'Testing Printer & Drawer...'
-                        : 'Test Printer & Drawer',
-                  ),
                 ),
               ),
               if (shortViewport) const SizedBox(height: 20) else const Spacer(),
