@@ -203,9 +203,78 @@ class AppTheme {
         clipBehavior: Clip.antiAlias,
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
-        fillColor: AppColors.trainingElevated,
+        fillColor: const Color(0xFF22283C),
+        iconColor: AppColors.trainingTextSecondary,
+        prefixIconColor: AppColors.trainingTextSecondary,
+        suffixIconColor: AppColors.trainingTextSecondary,
         labelStyle: AppTextStyles.body.copyWith(color: AppColors.neutral300),
         hintStyle: AppTextStyles.body.copyWith(color: AppColors.neutral500),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.trainingBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.trainingBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.yellow, width: 2),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.yellow,
+          foregroundColor: AppColors.blueDark,
+          textStyle: AppTextStyles.button,
+          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 20),
+          minimumSize: const Size(144, 64),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          elevation: 0,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.yellow,
+          textStyle: AppTextStyles.button,
+          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 20),
+          minimumSize: const Size(144, 64),
+          side: const BorderSide(color: AppColors.yellow, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.yellow,
+          textStyle: AppTextStyles.button,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          minimumSize: const Size(104, 60),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size(60, 60),
+          padding: const EdgeInsets.all(14),
+          foregroundColor: AppColors.yellow,
+          backgroundColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: AppColors.trainingPanel,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        textStyle: AppTextStyles.body.copyWith(color: AppColors.white),
       ),
       dividerTheme: DividerThemeData(
         color: Colors.white.withValues(alpha: 0.12),

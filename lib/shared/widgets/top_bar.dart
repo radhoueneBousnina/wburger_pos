@@ -278,11 +278,18 @@ class _CashDrawerButton extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.panelFor(context),
           title: Row(
             children: [
-              const Icon(Icons.storefront_rounded, color: AppColors.blue),
+              Icon(Icons.storefront_rounded,
+                  color: AppColors.accentFor(context)),
               const SizedBox(width: 8),
-              const Text('Open Cash Drawer'),
+              Text(
+                'Open Cash Drawer',
+                style: AppTextStyles.h4.copyWith(
+                  color: AppColors.textPrimaryFor(context),
+                ),
+              ),
               const Spacer(),
               IconButton(
                 icon: const Icon(Icons.close),
@@ -300,9 +307,9 @@ class _CashDrawerButton extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.yellowSurface,
+                    color: AppColors.accentSurfaceFor(context),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.yellow),
+                    border: Border.all(color: AppColors.accentFor(context)),
                   ),
                   child: Column(
                     children: [
@@ -322,7 +329,12 @@ class _CashDrawerButton extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text('Reason *', style: AppTextStyles.label),
+                Text(
+                  'Reason *',
+                  style: AppTextStyles.label.copyWith(
+                    color: AppColors.textSecondaryFor(context),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -405,12 +417,11 @@ class _CashDrawerButton extends ConsumerWidget {
                                 Navigator.canPop(dialogContext)) {
                               Navigator.pop(dialogContext);
                             }
+                            if (result.isSuccess) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(result.message),
-                                backgroundColor: result.isSuccess
-                                    ? AppColors.success
-                                    : AppColors.error,
+                                backgroundColor: AppColors.error,
                                 duration: const Duration(seconds: 6),
                               ),
                             );
@@ -452,14 +463,25 @@ class _DrawerRow extends StatelessWidget {
         Text(
           label,
           style: bold
-              ? AppTextStyles.title.copyWith(fontWeight: FontWeight.w800)
-              : AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+              ? AppTextStyles.title.copyWith(
+                  color: AppColors.textPrimaryFor(context),
+                  fontWeight: FontWeight.w800,
+                )
+              : AppTextStyles.body.copyWith(
+                  color: AppColors.textSecondaryFor(context),
+                ),
         ),
         Text(
           value,
           style: bold
-              ? AppTextStyles.title.copyWith(fontWeight: FontWeight.w900)
-              : AppTextStyles.body.copyWith(fontWeight: FontWeight.w700),
+              ? AppTextStyles.title.copyWith(
+                  color: AppColors.textPrimaryFor(context),
+                  fontWeight: FontWeight.w900,
+                )
+              : AppTextStyles.body.copyWith(
+                  color: AppColors.textPrimaryFor(context),
+                  fontWeight: FontWeight.w700,
+                ),
         ),
       ],
     );
@@ -481,8 +503,11 @@ class _ReasonButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedColor = AppColors.selectedSurfaceFor(context);
+    final selectedText = AppColors.selectedTextFor(context);
+    final accent = AppColors.accentFor(context);
     return Material(
-      color: isSelected ? AppColors.blue : AppColors.neutral50,
+      color: isSelected ? selectedColor : AppColors.elevatedSurfaceFor(context),
       borderRadius: BorderRadius.circular(12),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -494,7 +519,7 @@ class _ReasonButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 18),
           decoration: BoxDecoration(
             border: Border.all(
-              color: isSelected ? AppColors.blue : AppColors.border,
+              color: isSelected ? selectedColor : AppColors.borderFor(context),
               width: 1.5,
             ),
             borderRadius: BorderRadius.circular(12),
@@ -505,13 +530,15 @@ class _ReasonButton extends StatelessWidget {
               Icon(
                 icon,
                 size: 28,
-                color: isSelected ? AppColors.white : AppColors.textSecondary,
+                color: isSelected ? selectedText : accent,
               ),
               const SizedBox(height: 8),
               Text(
                 label,
                 style: AppTextStyles.title.copyWith(
-                  color: isSelected ? AppColors.white : AppColors.textPrimary,
+                  color: isSelected
+                      ? selectedText
+                      : AppColors.textPrimaryFor(context),
                   fontWeight: FontWeight.w800,
                 ),
               ),

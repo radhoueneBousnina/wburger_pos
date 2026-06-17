@@ -39,7 +39,7 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (_isForcedClosure) _buildForcedClosureNotice(),
+                if (_isForcedClosure) _buildForcedClosureNotice(context),
                 _buildStepsHeader(),
                 const SizedBox(height: 18),
                 Wrap(
@@ -49,7 +49,7 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
                     _EodKpi(
                         label: 'Total Revenue',
                         value: '${total.toStringAsFixed(3)} DT',
-                        color: AppColors.blue,
+                        color: AppColors.accentFor(context),
                         icon: Icons.trending_up_rounded),
                     _EodKpi(
                         label: 'Tickets',
@@ -86,13 +86,15 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
     );
   }
 
-  Widget _buildForcedClosureNotice() {
+  Widget _buildForcedClosureNotice(BuildContext context) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.warningLight,
+        color: AppColors.isTraining(context)
+            ? AppColors.warning.withValues(alpha: 0.14)
+            : AppColors.warningLight,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.warning),
       ),
@@ -163,7 +165,7 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
                   theoryAmount: _theoreticalCard,
                   totalRevenue:
                       _theoreticalCash + _theoreticalCard + _theoreticalOther,
-                  color: AppColors.blue,
+                  color: AppColors.accentFor(context),
                   actualCtrl: _actualCardCtrl,
                   submitted: _submittedFinancial,
                   onChanged: () => setState(() => _tpeUploadSession = null)),

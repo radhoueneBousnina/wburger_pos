@@ -29,15 +29,11 @@ class _SaleDetailsModal extends ConsumerWidget {
           await ReceiptPrinterService.instance.printReceipt(receiptData);
       if (!context.mounted) return;
       navigator.pop();
+      if (result.isSuccess) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(
-            result.isSuccess
-                ? result.message
-                : 'Could not re-print ticket: ${result.message}',
-          ),
-          backgroundColor:
-              result.isSuccess ? AppColors.success : AppColors.warning,
+          content: Text('Could not re-print ticket: ${result.message}'),
+          backgroundColor: AppColors.warning,
         ),
       );
     }
@@ -54,7 +50,7 @@ class _SaleDetailsModal extends ConsumerWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(compact ? 20 : 28),
           child: Material(
-            color: AppColors.white,
+            color: AppColors.panelFor(context),
             child: Column(
               children: [
                 _OrderDetailsHeader(order: order, compact: compact),
@@ -110,7 +106,7 @@ class _OrderDetailsHeader extends StatelessWidget {
         compact ? 10 : 16,
         compact ? 16 : 22,
       ),
-      color: AppColors.blue,
+      color: AppColors.modalHeaderFor(context),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -309,9 +305,9 @@ class _OrderTotalsPanel extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(compact ? 14 : 18),
       decoration: BoxDecoration(
-        color: AppColors.neutral50,
+        color: AppColors.elevatedSurfaceFor(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderFor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -326,7 +322,7 @@ class _OrderTotalsPanel extends StatelessWidget {
                     Text(
                       'Total amount',
                       style: AppTextStyles.label.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.textSecondaryFor(context),
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -334,7 +330,7 @@ class _OrderTotalsPanel extends StatelessWidget {
                     Text(
                       '${order.total.toStringAsFixed(3)} DT',
                       style: AppTextStyles.h1.copyWith(
-                        color: AppColors.blue,
+                        color: AppColors.accentFor(context),
                         fontSize: compact ? 28 : 34,
                       ),
                     ),
@@ -344,7 +340,7 @@ class _OrderTotalsPanel extends StatelessWidget {
               Text(
                 '#${order.displayTicketNumber}',
                 style: AppTextStyles.title.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.textSecondaryFor(context),
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -381,8 +377,8 @@ class _CustomerPanel extends StatelessWidget {
       message: order.customerNote?.trim().isNotEmpty == true
           ? order.customerNote!.trim()
           : 'Mobile customer information attached to this order.',
-      color: AppColors.blue,
-      background: AppColors.blueSurface,
+      color: AppColors.accentFor(context),
+      background: AppColors.accentSurfaceFor(context),
     );
   }
 }
@@ -401,9 +397,9 @@ class _ItemsSection extends StatelessWidget {
     final itemGroups = groupCartItemsForDisplay(order.items);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.panelFor(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderFor(context)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -418,18 +414,23 @@ class _ItemsSection extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.fastfood_rounded,
-                  color: AppColors.blue,
+                  color: AppColors.accentFor(context),
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                Text('Ordered items', style: AppTextStyles.titleLg),
+                Text(
+                  'Ordered items',
+                  style: AppTextStyles.titleLg.copyWith(
+                    color: AppColors.textPrimaryFor(context),
+                  ),
+                ),
                 const Spacer(),
                 Text(
                   '${itemGroups.length} line${itemGroups.length == 1 ? '' : 's'}',
                   style: AppTextStyles.label.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.textSecondaryFor(context),
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -442,7 +443,7 @@ class _ItemsSection extends StatelessWidget {
               child: Text(
                 'No item details available for this order.',
                 style: AppTextStyles.body.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.textSecondaryFor(context),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -454,15 +455,17 @@ class _ItemsSection extends StatelessWidget {
                 1: FlexColumnWidth(1),
                 2: FixedColumnWidth(120),
               },
-              border: const TableBorder(
-                horizontalInside: BorderSide(color: AppColors.border),
-                bottom: BorderSide(color: AppColors.border),
-                top: BorderSide(color: AppColors.border),
+              border: TableBorder(
+                horizontalInside:
+                    BorderSide(color: AppColors.borderFor(context)),
+                bottom: BorderSide(color: AppColors.borderFor(context)),
+                top: BorderSide(color: AppColors.borderFor(context)),
               ),
               defaultVerticalAlignment: TableCellVerticalAlignment.middle,
               children: [
                 TableRow(
-                  decoration: const BoxDecoration(color: AppColors.neutral50),
+                  decoration:
+                      BoxDecoration(color: AppColors.tableHeaderFor(context)),
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -495,18 +498,19 @@ class _ItemsSection extends StatelessWidget {
                             height: 38,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: AppColors.yellowSurface,
+                              color: AppColors.accentSurfaceFor(context),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                  color:
-                                      AppColors.yellow.withValues(alpha: 0.5)),
+                                color: AppColors.accentFor(context)
+                                    .withValues(alpha: 0.5),
+                              ),
                             ),
                             child: Text(
                               group.components.isEmpty
                                   ? 'x${group.item.quantity}'
                                   : '',
                               style: AppTextStyles.title.copyWith(
-                                color: AppColors.blue,
+                                color: AppColors.accentFor(context),
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
@@ -522,14 +526,16 @@ class _ItemsSection extends StatelessWidget {
                           children: [
                             Text(
                               group.item.product.name,
-                              style: AppTextStyles.title
-                                  .copyWith(fontWeight: FontWeight.w800),
+                              style: AppTextStyles.title.copyWith(
+                                color: AppColors.textPrimaryFor(context),
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               '${group.item.unitPrice.toStringAsFixed(3)} DT each',
                               style: AppTextStyles.bodySm.copyWith(
-                                color: AppColors.textSecondary,
+                                color: AppColors.textSecondaryFor(context),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -538,7 +544,7 @@ class _ItemsSection extends StatelessWidget {
                               Text(
                                 '- ${component.quantity}x ${component.product.name}',
                                 style: AppTextStyles.bodySm.copyWith(
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.textPrimaryFor(context),
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -548,7 +554,7 @@ class _ItemsSection extends StatelessWidget {
                                 Text(
                                   '  ${component.note!.trim()}',
                                   style: AppTextStyles.bodySm.copyWith(
-                                    color: AppColors.textSecondary,
+                                    color: AppColors.textSecondaryFor(context),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -559,7 +565,7 @@ class _ItemsSection extends StatelessWidget {
                               Text(
                                 group.item.note!.trim(),
                                 style: AppTextStyles.bodySm.copyWith(
-                                  color: AppColors.textSecondary,
+                                  color: AppColors.textSecondaryFor(context),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -575,8 +581,10 @@ class _ItemsSection extends StatelessWidget {
                           alignment: Alignment.centerRight,
                           child: Text(
                             '${group.item.total.toStringAsFixed(3)} DT',
-                            style: AppTextStyles.price
-                                .copyWith(fontSize: compact ? 16 : 18),
+                            style: AppTextStyles.price.copyWith(
+                              color: AppColors.accentFor(context),
+                              fontSize: compact ? 16 : 18,
+                            ),
                           ),
                         ),
                       ),
@@ -605,15 +613,19 @@ class _OrderDetailsFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(compact ? 14 : 18),
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.panelFor(context),
+        border: Border(
+          top: BorderSide(color: AppColors.borderFor(context)),
+        ),
       ),
       child: Row(
         children: [
           Text(
             'Total',
-            style: AppTextStyles.h3.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.h3.copyWith(
+              color: AppColors.textSecondaryFor(context),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -621,7 +633,7 @@ class _OrderDetailsFooter extends StatelessWidget {
               '${order.total.toStringAsFixed(3)} DT',
               textAlign: TextAlign.right,
               style: AppTextStyles.h2.copyWith(
-                color: AppColors.blue,
+                color: AppColors.accentFor(context),
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -635,8 +647,8 @@ class _OrderDetailsFooter extends StatelessWidget {
               icon: const Icon(Icons.print_rounded),
               label: const Text('Re-print Ticket'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.blue,
-                foregroundColor: AppColors.white,
+                backgroundColor: AppColors.accentFor(context),
+                foregroundColor: AppColors.onAccentFor(context),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -667,12 +679,15 @@ class _NoticePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTraining = AppColors.isTraining(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: background.withValues(alpha: 0.55),
+        color: isTraining
+            ? color.withValues(alpha: 0.14)
+            : background.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -696,7 +711,7 @@ class _NoticePanel extends StatelessWidget {
                 Text(
                   message,
                   style: AppTextStyles.body.copyWith(
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryFor(context),
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 3,
@@ -768,12 +783,14 @@ class _InfoTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 3,
-      shadowColor: AppColors.neutral300.withValues(alpha: 0.5),
+      shadowColor: AppColors.isTraining(context)
+          ? Colors.black.withValues(alpha: 0.28)
+          : AppColors.neutral300.withValues(alpha: 0.5),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.borderFor(context)),
       ),
-      color: AppColors.white,
+      color: AppColors.panelFor(context),
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -782,13 +799,13 @@ class _InfoTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(data.icon, color: AppColors.blue, size: 22),
+                Icon(data.icon, color: AppColors.accentFor(context), size: 22),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     data.label,
                     style: AppTextStyles.label.copyWith(
-                      color: AppColors.textSecondary,
+                      color: AppColors.textSecondaryFor(context),
                       fontWeight: FontWeight.w800,
                     ),
                     maxLines: 1,
@@ -802,7 +819,7 @@ class _InfoTile extends StatelessWidget {
               data.value,
               style: AppTextStyles.h3.copyWith(
                 fontWeight: FontWeight.w900,
-                color: AppColors.textPrimary,
+                color: AppColors.textPrimaryFor(context),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -826,7 +843,7 @@ class _ItemsHeader extends StatelessWidget {
       label,
       textAlign: align,
       style: AppTextStyles.label.copyWith(
-        color: AppColors.textSecondary,
+        color: AppColors.textSecondaryFor(context),
         fontWeight: FontWeight.w800,
       ),
     );

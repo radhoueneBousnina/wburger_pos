@@ -229,17 +229,6 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       _searchCtrl.clear();
       ref.read(searchQueryProvider.notifier).state = '';
       ref.read(selectedCategoryProvider.notifier).state = null;
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            qrOrder.customerName != null && qrOrder.customerName!.isNotEmpty
-                ? 'Mobile order loaded for ${qrOrder.customerName}'
-                : 'Mobile order loaded successfully',
-          ),
-          backgroundColor: AppColors.success,
-        ),
-      );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -286,15 +275,11 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       await ReceiptPrinterService.instance.connectWebPrinter();
       final result = await ReceiptPrinterService.instance.printSampleReceipt();
       if (!mounted) return;
+      if (result.isSuccess) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(
-            result.isSuccess
-                ? result.message
-                : 'Sample ticket print failed: ${result.message}',
-          ),
-          backgroundColor:
-              result.isSuccess ? AppColors.success : AppColors.warning,
+          content: Text('Sample ticket print failed: ${result.message}'),
+          backgroundColor: AppColors.warning,
           duration: const Duration(seconds: 6),
         ),
       );
@@ -322,6 +307,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => Dialog(
+        backgroundColor: AppColors.panelFor(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         child: ConstrainedBox(
           constraints: BoxConstraints(
@@ -365,23 +351,27 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                       children: [
                         Text(
                           'Some items will go below zero if this sale is confirmed.',
-                          style: AppTextStyles.body
-                              .copyWith(color: AppColors.textSecondary),
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.textSecondaryFor(context),
+                          ),
                         ),
                         const SizedBox(height: 20),
                         Container(
                           decoration: BoxDecoration(
-                            color: AppColors.neutral50,
+                            color: AppColors.elevatedSurfaceFor(context),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.border),
+                            border:
+                                Border.all(color: AppColors.borderFor(context)),
                           ),
                           child: ListView.separated(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             padding: const EdgeInsets.all(16),
                             itemCount: warnings.length,
-                            separatorBuilder: (_, __) =>
-                                const Divider(height: 24),
+                            separatorBuilder: (_, __) => Divider(
+                              height: 24,
+                              color: AppColors.borderFor(context),
+                            ),
                             itemBuilder: (context, index) {
                               final warning = warnings[index];
                               return Row(
@@ -389,7 +379,10 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                                   Expanded(
                                     child: Text(
                                       warning.stockItemName,
-                                      style: AppTextStyles.title,
+                                      style: AppTextStyles.title.copyWith(
+                                        color:
+                                            AppColors.textPrimaryFor(context),
+                                      ),
                                     ),
                                   ),
                                   Text(

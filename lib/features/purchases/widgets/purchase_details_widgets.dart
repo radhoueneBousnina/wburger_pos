@@ -33,7 +33,7 @@ class _PurchaseStatCard extends StatelessWidget {
             children: [
               Text(label,
                   style: AppTextStyles.label
-                      .copyWith(color: AppColors.textSecondary)),
+                      .copyWith(color: AppColors.textSecondaryFor(context))),
               Text(value, style: AppTextStyles.title.copyWith(color: color)),
             ],
           ),
@@ -53,19 +53,25 @@ class _PurchaseLinesCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.panelFor(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderFor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Purchase Lines', style: AppTextStyles.h4),
+          Text(
+            'Purchase Lines',
+            style: AppTextStyles.h4.copyWith(
+              color: AppColors.textPrimaryFor(context),
+            ),
+          ),
           const SizedBox(height: 12),
           Expanded(
             child: ListView.separated(
               itemCount: purchase.lines.length,
-              separatorBuilder: (_, __) => const Divider(height: 18),
+              separatorBuilder: (_, __) =>
+                  Divider(height: 18, color: AppColors.borderFor(context)),
               itemBuilder: (context, index) {
                 final line = purchase.lines[index];
                 return Row(
@@ -75,11 +81,18 @@ class _PurchaseLinesCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(line.stockItem.name, style: AppTextStyles.title),
+                          Text(
+                            line.stockItem.name,
+                            style: AppTextStyles.title.copyWith(
+                              color: AppColors.textPrimaryFor(context),
+                            ),
+                          ),
                           const SizedBox(height: 4),
                           Text(
                             '${line.quantity.toStringAsFixed(line.stockItem.unit == 'pcs' ? 0 : 3)} ${line.stockItem.unit} • ${line.purchasePrice.toStringAsFixed(3)} DT / unit',
-                            style: AppTextStyles.bodySm,
+                            style: AppTextStyles.bodySm.copyWith(
+                              color: AppColors.textSecondaryFor(context),
+                            ),
                           ),
                         ],
                       ),
@@ -87,8 +100,9 @@ class _PurchaseLinesCard extends StatelessWidget {
                     const SizedBox(width: 12),
                     Text(
                       '${line.lineTotal.toStringAsFixed(3)} DT',
-                      style:
-                          AppTextStyles.title.copyWith(color: AppColors.blue),
+                      style: AppTextStyles.title.copyWith(
+                        color: AppColors.accentFor(context),
+                      ),
                     ),
                   ],
                 );
@@ -111,14 +125,19 @@ class _InvoiceDetailsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.panelFor(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderFor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Invoice', style: AppTextStyles.h4),
+          Text(
+            'Invoice',
+            style: AppTextStyles.h4.copyWith(
+              color: AppColors.textPrimaryFor(context),
+            ),
+          ),
           const SizedBox(height: 12),
           if (purchase.invoiceImagePath != null &&
               purchase.invoiceImagePath!.isNotEmpty)
@@ -145,7 +164,7 @@ class _InvoiceDetailsCard extends StatelessWidget {
                   Text(
                     'Tap image to open zoomable viewer',
                     style: AppTextStyles.bodySm
-                        .copyWith(color: AppColors.textSecondary),
+                        .copyWith(color: AppColors.textSecondaryFor(context)),
                   ),
                 ],
               ),
@@ -248,8 +267,8 @@ class _InvoiceThumb extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text('Preview',
-            style:
-                AppTextStyles.labelSm.copyWith(color: AppColors.textSecondary)),
+            style: AppTextStyles.labelSm
+                .copyWith(color: AppColors.textSecondaryFor(context))),
       ],
     );
   }
@@ -271,7 +290,7 @@ class _InvoiceImageFallback extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      color: AppColors.neutral100,
+      color: AppColors.elevatedSurfaceFor(context),
       alignment: Alignment.center,
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -280,11 +299,14 @@ class _InvoiceImageFallback extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.image_not_supported_rounded,
-                  color: AppColors.neutral500),
+              Icon(Icons.image_not_supported_rounded,
+                  color: AppColors.textSecondaryFor(context)),
               const SizedBox(height: 8),
               Text(message,
-                  style: AppTextStyles.bodySm, textAlign: TextAlign.center),
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.textSecondaryFor(context),
+                  ),
+                  textAlign: TextAlign.center),
             ],
           ),
         ),

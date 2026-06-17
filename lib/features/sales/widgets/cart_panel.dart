@@ -40,7 +40,7 @@ class _CartPanel extends ConsumerWidget {
                   children: [
                     Icon(
                       Icons.shopping_basket_rounded,
-                      color: AppColors.blue,
+                      color: AppColors.accentFor(context),
                       size: layout.isCompact ? 24 : 26,
                     ),
                     const SizedBox(width: 10),
@@ -59,13 +59,13 @@ class _CartPanel extends ConsumerWidget {
                           vertical: layout.isCompact ? 6 : 8,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.blue,
+                          color: AppColors.selectedSurfaceFor(context),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
                           '${cart.itemCount}',
-                          style: AppTextStyles.titleSm
-                              .copyWith(color: AppColors.white),
+                          style: AppTextStyles.titleSm.copyWith(
+                              color: AppColors.selectedTextFor(context)),
                         ),
                       ),
                   ],
@@ -76,10 +76,11 @@ class _CartPanel extends ConsumerWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.blueSurface,
+                      color: AppColors.accentSurfaceFor(context),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: AppColors.blue.withValues(alpha: 0.18),
+                        color: AppColors.accentFor(context)
+                            .withValues(alpha: 0.22),
                       ),
                     ),
                     child: Column(
@@ -90,7 +91,7 @@ class _CartPanel extends ConsumerWidget {
                           Text(
                             cart.customerName!,
                             style: AppTextStyles.title.copyWith(
-                              color: AppColors.blue,
+                              color: AppColors.accentFor(context),
                             ),
                           ),
                         const SizedBox(height: 4),
@@ -106,7 +107,7 @@ class _CartPanel extends ConsumerWidget {
                           Text(
                             'Ticket ${displayTicketNumberFrom(cart.ticketNumber!)}',
                             style: AppTextStyles.label.copyWith(
-                              color: AppColors.blue,
+                              color: AppColors.accentFor(context),
                             ),
                           ),
                         ],
@@ -203,8 +204,10 @@ class _CartPanel extends ConsumerWidget {
                             color: AppColors.textSecondaryFor(context),
                           )),
                       Text('${cart.subtotal.toStringAsFixed(3)} DT',
-                          style: AppTextStyles.title
-                              .copyWith(color: AppColors.blue, fontSize: 18)),
+                          style: AppTextStyles.title.copyWith(
+                            color: AppColors.accentFor(context),
+                            fontSize: 18,
+                          )),
                     ],
                   ),
                   const SizedBox(height: 12),

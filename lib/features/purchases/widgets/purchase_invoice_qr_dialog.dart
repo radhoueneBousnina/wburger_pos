@@ -72,10 +72,6 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
 
   Future<void> _copyLink() async {
     await Clipboard.setData(ClipboardData(text: _session.uploadUrl));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Upload link copied.')),
-    );
   }
 
   String _money(double value) => '${value.toStringAsFixed(3)} DT';
@@ -89,6 +85,7 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
         horizontal: layout.isCompact ? 14 : 28,
         vertical: 24,
       ),
+      backgroundColor: AppColors.panelFor(context),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 620),
@@ -101,7 +98,7 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
                 width: double.infinity,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
-                color: AppColors.blue,
+                color: AppColors.modalHeaderFor(context),
                 child: Row(
                   children: [
                     Container(
@@ -154,9 +151,9 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
                       width: stack ? double.infinity : 252,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.white,
+                        color: AppColors.elevatedSurfaceFor(context),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.borderFor(context)),
                       ),
                       child: Column(
                         children: [
@@ -165,7 +162,7 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
                             decoration: BoxDecoration(
                               color: AppColors.white,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: AppColors.neutral100),
+                              border: Border.all(color: AppColors.neutral200),
                             ),
                             child: QrImageView(
                               data: _session.uploadUrl,
@@ -182,7 +179,7 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
                             style: AppTextStyles.titleSm.copyWith(
                               color: _session.isUploaded
                                   ? AppColors.success
-                                  : AppColors.blue,
+                                  : AppColors.accentFor(context),
                             ),
                           ),
                         ],
@@ -195,21 +192,26 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.blueSurface,
+                            color: AppColors.accentSurfaceFor(context),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: AppColors.blue.withValues(alpha: 0.18),
+                              color: AppColors.accentFor(context)
+                                  .withValues(alpha: 0.18),
                             ),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Purchase Total',
-                                  style: AppTextStyles.label),
+                              Text(
+                                'Purchase Total',
+                                style: AppTextStyles.label.copyWith(
+                                  color: AppColors.textSecondaryFor(context),
+                                ),
+                              ),
                               Text(
                                 _money(_session.purchaseTotalAmount),
                                 style: AppTextStyles.title.copyWith(
-                                  color: AppColors.blue,
+                                  color: AppColors.accentFor(context),
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
@@ -240,7 +242,7 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
                               ? AppColors.success
                               : (_session.isExpired
                                   ? AppColors.error
-                                  : AppColors.blue),
+                                  : AppColors.accentFor(context)),
                         ),
                         const SizedBox(height: 16),
                         Row(
@@ -257,19 +259,10 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
                               child: ElevatedButton.icon(
                                 onPressed: _session.isUploaded
                                     ? () => Navigator.pop(context)
-                                    : (_isRefreshing ? null : _refreshStatus),
+                                    : _refreshStatus,
                                 icon: _session.isUploaded
                                     ? const Icon(Icons.done_rounded)
-                                    : (_isRefreshing
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: AppColors.white,
-                                            ),
-                                          )
-                                        : const Icon(Icons.refresh_rounded)),
+                                    : const Icon(Icons.refresh_rounded),
                                 label: Text(
                                   _session.isUploaded ? 'Done' : 'Refresh',
                                 ),
@@ -348,8 +341,9 @@ class _InvoiceStatusBanner extends StatelessWidget {
                   message,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodySm
-                      .copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.textSecondaryFor(context),
+                  ),
                 ),
               ],
             ),
@@ -387,22 +381,24 @@ class _InvoiceUpload extends StatelessWidget {
               ? AppColors.success.withValues(alpha: 0.05)
               : (hasError
                   ? AppColors.error.withValues(alpha: 0.05)
-                  : AppColors.neutral50),
+                  : AppColors.elevatedSurfaceFor(context)),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isUploaded
                 ? AppColors.success
-                : (hasError ? AppColors.error : AppColors.border),
+                : (hasError ? AppColors.error : AppColors.borderFor(context)),
             width: isUploaded || hasError ? 2 : 1,
             style: isUploaded ? BorderStyle.solid : BorderStyle.none,
           ),
         ),
-        child: isUploaded ? _buildUploadedState() : _buildUploadPlaceholder(),
+        child: isUploaded
+            ? _buildUploadedState(context)
+            : _buildUploadPlaceholder(context),
       ),
     );
   }
 
-  Widget _buildUploadedState() {
+  Widget _buildUploadedState(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Row(
@@ -431,7 +427,9 @@ class _InvoiceUpload extends StatelessWidget {
                   fileName == null || fileName!.isEmpty
                       ? 'Invoice uploaded from phone'
                       : fileName!,
-                  style: AppTextStyles.bodySm,
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.textSecondaryFor(context),
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -448,7 +446,7 @@ class _InvoiceUpload extends StatelessWidget {
     );
   }
 
-  Widget _buildUploadPlaceholder() {
+  Widget _buildUploadPlaceholder(BuildContext context) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -462,20 +460,22 @@ class _InvoiceUpload extends StatelessWidget {
           Icon(
             Icons.qr_code_2_rounded,
             size: 40,
-            color: hasError ? AppColors.error : AppColors.blue,
+            color: hasError ? AppColors.error : AppColors.accentFor(context),
           ),
         const SizedBox(height: 12),
         Text(
           isLoading ? 'Creating QR code...' : 'Scan QR to upload invoice',
           style: AppTextStyles.title.copyWith(
-            color: hasError ? AppColors.error : AppColors.blue,
+            color: hasError ? AppColors.error : AppColors.accentFor(context),
           ),
         ),
         const SizedBox(height: 4),
         Text(
           'Photo required for confirmation',
           style: AppTextStyles.bodySm.copyWith(
-            color: hasError ? AppColors.error : AppColors.neutral500,
+            color: hasError
+                ? AppColors.error
+                : AppColors.textSecondaryFor(context),
           ),
         ),
       ],

@@ -48,11 +48,11 @@ class _ProductsPanel extends ConsumerWidget {
                     hintStyle: AppTextStyles.body.copyWith(
                       color: AppColors.textSecondaryFor(context),
                     ),
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.all(14),
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.all(14),
                       child: Icon(
                         Icons.search_rounded,
-                        color: AppColors.blue,
+                        color: AppColors.accentFor(context),
                         size: 22,
                       ),
                     ),
@@ -331,7 +331,7 @@ class _ProductCard extends ConsumerWidget {
           ref.read(cartProvider.notifier).addProduct(product);
         },
         borderRadius: BorderRadius.circular(layout.cardRadius),
-        splashColor: AppColors.yellowSurface,
+        splashColor: AppColors.accentSurfaceFor(context),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(layout.cardRadius),
@@ -395,8 +395,10 @@ class _ProductCard extends ConsumerWidget {
                         Flexible(
                           child: Text(
                             '${product.price.toStringAsFixed(1)} DT',
-                            style: AppTextStyles.price
-                                .copyWith(fontSize: layout.isCompact ? 18 : 20),
+                            style: AppTextStyles.price.copyWith(
+                              color: AppColors.accentFor(context),
+                              fontSize: layout.isCompact ? 18 : 20,
+                            ),
                             maxLines: 1,
                           ),
                         ),

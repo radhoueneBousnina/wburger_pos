@@ -136,14 +136,6 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
             );
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(testMode.isActive
-              ? 'Training purchase recorded locally'
-              : 'Purchase recorded and confirmed successfully'),
-          backgroundColor: AppColors.success,
-        ),
-      );
       context.go(AppRoutes.purchases);
     } catch (e) {
       if (!mounted) return;
@@ -255,14 +247,14 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
           backgroundColor: AppColors.surfaceFor(context),
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.blue),
+            icon: Icon(Icons.arrow_back_rounded,
+                color: AppColors.accentFor(context)),
             onPressed: _goBack,
           ),
           title: Text(
             testMode.isActive ? 'New Training Purchase' : 'New Purchase',
             style: AppTextStyles.h4.copyWith(
-              color:
-                  testMode.isActive ? AppColors.white : AppColors.textPrimary,
+              color: AppColors.textPrimaryFor(context),
             ),
           ),
           actions: [
@@ -272,7 +264,9 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
                 child: Center(
                   child: Text(
                     'Total: ${_total.toStringAsFixed(3)} DT',
-                    style: AppTextStyles.title.copyWith(color: AppColors.blue),
+                    style: AppTextStyles.title.copyWith(
+                      color: AppColors.accentFor(context),
+                    ),
                   ),
                 ),
               ),
@@ -280,7 +274,7 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
         ),
         body: Column(
           children: [
-            const Divider(height: 1),
+            Divider(height: 1, color: AppColors.borderFor(context)),
             Expanded(
               child: layout.stackPanels
                   ? _buildStackedLayout(stocks, layout)
@@ -399,9 +393,13 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppColors.blue.withValues(alpha: 0.05),
+            color: AppColors.accentSurfaceFor(context).withValues(
+              alpha: AppColors.isTraining(context) ? 0.72 : 1,
+            ),
             borderRadius: BorderRadius.circular(layout.cardRadius),
-            border: Border.all(color: AppColors.blue.withValues(alpha: 0.1)),
+            border: Border.all(
+              color: AppColors.accentFor(context).withValues(alpha: 0.2),
+            ),
           ),
           child: Column(
             children: [
@@ -413,10 +411,17 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Grand Total', style: AppTextStyles.title),
+                  Text(
+                    'Grand Total',
+                    style: AppTextStyles.title.copyWith(
+                      color: AppColors.textPrimaryFor(context),
+                    ),
+                  ),
                   Text(
                     '${_total.toStringAsFixed(3)} DT',
-                    style: AppTextStyles.h3.copyWith(color: AppColors.blue),
+                    style: AppTextStyles.h3.copyWith(
+                      color: AppColors.accentFor(context),
+                    ),
                   ),
                 ],
               ),
@@ -487,7 +492,8 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
                       ? 'Confirm Training Purchase'
                       : 'Confirm Purchase'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.blue,
+                backgroundColor: AppColors.accentFor(context),
+                foregroundColor: AppColors.onAccentFor(context),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
             ),
@@ -498,7 +504,6 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
   }
 
   Widget _buildEmptyState() {
-    final testMode = ref.watch(testModeProvider);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 48),
@@ -514,8 +519,7 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
           Icon(
             Icons.inventory_2_outlined,
             size: 48,
-            color:
-                testMode.isActive ? AppColors.neutral500 : AppColors.neutral300,
+            color: AppColors.textSecondaryFor(context),
           ),
           const SizedBox(height: 16),
           Text('No items added yet',

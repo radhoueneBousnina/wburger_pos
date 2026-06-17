@@ -24,13 +24,13 @@ class _StepTab extends StatelessWidget {
     final Color color = !isInteractive
         ? AppColors.textSecondaryFor(context)
         : selected
-            ? AppColors.blue
+            ? AppColors.accentFor(context)
             : (done ? AppColors.success : AppColors.textSecondaryFor(context));
     final Color bgColor = !isInteractive
         ? AppColors.elevatedSurfaceFor(context)
         : selected
-            ? AppColors.blueSurface
-                .withValues(alpha: AppColors.isTraining(context) ? 0.18 : 1)
+            ? AppColors.accentSurfaceFor(context)
+                .withValues(alpha: AppColors.isTraining(context) ? 0.72 : 1)
             : (done
                 ? AppColors.successLight
                     .withValues(alpha: AppColors.isTraining(context) ? 0.18 : 1)
@@ -122,8 +122,8 @@ class _TheoreticalActualHeader extends StatelessWidget {
         Expanded(
           child: Row(
             children: [
-              const Icon(Icons.calculate_rounded,
-                  color: AppColors.blue, size: 20),
+              Icon(Icons.calculate_rounded,
+                  color: AppColors.accentFor(context), size: 20),
               const SizedBox(width: 8),
               Text(
                 'Theoretical Values',
@@ -224,7 +224,12 @@ class _ComparisonRow extends StatelessWidget {
               Expanded(
                 child: TextField(
                   controller: actualCtrl,
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    _SessionClosureScreenState._stockQuantityInputFormatter,
+                  ],
                   onChanged: (_) => onChanged(),
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(
@@ -244,8 +249,9 @@ class _ComparisonRow extends StatelessWidget {
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(
-                          color:
-                              hasDiscrepancy ? AppColors.error : AppColors.blue,
+                          color: hasDiscrepancy
+                              ? AppColors.error
+                              : AppColors.accentFor(context),
                           width: 2),
                     ),
                   ),

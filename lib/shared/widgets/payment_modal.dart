@@ -343,6 +343,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
 
     return Dialog(
       insetPadding: EdgeInsets.all(layout.pagePadding),
+      backgroundColor: AppColors.panelFor(context),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -355,13 +356,14 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: AppColors.blue,
+              decoration: BoxDecoration(
+                color: AppColors.modalHeaderFor(context),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.payments_rounded, color: AppColors.yellow),
+                  Icon(Icons.payments_rounded,
+                      color: AppColors.accentFor(context)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -588,7 +590,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
         child: _PaymentInfoPill(
           icon: Icons.delivery_dining_rounded,
           text: 'Glovo payment will be used automatically.',
-          color: AppColors.blue,
+          color: AppColors.accentFor(context),
         ),
       );
     }
@@ -624,7 +626,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
           labelText: 'Glovo order ID (optional)',
           prefixIcon: const Icon(Icons.confirmation_number_rounded),
           filled: true,
-          fillColor: AppColors.white,
+          fillColor: AppColors.inputFillFor(context),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -644,7 +646,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
           labelText: 'Gift recipient',
           prefixIcon: const Icon(Icons.card_giftcard_rounded),
           filled: true,
-          fillColor: AppColors.white,
+          fillColor: AppColors.inputFillFor(context),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -688,7 +690,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
                   suffixText: 'DT',
                   prefixIcon: const Icon(Icons.payments_rounded),
                   filled: true,
-                  fillColor: AppColors.white,
+                  fillColor: AppColors.inputFillFor(context),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -771,8 +773,13 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       width: double.infinity,
       padding: EdgeInsets.all(compact ? 14 : 18),
       decoration: BoxDecoration(
-        color: AppColors.yellow.withValues(alpha: 0.16),
+        color: AppColors.accentSurfaceFor(context).withValues(
+          alpha: AppColors.isTraining(context) ? 0.72 : 1,
+        ),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.accentFor(context).withValues(alpha: 0.26),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -780,14 +787,14 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
           Text(
             totalLabel,
             style: (compact ? AppTextStyles.h4 : AppTextStyles.h3)
-                .copyWith(color: AppColors.blue),
+                .copyWith(color: AppColors.accentFor(context)),
           ),
           if (discountLabel != null) ...[
             const SizedBox(height: 6),
             Text(
               discountLabel,
               style: AppTextStyles.titleSm.copyWith(
-                color: AppColors.textSecondary,
+                color: AppColors.textSecondaryFor(context),
               ),
             ),
           ],

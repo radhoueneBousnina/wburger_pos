@@ -13,19 +13,19 @@ class _PaymentSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppColors.accentFor(context);
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(dense ? 12 : 16),
       decoration: BoxDecoration(
-        color: AppColors.neutral50,
+        color: AppColors.elevatedSurfaceFor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderFor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: AppTextStyles.label.copyWith(color: AppColors.blue)),
+          Text(title, style: AppTextStyles.label.copyWith(color: accent)),
           SizedBox(height: dense ? 8 : 12),
           child,
         ],
@@ -53,8 +53,12 @@ class _PaymentChoiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedColor = AppColors.selectedSurfaceFor(context);
+    final selectedText = AppColors.selectedTextFor(context);
+    final accent = AppColors.accentFor(context);
+    final textColor = AppColors.textPrimaryFor(context);
     return Material(
-      color: selected ? AppColors.blue : AppColors.white,
+      color: selected ? selectedColor : AppColors.panelFor(context),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: enabled ? onTap : null,
@@ -68,8 +72,9 @@ class _PaymentChoiceTile extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border:
-                Border.all(color: selected ? AppColors.blue : AppColors.border),
+            border: Border.all(
+              color: selected ? selectedColor : AppColors.borderFor(context),
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -77,7 +82,7 @@ class _PaymentChoiceTile extends StatelessWidget {
               Icon(
                 icon,
                 size: compact ? 19 : 24,
-                color: selected ? AppColors.white : AppColors.blue,
+                color: selected ? selectedText : accent,
               ),
               SizedBox(width: compact ? 6 : 8),
               Flexible(
@@ -85,7 +90,7 @@ class _PaymentChoiceTile extends StatelessWidget {
                   label,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.titleSm.copyWith(
-                    color: selected ? AppColors.white : AppColors.textPrimary,
+                    color: selected ? selectedText : textColor,
                   ),
                 ),
               ),
@@ -143,19 +148,25 @@ class _StaffPicker extends ConsumerWidget {
                     .toList();
                 final user = filtered[index];
                 final selected = selectedStaffId == user.id;
+                final accent = AppColors.accentFor(context);
                 return ListTile(
                   selected: selected,
-                  selectedTileColor: AppColors.blue.withValues(alpha: 0.08),
+                  selectedTileColor: accent.withValues(alpha: 0.14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   leading: CircleAvatar(
                       child: Text(user.fullName.isEmpty
                           ? '?'
                           : user.fullName[0].toUpperCase())),
-                  title: Text(user.fullName),
+                  title: Text(
+                    user.fullName,
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.textPrimaryFor(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   trailing: selected
-                      ? const Icon(Icons.check_circle_rounded,
-                          color: AppColors.blue)
+                      ? Icon(Icons.check_circle_rounded, color: accent)
                       : null,
                   onTap: () => onChanged(user.id),
                 );
@@ -181,12 +192,14 @@ class _PaymentInfoPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bgAlpha = AppColors.isTraining(context) ? 0.16 : 0.1;
+    final borderAlpha = AppColors.isTraining(context) ? 0.34 : 0.22;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: bgAlpha),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
+        border: Border.all(color: color.withValues(alpha: borderAlpha)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -219,16 +232,19 @@ class _CashNumberPad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0'];
+    final accent = AppColors.accentFor(context);
 
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.panelFor(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.blueBorder),
+        border: Border.all(color: AppColors.borderFor(context)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.blueDark.withValues(alpha: 0.08),
+            color: Colors.black.withValues(
+              alpha: AppColors.isTraining(context) ? 0.22 : 0.08,
+            ),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -239,14 +255,13 @@ class _CashNumberPad extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.touch_app_rounded,
-                  size: 16, color: AppColors.blue),
+              Icon(Icons.touch_app_rounded, size: 16, color: accent),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   'Touch amount',
                   style: AppTextStyles.label.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.textSecondaryFor(context),
                   ),
                 ),
               ),
@@ -319,20 +334,21 @@ class _CashPadKey extends StatelessWidget {
     final Color foreground;
     final Color background;
     final Color border;
+    final isTraining = AppColors.isTraining(context);
 
     switch (tone) {
       case _CashPadKeyTone.accent:
-        foreground = AppColors.blue;
-        background = AppColors.blueSurface;
-        border = AppColors.blueBorder;
+        foreground = AppColors.accentFor(context);
+        background = AppColors.accentFor(context).withValues(alpha: 0.16);
+        border = AppColors.accentFor(context).withValues(alpha: 0.38);
       case _CashPadKeyTone.danger:
         foreground = AppColors.error;
-        background = AppColors.errorLight;
-        border = AppColors.error.withValues(alpha: 0.18);
+        background = AppColors.error.withValues(alpha: isTraining ? 0.16 : 0.1);
+        border = AppColors.error.withValues(alpha: isTraining ? 0.32 : 0.18);
       case _CashPadKeyTone.normal:
-        foreground = AppColors.textPrimary;
-        background = AppColors.neutral50;
-        border = AppColors.neutral200;
+        foreground = AppColors.textPrimaryFor(context);
+        background = AppColors.elevatedSurfaceFor(context);
+        border = AppColors.borderFor(context);
     }
 
     return Material(

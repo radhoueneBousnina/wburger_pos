@@ -67,6 +67,7 @@ class AppColors {
   static const Color trainingElevated = Color(0xFF1D2235);
   static const Color trainingBorder = Color(0x33FFFFFF);
   static const Color trainingTextSecondary = Color(0xFF9AA3B8);
+  static const Color trainingAccentSurface = Color(0xFF222842);
 
   static bool isTraining(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
@@ -85,6 +86,27 @@ class AppColors {
 
   static Color elevatedSurfaceFor(BuildContext context) =>
       isTraining(context) ? trainingElevated : neutral50;
+
+  static Color inputFillFor(BuildContext context) =>
+      isTraining(context) ? const Color(0xFF22283C) : neutral50;
+
+  static Color modalHeaderFor(BuildContext context) =>
+      isTraining(context) ? const Color(0xFF20263A) : blue;
+
+  static Color accentFor(BuildContext context) =>
+      isTraining(context) ? yellow : blue;
+
+  static Color onAccentFor(BuildContext context) =>
+      isTraining(context) ? blueDark : white;
+
+  static Color accentSurfaceFor(BuildContext context) =>
+      isTraining(context) ? trainingAccentSurface : yellowSurface;
+
+  static Color selectedSurfaceFor(BuildContext context) =>
+      isTraining(context) ? yellow : blue;
+
+  static Color selectedTextFor(BuildContext context) =>
+      isTraining(context) ? blueDark : white;
 
   static Color tableHeaderFor(BuildContext context) =>
       isTraining(context) ? trainingSurface : neutral50;

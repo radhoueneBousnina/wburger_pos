@@ -73,10 +73,6 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
 
   Future<void> _copyLink() async {
     await Clipboard.setData(ClipboardData(text: _session.uploadUrl));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Upload link copied.')),
-    );
   }
 
   String _money(double value) => '${value.toStringAsFixed(3)} DT';
@@ -93,6 +89,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
         horizontal: layout.isCompact ? 14 : 28,
         vertical: 24,
       ),
+      backgroundColor: AppColors.panelFor(context),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 620),
@@ -105,7 +102,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                 width: double.infinity,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
-                color: AppColors.blue,
+                color: AppColors.modalHeaderFor(context),
                 child: Row(
                   children: [
                     Container(
@@ -157,9 +154,9 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                       width: stack ? double.infinity : 252,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.white,
+                        color: AppColors.elevatedSurfaceFor(context),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.borderFor(context)),
                       ),
                       child: Column(
                         children: [
@@ -168,7 +165,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                             decoration: BoxDecoration(
                               color: AppColors.white,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: AppColors.neutral100),
+                              border: Border.all(color: AppColors.neutral200),
                             ),
                             child: QrImageView(
                               data: _session.uploadUrl,
@@ -185,7 +182,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                             style: AppTextStyles.titleSm.copyWith(
                               color: _session.isUploaded
                                   ? AppColors.success
-                                  : AppColors.blue,
+                                  : AppColors.accentFor(context),
                             ),
                           ),
                         ],
@@ -201,7 +198,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                               child: _TpeAmountTile(
                                 label: 'System Card',
                                 value: _money(_session.systemCardAmount),
-                                color: AppColors.blue,
+                                color: AppColors.accentFor(context),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -238,7 +235,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                               ? AppColors.success
                               : (_session.isExpired
                                   ? AppColors.error
-                                  : AppColors.blue),
+                                  : AppColors.accentFor(context)),
                         ),
                         const SizedBox(height: 10),
                         Container(
@@ -253,7 +250,12 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Difference', style: AppTextStyles.label),
+                              Text(
+                                'Difference',
+                                style: AppTextStyles.label.copyWith(
+                                  color: AppColors.textSecondaryFor(context),
+                                ),
+                              ),
                               Text(
                                 _money(_session.differenceAmount),
                                 style: AppTextStyles.title.copyWith(
@@ -279,19 +281,10 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                               child: ElevatedButton.icon(
                                 onPressed: _session.isUploaded
                                     ? () => Navigator.pop(context)
-                                    : (_isRefreshing ? null : _refreshStatus),
+                                    : _refreshStatus,
                                 icon: _session.isUploaded
                                     ? const Icon(Icons.done_rounded)
-                                    : (_isRefreshing
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: AppColors.white,
-                                            ),
-                                          )
-                                        : const Icon(Icons.refresh_rounded)),
+                                    : const Icon(Icons.refresh_rounded),
                                 label: Text(
                                   _session.isUploaded ? 'Done' : 'Refresh',
                                 ),
@@ -356,7 +349,12 @@ class _TpeAmountTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: AppTextStyles.labelSm),
+          Text(
+            label,
+            style: AppTextStyles.labelSm.copyWith(
+              color: AppColors.textSecondaryFor(context),
+            ),
+          ),
           const SizedBox(height: 7),
           Text(
             value,
@@ -410,8 +408,9 @@ class _TpeStatusBanner extends StatelessWidget {
                   message,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodySm
-                      .copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.textSecondaryFor(context),
+                  ),
                 ),
               ],
             ),
@@ -450,13 +449,15 @@ class _UploadBox extends StatelessWidget {
           height: layout.touchTarget + 16,
           decoration: BoxDecoration(
             color: isUploaded
-                ? AppColors.successLight
-                : (hasError ? AppColors.errorLight : AppColors.neutral50),
+                ? AppColors.success.withValues(alpha: 0.12)
+                : (hasError
+                    ? AppColors.error.withValues(alpha: 0.1)
+                    : AppColors.elevatedSurfaceFor(context)),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isUploaded
                   ? AppColors.success
-                  : (hasError ? AppColors.error : AppColors.border),
+                  : (hasError ? AppColors.error : AppColors.borderFor(context)),
               width: hasError || isUploaded ? 2 : 1,
             ),
           ),
@@ -477,7 +478,8 @@ class _UploadBox extends StatelessWidget {
               else
                 Icon(
                   Icons.qr_code_2_rounded,
-                  color: hasError ? AppColors.error : AppColors.blue,
+                  color:
+                      hasError ? AppColors.error : AppColors.accentFor(context),
                 ),
               const SizedBox(width: 10),
               Flexible(
@@ -492,7 +494,9 @@ class _UploadBox extends StatelessWidget {
                   style: AppTextStyles.titleSm.copyWith(
                     color: isUploaded
                         ? AppColors.success
-                        : (hasError ? AppColors.error : AppColors.blue),
+                        : (hasError
+                            ? AppColors.error
+                            : AppColors.accentFor(context)),
                   ),
                 ),
               ),

@@ -163,7 +163,9 @@ class _PurchaseLineRow extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   '${_lineTotal.toStringAsFixed(3)} DT',
-                  style: AppTextStyles.title.copyWith(color: AppColors.blue),
+                  style: AppTextStyles.title.copyWith(
+                    color: AppColors.accentFor(context),
+                  ),
                 ),
               ],
             ),
@@ -257,19 +259,31 @@ class _StockSearchPickerState extends State<_StockSearchPicker> {
 
         if (filtered.isEmpty) {
           return [
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No matching items found',
-                  textAlign: TextAlign.center, style: AppTextStyles.bodySm),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'No matching items found',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.textSecondaryFor(context),
+                ),
+              ),
             )
           ];
         }
 
         return filtered.map((s) {
           return ListTile(
-            title: Text(s.name, style: AppTextStyles.titleSm),
+            title: Text(
+              s.name,
+              style: AppTextStyles.titleSm.copyWith(
+                color: AppColors.textPrimaryFor(context),
+              ),
+            ),
             subtitle: Text('Unit: ${s.unit} | Price: ${s.purchasePrice} DT',
-                style: AppTextStyles.labelSm),
+                style: AppTextStyles.labelSm.copyWith(
+                  color: AppColors.textSecondaryFor(context),
+                )),
             onTap: () {
               controller.closeView(s.name);
               widget.onSelected(s);
@@ -301,11 +315,17 @@ class _SectionHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: AppTextStyles.h4),
+              Text(
+                title,
+                style: AppTextStyles.h4.copyWith(
+                  color: AppColors.textPrimaryFor(context),
+                ),
+              ),
               const SizedBox(height: 2),
               Text(subtitle,
-                  style: AppTextStyles.body
-                      .copyWith(color: AppColors.textSecondary)),
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.textSecondaryFor(context),
+                  )),
             ],
           ),
         ),
