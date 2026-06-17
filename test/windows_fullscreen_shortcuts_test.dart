@@ -26,7 +26,7 @@ void main() {
     );
     addTearDown(shortcuts.dispose);
 
-    expect(shortcuts.handleKey(escapeDown), isFalse);
+    expect(shortcuts.handleKey(escapeDown), isTrue);
     await tester.pump(const Duration(milliseconds: 699));
     expect(fullscreenStates, isEmpty);
 
@@ -41,9 +41,9 @@ void main() {
     );
     addTearDown(shortcuts.dispose);
 
-    expect(shortcuts.handleKey(escapeDown), isFalse);
+    expect(shortcuts.handleKey(escapeDown), isTrue);
     await tester.pump(const Duration(milliseconds: 300));
-    expect(shortcuts.handleKey(escapeUp), isFalse);
+    expect(shortcuts.handleKey(escapeUp), isTrue);
     await tester.pump(const Duration(seconds: 1));
 
     expect(fullscreenStates, isEmpty);

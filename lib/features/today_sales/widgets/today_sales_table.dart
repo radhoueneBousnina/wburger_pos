@@ -235,11 +235,11 @@ class _OrderRow extends ConsumerWidget {
                           backgroundColor: AppColors.error,
                           foregroundColor: AppColors.white,
                           elevation: 0,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          minimumSize: const Size(104, 42),
+                          tapTargetSize: MaterialTapTargetSize.padded,
                           padding: EdgeInsets.symmetric(
-                            horizontal: metrics.compact ? 10 : 16,
-                            vertical: metrics.compact ? 9 : 12,
+                            horizontal: metrics.compact ? 14 : 18,
+                            vertical: metrics.compact ? 11 : 12,
                           ),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),

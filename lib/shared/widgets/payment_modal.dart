@@ -144,7 +144,8 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   double get _staffDiscountPercent =>
       ref.watch(posSettingsProvider).valueOrNull?.staffDiscountPercent ?? 0;
   bool get _isGlovoOrder => _orderType == OrderType.glovo;
-  bool get _isGiftPayment => !_isGlovoOrder && _selectedType == PaymentType.gift;
+  bool get _isGiftPayment =>
+      !_isGlovoOrder && _selectedType == PaymentType.gift;
   PaymentType? get _effectivePaymentType =>
       _isGlovoOrder ? PaymentType.glovo : _selectedType;
   double get _giftDiscountAmount =>
@@ -758,13 +759,13 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
     final totalLabel = isGiftPayment
         ? 'Gift total: 0.000 DT'
         : isStaffPayment
-        ? 'Staff total: ${_displayTotal.toStringAsFixed(3)} DT'
-        : 'Total: ${widget.total.toStringAsFixed(3)} DT';
+            ? 'Staff total: ${_displayTotal.toStringAsFixed(3)} DT'
+            : 'Total: ${widget.total.toStringAsFixed(3)} DT';
     final discountLabel = isGiftPayment && _giftDiscountAmount > 0
         ? 'Gift discount: -${_giftDiscountAmount.toStringAsFixed(3)} DT'
         : isStaffPayment && _staffDiscountAmount > 0
-        ? 'Discount ${_staffDiscountPercent.toStringAsFixed(2)}%: -${_staffDiscountAmount.toStringAsFixed(3)} DT'
-        : null;
+            ? 'Discount ${_staffDiscountPercent.toStringAsFixed(2)}%: -${_staffDiscountAmount.toStringAsFixed(3)} DT'
+            : null;
 
     return Container(
       width: double.infinity,

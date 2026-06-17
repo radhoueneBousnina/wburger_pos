@@ -526,14 +526,15 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       customerName: cart.customerName,
       customerNote: cart.customerNote,
       referenceLabel: cart.ticketNumber,
-      onConfirm: (paymentType, orderType,
-          {
-          amountGiven,
-          changeReturned,
-          staffId,
-          glovoOrderId,
-          giftRecipient,
-        }) async {
+      onConfirm: (
+        paymentType,
+        orderType, {
+        amountGiven,
+        changeReturned,
+        staffId,
+        glovoOrderId,
+        giftRecipient,
+      }) async {
         final orderNotifier = ref.read(ordersProvider.notifier);
         final confirmedPaymentType =
             isDealRedemption ? PaymentType.deal : paymentType;

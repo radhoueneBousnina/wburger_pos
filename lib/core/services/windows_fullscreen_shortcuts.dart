@@ -30,14 +30,13 @@ class WindowsFullscreenShortcuts {
         _escapeHoldTimer = null;
         unawaited(setFullScreen(false));
       });
-      // A short Escape press should still work normally inside dialogs/forms.
-      return false;
+      return true;
     }
 
     if (event is KeyUpEvent) {
       _escapeHoldTimer?.cancel();
       _escapeHoldTimer = null;
-      return false;
+      return true;
     }
 
     // Suppress key-repeat events while Escape is being held.

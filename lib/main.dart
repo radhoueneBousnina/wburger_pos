@@ -127,9 +127,22 @@ class _DesktopShellShortcutsState extends State<_DesktopShellShortcuts> {
     super.initState();
     if (_isWindowsDesktop) {
       _shortcuts = WindowsFullscreenShortcuts(
-        setFullScreen: windowManager.setFullScreen,
+        setFullScreen: _setWindowsFullScreen,
       );
       HardwareKeyboard.instance.addHandler(_shortcuts!.handleKey);
+    }
+  }
+
+  Future<void> _setWindowsFullScreen(bool enabled) async {
+    await windowManager.setFullScreen(enabled);
+    if (!enabled) {
+      await windowManager.setSkipTaskbar(false);
+      await windowManager.setResizable(true);
+      await windowManager.setMinimizable(true);
+      await windowManager.setMaximizable(true);
+      await windowManager.restore();
+      await windowManager.show();
+      await windowManager.focus();
     }
   }
 

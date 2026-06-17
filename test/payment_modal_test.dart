@@ -58,14 +58,15 @@ void main() {
             body: PaymentModal(
               total: 12,
               initialPaymentType: PaymentType.cash,
-              onConfirm: (_, __,
-                  {
-                  amountGiven,
-                  changeReturned,
-                  staffId,
-                  glovoOrderId,
-                  giftRecipient,
-                }) {},
+              onConfirm: (
+                _,
+                __, {
+                amountGiven,
+                changeReturned,
+                staffId,
+                glovoOrderId,
+                giftRecipient,
+              }) {},
             ),
           ),
         ),
@@ -113,14 +114,15 @@ void main() {
               total: 20,
               staffDiscountBaseTotal: 20,
               initialPaymentType: PaymentType.staff,
-              onConfirm: (_, __,
-                  {
-                  amountGiven,
-                  changeReturned,
-                  staffId,
-                  glovoOrderId,
-                  giftRecipient,
-                }) {},
+              onConfirm: (
+                _,
+                __, {
+                amountGiven,
+                changeReturned,
+                staffId,
+                glovoOrderId,
+                giftRecipient,
+              }) {},
             ),
           ),
         ),
@@ -148,14 +150,15 @@ void main() {
               total: 20,
               staffDiscountBaseTotal: 20,
               initialPaymentType: PaymentType.gift,
-              onConfirm: (_, __,
-                  {
-                  amountGiven,
-                  changeReturned,
-                  staffId,
-                  glovoOrderId,
-                  giftRecipient,
-                }) {
+              onConfirm: (
+                _,
+                __, {
+                amountGiven,
+                changeReturned,
+                staffId,
+                glovoOrderId,
+                giftRecipient,
+              }) {
                 receivedGiftRecipient = giftRecipient;
               },
             ),

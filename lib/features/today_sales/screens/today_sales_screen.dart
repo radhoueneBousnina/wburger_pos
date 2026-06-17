@@ -184,43 +184,43 @@ class _TodaySalesTableMetrics {
     final horizontalPadding = veryCompact
         ? 8.0
         : compact
-            ? 10.0
+            ? 12.0
             : 24.0;
     final columnGap = veryCompact
         ? 4.0
         : compact
-            ? 6.0
-            : 16.0;
+            ? 8.0
+            : 12.0;
     final dateWidth = veryCompact
-        ? 68.0
+        ? 88.0
         : compact
-            ? 76.0
-            : 100.0;
+            ? 106.0
+            : 116.0;
     final ticketWidth = veryCompact
-        ? 44.0
+        ? 48.0
         : compact
-            ? 56.0
-            : 80.0;
+            ? 60.0
+            : 76.0;
     final amountWidth = veryCompact
-        ? 72.0
+        ? 82.0
         : compact
-            ? 82.0
-            : 90.0;
+            ? 90.0
+            : 96.0;
     final paymentWidth = veryCompact
-        ? 64.0
+        ? 84.0
         : compact
-            ? 74.0
-            : 120.0;
+            ? 102.0
+            : 126.0;
     final statusWidth = veryCompact
-        ? 72.0
+        ? 92.0
         : compact
-            ? 84.0
-            : 120.0;
+            ? 112.0
+            : 126.0;
     final actionsWidth = veryCompact
-        ? 64.0
+        ? 112.0
         : compact
-            ? 74.0
-            : 120.0;
+            ? 124.0
+            : 136.0;
 
     final fixedWidth = (horizontalPadding * 2) +
         (columnGap * 6) +
@@ -231,10 +231,10 @@ class _TodaySalesTableMetrics {
         statusWidth +
         actionsWidth;
     final minItemsWidth = veryCompact
-        ? 96.0
+        ? 150.0
         : compact
-            ? 130.0
-            : 260.0;
+            ? 180.0
+            : 220.0;
     final remainingItemsWidth = availableWidth - fixedWidth;
     final itemsWidth = remainingItemsWidth < minItemsWidth
         ? minItemsWidth
