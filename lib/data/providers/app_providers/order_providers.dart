@@ -232,9 +232,17 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
 
       final responseData = _asMap(response.data);
       final confirmedOrderData = _asMap(responseData?['order']);
-      final confirmedOrder = confirmedOrderData != null
+      final parsedConfirmedOrder = confirmedOrderData != null
           ? Order.fromJson(confirmedOrderData)
           : null;
+      final confirmedOrder = _normalizeConfirmedOrderPricing(
+        parsedConfirmedOrder,
+        cart: cart,
+        paymentType: effectivePaymentType,
+        amountGiven: amountGiven,
+        changeReturned: changeReturned,
+        giftRecipient: giftRecipient,
+      );
       final ticketNumber =
           confirmedOrder != null && confirmedOrder.ticketNumber.isNotEmpty
               ? confirmedOrder.ticketNumber
@@ -630,6 +638,36 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       ),
       amountGiven: amountGiven ?? 0,
       changeReturned: changeReturned ?? 0,
+    );
+  }
+
+  Order? _normalizeConfirmedOrderPricing(
+    Order? order, {
+    required CartState? cart,
+    required PaymentType paymentType,
+    double? amountGiven,
+    double? changeReturned,
+    String? giftRecipient,
+  }) {
+    if (order == null || cart == null) return order;
+    final shouldUsePosDiscountPricing =
+        paymentType == PaymentType.staff || paymentType == PaymentType.gift;
+    if (!shouldUsePosDiscountPricing) return order;
+
+    final staffDiscountPercent = _staffDiscountPercent();
+    return order.copyWith(
+      paymentType: paymentType,
+      totalAmount: cart.payableTotalFor(
+        paymentType,
+        staffDiscountPercent: staffDiscountPercent,
+      ),
+      discountAmount: cart.discountAmountFor(
+        paymentType,
+        staffDiscountPercent: staffDiscountPercent,
+      ),
+      amountGiven: amountGiven ?? order.amountGiven,
+      changeReturned: changeReturned ?? order.changeReturned,
+      giftRecipient: giftRecipient,
     );
   }
 

@@ -515,9 +515,14 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     }());
   }
 
-  void _checkout() {
+  Future<void> _checkout() async {
     final cart = ref.read(cartProvider);
     if (cart.items.isEmpty) return;
+    await ref.read(posSettingsProvider.notifier).fetchSettings(
+          silent: true,
+          force: true,
+        );
+    if (!mounted) return;
     final isDealRedemption =
         cart.isQrOrder && cart.paymentType == PaymentType.deal;
     setState(() => _customerDisplayResult = null);
@@ -624,7 +629,9 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
             confirmedOrder != null && confirmedOrder.ticketNumber.isNotEmpty
                 ? confirmedOrder.ticketNumber
                 : result.ticketNumber ?? 'ORDER';
-        final receiptData = confirmedOrder != null
+        final receiptData = confirmedOrder != null &&
+                confirmedPaymentType != PaymentType.staff &&
+                confirmedPaymentType != PaymentType.gift
             ? ReceiptData.fromOrder(
                 confirmedOrder,
                 cashierName: ref.read(authProvider).username,
