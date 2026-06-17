@@ -15,16 +15,30 @@ class CustomerDisplayService {
   final ValueNotifier<CustomerDisplayBackendResult?> lastResult =
       ValueNotifier<CustomerDisplayBackendResult?>(null);
   String? _preferredSource;
+  Future<void> _pendingWrite = Future<void>.value();
 
   Future<CustomerDisplayBackendResult> showTotal(double total) async {
     return _writeAmount(label: 'TOTAL', amount: total);
   }
 
-  Future<CustomerDisplayBackendResult> showFree() async {
+  Future<CustomerDisplayBackendResult> showZeroes() async {
     return _writeAmount(label: 'TOTAL', amount: 0);
   }
 
+  Future<CustomerDisplayBackendResult> showFree() => showZeroes();
+
   Future<CustomerDisplayBackendResult> _writeAmount({
+    required String label,
+    required double amount,
+  }) {
+    final write = _pendingWrite.then(
+      (_) => _performWriteAmount(label: label, amount: amount),
+    );
+    _pendingWrite = write.then<void>((_) {}, onError: (_) {});
+    return write;
+  }
+
+  Future<CustomerDisplayBackendResult> _performWriteAmount({
     required String label,
     required double amount,
   }) async {

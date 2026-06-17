@@ -145,7 +145,7 @@ class _CustomerDisplaySettings {
     return _CustomerDisplaySettings(
       portName: portName,
       printerName: printerName,
-      baudRate: int.tryParse(baudRaw ?? '') ?? 9600,
+      baudRate: int.tryParse(baudRaw ?? '') ?? 2400,
       mode: mode.trim().toLowerCase(),
       autoDetect: !_isFalse(autoRaw),
     );
@@ -345,6 +345,10 @@ class _CustomerDisplayPayloadBuilder {
     final normalizedAmount = _ascii(amountText.trim());
     final mode = settings.mode;
 
+    if (mode == 'amount' || mode == 'amount-clear') {
+      return Uint8List.fromList([0x0c, ..._bytes('$normalizedAmount\r')]);
+    }
+
     if (mode == 'plain') {
       return _bytes('$normalizedLabel $normalizedAmount\r\n');
     }
@@ -356,10 +360,6 @@ class _CustomerDisplayPayloadBuilder {
         0x0c,
         ..._bytes('$normalizedLabel\r\n$normalizedAmount'),
       ]);
-    }
-
-    if (mode == 'amount-clear') {
-      return Uint8List.fromList([0x0c, ..._bytes('$normalizedAmount\r')]);
     }
 
     return _bytes('$normalizedAmount\r');
@@ -376,6 +376,7 @@ class _CustomerDisplayPayloadBuilder {
 }
 
 class _WindowsCustomerDisplaySerialWriter {
+  static const Duration _clearDelay = Duration(milliseconds: 200);
   static const int _genericWrite = 0x40000000;
   static const int _openExisting = 3;
   static const int _invalidHandleValue = -1;
@@ -430,23 +431,33 @@ class _WindowsCustomerDisplaySerialWriter {
       try {
         _configureSerialPort(handle, baudRate, alloc);
         _configureTimeouts(handle, alloc);
-        final buffer = alloc<Uint8>(bytes.length);
-        buffer.asTypedList(bytes.length).setAll(0, bytes);
-        final bytesWritten = alloc<Uint32>();
-        final ok = _writeFile(
-          handle,
-          buffer.cast<Void>(),
-          bytes.length,
-          bytesWritten,
-          nullptr.cast<Void>(),
-        );
-        if (ok == 0 || bytesWritten.value != bytes.length) {
-          throw StateError(_windowsError('WriteFile'));
+        if (bytes.isNotEmpty && bytes.first == 0x0c && bytes.length > 1) {
+          _writeBytes(handle, alloc, Uint8List.fromList(const [0x0c]));
+          sleep(_clearDelay);
+          _writeBytes(handle, alloc, Uint8List.sublistView(bytes, 1));
+        } else {
+          _writeBytes(handle, alloc, bytes);
         }
       } finally {
         _closeHandle(handle);
       }
     });
+  }
+
+  void _writeBytes(int handle, Arena alloc, Uint8List bytes) {
+    final buffer = alloc<Uint8>(bytes.length);
+    buffer.asTypedList(bytes.length).setAll(0, bytes);
+    final bytesWritten = alloc<Uint32>();
+    final ok = _writeFile(
+      handle,
+      buffer.cast<Void>(),
+      bytes.length,
+      bytesWritten,
+      nullptr.cast<Void>(),
+    );
+    if (ok == 0 || bytesWritten.value != bytes.length) {
+      throw StateError(_windowsError('WriteFile'));
+    }
   }
 
   void _configureSerialPort(int handle, int baudRate, Arena alloc) {

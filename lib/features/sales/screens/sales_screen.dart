@@ -470,6 +470,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   void _printTicketInBackground(ReceiptData receiptData) {
     unawaited(() async {
       try {
+        await CustomerDisplayService.instance.showZeroes();
         final result = await ReceiptPrinterService.instance.printReceipt(
           receiptData,
           allowBrowserFallback: false,
