@@ -17,6 +17,8 @@ class _PurchaseInvoiceQrDialog extends StatefulWidget {
 }
 
 class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
+  static const Duration _pollInterval = Duration(milliseconds: 500);
+
   late PurchaseInvoiceUploadSession _session;
   Timer? _pollTimer;
   bool _isRefreshing = false;
@@ -37,15 +39,16 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
 
   void _startPolling() {
     if (_session.isUploaded || _session.isExpired) return;
+    unawaited(_refreshStatus());
     _pollTimer = Timer.periodic(
-      const Duration(seconds: 2),
-      (_) => _refreshStatus(),
+      _pollInterval,
+      (_) => unawaited(_refreshStatus()),
     );
   }
 
   Future<void> _refreshStatus() async {
     if (_isRefreshing || _session.isUploaded) return;
-    setState(() => _isRefreshing = true);
+    _isRefreshing = true;
     try {
       final latest = await widget.purchasesNotifier.fetchInvoiceUploadSession(
         purchaseId: _session.purchaseId,
@@ -64,9 +67,7 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
     } catch (_) {
       // Keep the QR visible if a transient poll fails.
     } finally {
-      if (mounted) {
-        setState(() => _isRefreshing = false);
-      }
+      _isRefreshing = false;
     }
   }
 

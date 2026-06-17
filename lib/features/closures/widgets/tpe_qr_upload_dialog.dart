@@ -18,6 +18,8 @@ class _TpeQrUploadDialog extends StatefulWidget {
 }
 
 class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
+  static const Duration _pollInterval = Duration(milliseconds: 500);
+
   late TpeReceiptUploadSession _session;
   Timer? _pollTimer;
   bool _isRefreshing = false;
@@ -38,15 +40,16 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
 
   void _startPolling() {
     if (_session.isUploaded || _session.isExpired) return;
+    unawaited(_refreshStatus());
     _pollTimer = Timer.periodic(
-      const Duration(seconds: 2),
-      (_) => _refreshStatus(),
+      _pollInterval,
+      (_) => unawaited(_refreshStatus()),
     );
   }
 
   Future<void> _refreshStatus() async {
     if (_isRefreshing || _session.isUploaded) return;
-    setState(() => _isRefreshing = true);
+    _isRefreshing = true;
     try {
       final latest = await widget.sessionService.fetchTpeReceiptUploadSession(
         sessionId: _session.sessionId,
@@ -65,9 +68,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
     } catch (_) {
       // Keep the QR visible if a transient poll fails.
     } finally {
-      if (mounted) {
-        setState(() => _isRefreshing = false);
-      }
+      _isRefreshing = false;
     }
   }
 
