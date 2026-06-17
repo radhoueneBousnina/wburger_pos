@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../core/services/customer_display_backend.dart';
+import '../../../core/services/customer_display_service.dart';
 import '../../../core/services/receipt_printer_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -47,21 +49,33 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   bool _showSuccess = false;
   bool _isProcessingQr = false;
   String? _lastTicket;
+  CustomerDisplayBackendResult? _customerDisplayResult;
 
   @override
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_handleScannerHardwareKey);
+    CustomerDisplayService.instance.lastResult
+        .addListener(_handleCustomerDisplayResult);
     _refocusSalesScanner();
   }
 
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_handleScannerHardwareKey);
+    CustomerDisplayService.instance.lastResult
+        .removeListener(_handleCustomerDisplayResult);
     _scanIdleTimer?.cancel();
     _searchCtrl.dispose();
     _salesFocusNode.dispose();
     super.dispose();
+  }
+
+  void _handleCustomerDisplayResult() {
+    if (!mounted) return;
+    setState(() {
+      _customerDisplayResult = CustomerDisplayService.instance.lastResult.value;
+    });
   }
 
   void _onSearch(String value) {
@@ -505,6 +519,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     if (cart.items.isEmpty) return;
     final isDealRedemption =
         cart.isQrOrder && cart.paymentType == PaymentType.deal;
+    setState(() => _customerDisplayResult = null);
 
     PaymentModal.show(
       context,
@@ -731,7 +746,10 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 child: Center(child: CircularProgressIndicator()),
               ),
             if (_showSuccess && _lastTicket != null)
-              _SuccessOverlay(ticketNumber: _lastTicket!),
+              _SuccessOverlay(
+                ticketNumber: _lastTicket!,
+                customerDisplayResult: _customerDisplayResult,
+              ),
           ],
         ),
       ),

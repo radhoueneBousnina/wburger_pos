@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/services/customer_display_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/pos_layout.dart';
@@ -109,6 +110,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   final TextEditingController _staffSearchController = TextEditingController();
   final FocusNode _cashFocusNode = FocusNode();
   String? _selectedStaffId;
+  String? _lastCustomerDisplayAmountText;
 
   @override
   void initState() {
@@ -276,6 +278,18 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
     }
   }
 
+  void _queueCustomerDisplayTotalUpdate() {
+    final displayTotal = _displayTotal;
+    final amountText = displayTotal.toStringAsFixed(3);
+    if (_lastCustomerDisplayAmountText == amountText) return;
+    _lastCustomerDisplayAmountText = amountText;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(CustomerDisplayService.instance.showTotal(displayTotal));
+    });
+  }
+
   void _insertCashCharacter(String value) {
     final text = _cashGivenController.text;
     final selection = _cashGivenController.selection;
@@ -340,6 +354,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
     final compact = layout.width < 760;
     final cashWideLayout =
         _selectedType == PaymentType.cash && layout.width >= 980;
+    _queueCustomerDisplayTotalUpdate();
 
     return Dialog(
       insetPadding: EdgeInsets.all(layout.pagePadding),

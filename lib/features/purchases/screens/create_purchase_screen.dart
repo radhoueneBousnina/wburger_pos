@@ -30,17 +30,28 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
   bool _submitted = false;
   bool _isSubmitting = false;
 
-  void _addLine() {
+  Future<void> _addLine() async {
     final stocksAsync = ref.read(stockProvider);
     final stocks = stocksAsync.value ?? [];
-    if (stocks.isEmpty) return;
+    if (stocks.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No stock items are available.'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+    final selectedStock = await _showStockItemPicker(context, stocks);
+    if (selectedStock == null || !mounted) return;
     setState(() {
       _clearInvoiceUploadSession();
       _lines.add(_PurchaseLineEntry(
-        stockItem: stocks.first,
+        stockItem: selectedStock,
         quantityCtrl: TextEditingController(text: '1'),
         priceCtrl: TextEditingController(
-            text: stocks.first.purchasePrice.toStringAsFixed(3)),
+          text: selectedStock.purchasePrice.toStringAsFixed(3),
+        ),
       ));
     });
   }
