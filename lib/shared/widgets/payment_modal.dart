@@ -24,6 +24,9 @@ class PaymentModal extends ConsumerStatefulWidget {
     String? staffId,
     String? glovoOrderId,
     String? giftRecipient,
+    double? payableTotal,
+    double? discountAmount,
+    double? staffDiscountPercent,
   }) onConfirm;
   final OrderType initialOrderType;
   final PaymentType? initialPaymentType;
@@ -63,6 +66,9 @@ class PaymentModal extends ConsumerStatefulWidget {
       String? staffId,
       String? glovoOrderId,
       String? giftRecipient,
+      double? payableTotal,
+      double? discountAmount,
+      double? staffDiscountPercent,
     }) onConfirm,
     OrderType initialOrderType = OrderType.dineIn,
     PaymentType? initialPaymentType,
@@ -168,6 +174,12 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
     return total > 0 ? total : 0;
   }
 
+  double get _activeDiscountAmount {
+    if (_isGiftPayment) return _giftDiscountAmount;
+    if (_selectedType == PaymentType.staff) return _staffDiscountAmount;
+    return 0;
+  }
+
   List<PaymentType> get _availablePaymentTypes {
     if (_isGlovoOrder) {
       return const [];
@@ -231,6 +243,10 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
         giftRecipient: selectedType == PaymentType.gift
             ? _giftRecipientController.text.trim()
             : null,
+        payableTotal: _displayTotal,
+        discountAmount: _activeDiscountAmount,
+        staffDiscountPercent:
+            selectedType == PaymentType.staff ? _staffDiscountPercent : null,
       );
       if (mounted) Navigator.pop(context);
     } catch (error) {

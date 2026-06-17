@@ -411,6 +411,13 @@ class _WindowsCustomerDisplaySerialWriter {
     required int baudRate,
     required Uint8List bytes,
   }) {
+    final powershellResult = _writeWithPowerShell(
+      portName: portName,
+      baudRate: baudRate,
+      bytes: bytes,
+    );
+    if (powershellResult == null) return;
+
     using((Arena alloc) {
       final portNamePtr =
           _normalizePortName(portName).toNativeUtf16(allocator: alloc);
@@ -442,6 +449,56 @@ class _WindowsCustomerDisplaySerialWriter {
         _closeHandle(handle);
       }
     });
+  }
+
+  String? _writeWithPowerShell({
+    required String portName,
+    required int baudRate,
+    required Uint8List bytes,
+  }) {
+    try {
+      final clearFirst = bytes.isNotEmpty && bytes.first == 0x0c;
+      final textBytes = clearFirst ? Uint8List.sublistView(bytes, 1) : bytes;
+      final payloadLiteral = textBytes.join(',');
+      final script = [
+        r'$ErrorActionPreference = "Stop"',
+        '\$p = New-Object System.IO.Ports.SerialPort(${_psString(portName)},$baudRate,"None",8,"One")',
+        r'$p.Encoding = [System.Text.Encoding]::ASCII',
+        'try {',
+        r'  $p.Open()',
+        if (clearFirst) ...[
+          r'  $p.Write([byte[]]@(0x0C),0,1)',
+          '  Start-Sleep -Milliseconds ${_clearDelay.inMilliseconds}',
+        ],
+        if (textBytes.isNotEmpty) ...[
+          '  \$payload = [byte[]]@($payloadLiteral)',
+          r'  $p.Write($payload,0,$payload.Length)',
+        ],
+        '} finally {',
+        r'  if ($p -and $p.IsOpen) { $p.Close() }',
+        '}',
+      ].join('; ');
+
+      final result = Process.runSync(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-Command',
+          script,
+        ],
+        runInShell: false,
+      );
+      if (result.exitCode == 0) return null;
+      return '${result.stderr}${result.stdout}'.trim();
+    } catch (error) {
+      return error.toString();
+    }
+  }
+
+  String _psString(String value) {
+    return "'${value.replaceAll("'", "''")}'";
   }
 
   void _writeBytes(int handle, Arena alloc, Uint8List bytes) {

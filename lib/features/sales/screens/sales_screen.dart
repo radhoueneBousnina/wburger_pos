@@ -519,10 +519,23 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     final cart = ref.read(cartProvider);
     if (cart.items.isEmpty) return;
     await ref.read(posSettingsProvider.notifier).fetchSettings(
-          silent: true,
+          silent: false,
           force: true,
         );
     if (!mounted) return;
+    final settingsState = ref.read(posSettingsProvider);
+    if (settingsState.hasError || settingsState.valueOrNull == null) {
+      final message = settingsState.error?.toString() ??
+          'Unable to load POS settings from the server.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message.replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+      return;
+    }
     final isDealRedemption =
         cart.isQrOrder && cart.paymentType == PaymentType.deal;
     setState(() => _customerDisplayResult = null);
@@ -548,17 +561,30 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
         staffId,
         glovoOrderId,
         giftRecipient,
+        payableTotal,
+        discountAmount,
+        staffDiscountPercent,
       }) async {
         final orderNotifier = ref.read(ordersProvider.notifier);
         final confirmedPaymentType =
             isDealRedemption ? PaymentType.deal : paymentType;
-        final staffDiscountPercent =
+        final effectiveStaffDiscountPercent = staffDiscountPercent ??
             ref.read(posSettingsProvider).valueOrNull?.staffDiscountPercent ??
-                0;
+            0;
         final effectiveCart = cart.copyWith(
           orderType: orderType,
           paymentType: confirmedPaymentType,
         );
+        final effectiveDiscountAmount = discountAmount ??
+            effectiveCart.discountAmountFor(
+              confirmedPaymentType,
+              staffDiscountPercent: effectiveStaffDiscountPercent,
+            );
+        final effectivePayableTotal = payableTotal ??
+            effectiveCart.payableTotalFor(
+              confirmedPaymentType,
+              staffDiscountPercent: effectiveStaffDiscountPercent,
+            );
         CheckoutResult result = cart.redemptionToken != null
             ? await orderNotifier.processQrRedemption(
                 effectiveCart,
@@ -648,14 +674,8 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 customerName: effectiveCart.customerName,
                 customerNote: effectiveCart.customerNote,
                 subtotal: effectiveCart.originalSubtotal,
-                discountAmount: effectiveCart.discountAmountFor(
-                  confirmedPaymentType,
-                  staffDiscountPercent: staffDiscountPercent,
-                ),
-                totalAmount: effectiveCart.payableTotalFor(
-                  confirmedPaymentType,
-                  staffDiscountPercent: staffDiscountPercent,
-                ),
+                discountAmount: effectiveDiscountAmount,
+                totalAmount: effectivePayableTotal,
                 amountGiven: amountGiven,
                 changeReturned: changeReturned,
               );

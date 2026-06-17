@@ -66,6 +66,9 @@ void main() {
                 staffId,
                 glovoOrderId,
                 giftRecipient,
+                payableTotal,
+                discountAmount,
+                staffDiscountPercent,
               }) {},
             ),
           ),
@@ -122,6 +125,9 @@ void main() {
                 staffId,
                 glovoOrderId,
                 giftRecipient,
+                payableTotal,
+                discountAmount,
+                staffDiscountPercent,
               }) {},
             ),
           ),
@@ -140,6 +146,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     String? receivedGiftRecipient;
+    double? receivedPayableTotal;
+    double? receivedDiscountAmount;
 
     await tester.pumpWidget(
       ProviderScope(
@@ -158,8 +166,13 @@ void main() {
                 staffId,
                 glovoOrderId,
                 giftRecipient,
+                payableTotal,
+                discountAmount,
+                staffDiscountPercent,
               }) {
                 receivedGiftRecipient = giftRecipient;
+                receivedPayableTotal = payableTotal;
+                receivedDiscountAmount = discountAmount;
               },
             ),
           ),
@@ -176,5 +189,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(receivedGiftRecipient, 'Sami');
+    expect(receivedPayableTotal, 0);
+    expect(receivedDiscountAmount, 20);
   });
 }
