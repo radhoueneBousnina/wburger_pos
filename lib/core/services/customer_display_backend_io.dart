@@ -116,11 +116,12 @@ class _CustomerDisplaySettings {
 
   factory _CustomerDisplaySettings.fromEnvironment() {
     final portName = _firstConfiguredValue([
-      _portConfig,
-      _posPortConfig,
-      Platform.environment['CUSTOMER_DISPLAY_PORT'] ?? '',
-      Platform.environment['POS_CUSTOMER_DISPLAY_PORT'] ?? '',
-    ]) ?? 'COM8';
+          _portConfig,
+          _posPortConfig,
+          Platform.environment['CUSTOMER_DISPLAY_PORT'] ?? '',
+          Platform.environment['POS_CUSTOMER_DISPLAY_PORT'] ?? '',
+        ]) ??
+        'COM8';
     final printerName = _firstConfiguredValue([
       _printerConfig,
       _posPrinterConfig,
@@ -380,34 +381,6 @@ class _CustomerDisplayPayloadBuilder {
 
 class _WindowsCustomerDisplaySerialWriter {
   static const Duration _clearDelay = Duration(milliseconds: 200);
-  static const int _genericWrite = 0x40000000;
-  static const int _openExisting = 3;
-  static const int _invalidHandleValue = -1;
-
-  final DynamicLibrary _kernel32 = DynamicLibrary.open('kernel32.dll');
-
-  late final _CreateFileDart _createFile = _kernel32
-      .lookupFunction<_CreateFileNative, _CreateFileDart>('CreateFileW');
-  late final _WriteFileDart _writeFile =
-      _kernel32.lookupFunction<_WriteFileNative, _WriteFileDart>('WriteFile');
-  late final _CloseHandleDart _closeHandle =
-      _kernel32.lookupFunction<_CloseHandleNative, _CloseHandleDart>(
-    'CloseHandle',
-  );
-  late final _SetCommTimeoutsDart _setCommTimeouts =
-      _kernel32.lookupFunction<_SetCommTimeoutsNative, _SetCommTimeoutsDart>(
-    'SetCommTimeouts',
-  );
-  late final _BuildCommDcbDart _buildCommDcb =
-      _kernel32.lookupFunction<_BuildCommDcbNative, _BuildCommDcbDart>(
-    'BuildCommDCBW',
-  );
-  late final _SetCommStateDart _setCommState =
-      _kernel32.lookupFunction<_SetCommStateNative, _SetCommStateDart>(
-    'SetCommState',
-  );
-  late final _GetLastErrorDart _getLastError = _kernel32
-      .lookupFunction<_GetLastErrorNative, _GetLastErrorDart>('GetLastError');
 
   void write({
     required String portName,
@@ -437,18 +410,28 @@ class _WindowsCustomerDisplaySerialWriter {
           .replaceAll('\n', '');
       final script = [
         r'$ErrorActionPreference = "Stop"',
-        '\$p = New-Object System.IO.Ports.SerialPort(${_psString(portName)},$baudRate,"None",8,"One")',
-        r'$p.Encoding = [System.Text.Encoding]::ASCII',
+        r'$port = New-Object System.IO.Ports.SerialPort',
+        '\$port.PortName = ${_psString(portName)}',
+        '\$port.BaudRate = $baudRate',
+        r'$port.Parity = [System.IO.Ports.Parity]::None',
+        r'$port.DataBits = 8',
+        r'$port.StopBits = [System.IO.Ports.StopBits]::One',
+        r'$port.Handshake = [System.IO.Ports.Handshake]::None',
+        r'$port.Encoding = [System.Text.Encoding]::ASCII',
+        r'$port.WriteTimeout = 1000',
         'try {',
-        r'  $p.Open()',
+        r'  $port.Open()',
         if (clearFirst) ...[
-          r'  $p.Write([byte[]]@(0x0C),0,1)',
+          r'  $port.Write([byte[]]@(0x0C),0,1)',
           '  Start-Sleep -Milliseconds ${_clearDelay.inMilliseconds}',
         ],
-        if (text.isNotEmpty) '  \$p.Write(${_psString(text)} + [char]13)',
+        if (text.isNotEmpty) ...[
+          '  \$port.Write(${_psString(text)})',
+          r'  $port.Write([char]13)',
+        ],
         '  Start-Sleep -Milliseconds 300',
         '} finally {',
-        r'  if ($p -and $p.IsOpen) { $p.Close() }',
+        r'  if ($port -and $port.IsOpen) { $port.Close() }',
         '}',
       ].join('; ');
 
@@ -466,7 +449,8 @@ class _WindowsCustomerDisplaySerialWriter {
 
   ProcessResult _runPowerShell(String script) {
     final windir = Platform.environment['WINDIR'] ?? r'C:\Windows';
-    final executable = '$windir\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
+    final executable =
+        '$windir\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
     final arguments = [
       '-NoProfile',
       '-ExecutionPolicy',
@@ -479,51 +463,6 @@ class _WindowsCustomerDisplaySerialWriter {
     } on ProcessException {
       return Process.runSync('powershell.exe', arguments, runInShell: false);
     }
-  }
-
-  void _writeBytes(int handle, Arena alloc, Uint8List bytes) {
-    final buffer = alloc<Uint8>(bytes.length);
-    buffer.asTypedList(bytes.length).setAll(0, bytes);
-    final bytesWritten = alloc<Uint32>();
-    final ok = _writeFile(
-      handle,
-      buffer.cast<Void>(),
-      bytes.length,
-      bytesWritten,
-      nullptr.cast<Void>(),
-    );
-    if (ok == 0 || bytesWritten.value != bytes.length) {
-      throw StateError(_windowsError('WriteFile'));
-    }
-  }
-
-  void _configureSerialPort(int handle, int baudRate, Arena alloc) {
-    final dcb = alloc<_Dcb>();
-    dcb.ref.dcbLength = sizeOf<_Dcb>();
-    final settings =
-        'baud=$baudRate parity=N data=8 stop=1'.toNativeUtf16(allocator: alloc);
-    if (_buildCommDcb(settings, dcb) == 0) return;
-    _setCommState(handle, dcb);
-  }
-
-  void _configureTimeouts(int handle, Arena alloc) {
-    final timeouts = alloc<_CommTimeouts>()
-      ..ref.readIntervalTimeout = 50
-      ..ref.readTotalTimeoutMultiplier = 0
-      ..ref.readTotalTimeoutConstant = 250
-      ..ref.writeTotalTimeoutMultiplier = 0
-      ..ref.writeTotalTimeoutConstant = 250;
-    _setCommTimeouts(handle, timeouts);
-  }
-
-  String _normalizePortName(String value) {
-    final trimmed = value.trim();
-    if (trimmed.startsWith(r'\\.')) return trimmed;
-    return '\\\\.\\$trimmed';
-  }
-
-  String _windowsError(String operation) {
-    return '$operation failed with Windows error ${_getLastError()}';
   }
 }
 
@@ -617,139 +556,11 @@ class _WindowsCustomerDisplayPrinterWriter {
   }
 }
 
-base class _CommTimeouts extends Struct {
-  @Uint32()
-  external int readIntervalTimeout;
-
-  @Uint32()
-  external int readTotalTimeoutMultiplier;
-
-  @Uint32()
-  external int readTotalTimeoutConstant;
-
-  @Uint32()
-  external int writeTotalTimeoutMultiplier;
-
-  @Uint32()
-  external int writeTotalTimeoutConstant;
-}
-
-base class _Dcb extends Struct {
-  @Uint32()
-  external int dcbLength;
-
-  @Uint32()
-  external int baudRate;
-
-  @Uint32()
-  external int flags;
-
-  @Uint16()
-  external int reserved;
-
-  @Uint16()
-  external int xonLim;
-
-  @Uint16()
-  external int xoffLim;
-
-  @Uint8()
-  external int byteSize;
-
-  @Uint8()
-  external int parity;
-
-  @Uint8()
-  external int stopBits;
-
-  @Uint8()
-  external int xonChar;
-
-  @Uint8()
-  external int xoffChar;
-
-  @Uint8()
-  external int errorChar;
-
-  @Uint8()
-  external int eofChar;
-
-  @Uint8()
-  external int evtChar;
-
-  @Uint16()
-  external int reserved1;
-}
-
 base class _DocInfo1 extends Struct {
   external Pointer<Utf16> pDocName;
   external Pointer<Utf16> pOutputFile;
   external Pointer<Utf16> pDatatype;
 }
-
-typedef _CreateFileNative = IntPtr Function(
-  Pointer<Utf16> fileName,
-  Uint32 desiredAccess,
-  Uint32 shareMode,
-  Pointer<Void> securityAttributes,
-  Uint32 creationDisposition,
-  Uint32 flagsAndAttributes,
-  IntPtr templateFile,
-);
-typedef _CreateFileDart = int Function(
-  Pointer<Utf16> fileName,
-  int desiredAccess,
-  int shareMode,
-  Pointer<Void> securityAttributes,
-  int creationDisposition,
-  int flagsAndAttributes,
-  int templateFile,
-);
-
-typedef _WriteFileNative = Int32 Function(
-  IntPtr fileHandle,
-  Pointer<Void> buffer,
-  Uint32 bytesToWrite,
-  Pointer<Uint32> bytesWritten,
-  Pointer<Void> overlapped,
-);
-typedef _WriteFileDart = int Function(
-  int fileHandle,
-  Pointer<Void> buffer,
-  int bytesToWrite,
-  Pointer<Uint32> bytesWritten,
-  Pointer<Void> overlapped,
-);
-
-typedef _CloseHandleNative = Int32 Function(IntPtr objectHandle);
-typedef _CloseHandleDart = int Function(int objectHandle);
-
-typedef _SetCommTimeoutsNative = Int32 Function(
-  IntPtr fileHandle,
-  Pointer<_CommTimeouts> commTimeouts,
-);
-typedef _SetCommTimeoutsDart = int Function(
-  int fileHandle,
-  Pointer<_CommTimeouts> commTimeouts,
-);
-
-typedef _BuildCommDcbNative = Int32 Function(
-  Pointer<Utf16> deviceControlString,
-  Pointer<_Dcb> dcb,
-);
-typedef _BuildCommDcbDart = int Function(
-  Pointer<Utf16> deviceControlString,
-  Pointer<_Dcb> dcb,
-);
-
-typedef _SetCommStateNative = Int32 Function(
-  IntPtr fileHandle,
-  Pointer<_Dcb> dcb,
-);
-typedef _SetCommStateDart = int Function(
-  int fileHandle,
-  Pointer<_Dcb> dcb,
-);
 
 typedef _GetLastErrorNative = Uint32 Function();
 typedef _GetLastErrorDart = int Function();
