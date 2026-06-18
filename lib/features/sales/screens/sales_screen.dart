@@ -167,18 +167,47 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   bool _flushScannerBuffer() {
     final scannedValue = _scanBuffer.toString();
     _resetScanBuffer();
-    return _queueQrImportFromPayload(scannedValue);
+    if (scannedValue.trim().isEmpty) return false;
+    return _queueQrImportFromPayload(scannedValue, fromScanner: true);
   }
 
-  bool _queueQrImportFromPayload(String value) {
+  bool _queueQrImportFromPayload(
+    String value, {
+    bool fromScanner = false,
+  }) {
     final token = extractQrOrderToken(value);
-    if (token == null) return false;
+    if (token == null) {
+      if (fromScanner && _looksLikeOrderQrPayload(value)) {
+        _showInvalidQrScanFeedback();
+      }
+      return false;
+    }
 
     _searchCtrl.clear();
     ref.read(searchQueryProvider.notifier).state = '';
     ref.read(selectedCategoryProvider.notifier).state = null;
     unawaited(_importQrOrder(token));
     return true;
+  }
+
+  bool _looksLikeOrderQrPayload(String value) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized.length < 8) return false;
+    return normalized.contains('wburger') ||
+        normalized.contains('w-burger') ||
+        normalized.contains('order') ||
+        normalized.contains('qr') ||
+        normalized.contains('token=');
+  }
+
+  void _showInvalidQrScanFeedback() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('This QR code is not a W Burger mobile order.'),
+        backgroundColor: AppColors.warning,
+      ),
+    );
   }
 
   void _onCategorySelected(String? id) {

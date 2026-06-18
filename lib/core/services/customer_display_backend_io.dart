@@ -120,7 +120,7 @@ class _CustomerDisplaySettings {
       _posPortConfig,
       Platform.environment['CUSTOMER_DISPLAY_PORT'] ?? '',
       Platform.environment['POS_CUSTOMER_DISPLAY_PORT'] ?? '',
-    ]);
+    ]) ?? 'COM8';
     final printerName = _firstConfiguredValue([
       _printerConfig,
       _posPrinterConfig,
@@ -154,14 +154,17 @@ class _CustomerDisplaySettings {
   List<_CustomerDisplayTarget> targets({String? preferredSource}) {
     final targets = <_CustomerDisplayTarget>[];
     final preferred = preferredSource?.trim();
-    if (preferred != null && preferred.isNotEmpty) {
-      targets.add(_CustomerDisplayTarget.serial(preferred));
-    }
     if (portName != null) {
       targets.add(_CustomerDisplayTarget.serial(portName!));
     }
     if (printerName != null) {
       targets.add(_CustomerDisplayTarget.printer(printerName!));
+    }
+    if (preferred != null &&
+        preferred.isNotEmpty &&
+        portName == null &&
+        printerName == null) {
+      targets.add(_CustomerDisplayTarget.serial(preferred));
     }
     if (autoDetect && portName == null && printerName == null) {
       targets.addAll(_WindowsSerialPortEnumerator().listCustomerDisplayPorts());
@@ -417,38 +420,7 @@ class _WindowsCustomerDisplaySerialWriter {
       bytes: bytes,
     );
     if (powershellResult == null) return;
-
-    using((Arena alloc) {
-      final portNamePtr =
-          _normalizePortName(portName).toNativeUtf16(allocator: alloc);
-      final handle = _createFile(
-        portNamePtr,
-        _genericWrite,
-        0,
-        nullptr.cast<Void>(),
-        _openExisting,
-        0,
-        0,
-      );
-
-      if (handle == _invalidHandleValue) {
-        throw StateError(_windowsError('CreateFile'));
-      }
-
-      try {
-        _configureSerialPort(handle, baudRate, alloc);
-        _configureTimeouts(handle, alloc);
-        if (bytes.isNotEmpty && bytes.first == 0x0c && bytes.length > 1) {
-          _writeBytes(handle, alloc, Uint8List.fromList(const [0x0c]));
-          sleep(_clearDelay);
-          _writeBytes(handle, alloc, Uint8List.sublistView(bytes, 1));
-        } else {
-          _writeBytes(handle, alloc, bytes);
-        }
-      } finally {
-        _closeHandle(handle);
-      }
-    });
+    throw StateError(powershellResult);
   }
 
   String? _writeWithPowerShell({
@@ -459,7 +431,10 @@ class _WindowsCustomerDisplaySerialWriter {
     try {
       final clearFirst = bytes.isNotEmpty && bytes.first == 0x0c;
       final textBytes = clearFirst ? Uint8List.sublistView(bytes, 1) : bytes;
-      final payloadLiteral = textBytes.join(',');
+      final text = ascii
+          .decode(textBytes, allowInvalid: true)
+          .replaceAll('\r', '')
+          .replaceAll('\n', '');
       final script = [
         r'$ErrorActionPreference = "Stop"',
         '\$p = New-Object System.IO.Ports.SerialPort(${_psString(portName)},$baudRate,"None",8,"One")',
@@ -470,26 +445,14 @@ class _WindowsCustomerDisplaySerialWriter {
           r'  $p.Write([byte[]]@(0x0C),0,1)',
           '  Start-Sleep -Milliseconds ${_clearDelay.inMilliseconds}',
         ],
-        if (textBytes.isNotEmpty) ...[
-          '  \$payload = [byte[]]@($payloadLiteral)',
-          r'  $p.Write($payload,0,$payload.Length)',
-        ],
+        if (text.isNotEmpty) '  \$p.Write(${_psString(text)} + [char]13)',
+        '  Start-Sleep -Milliseconds 300',
         '} finally {',
         r'  if ($p -and $p.IsOpen) { $p.Close() }',
         '}',
       ].join('; ');
 
-      final result = Process.runSync(
-        'powershell.exe',
-        [
-          '-NoProfile',
-          '-ExecutionPolicy',
-          'Bypass',
-          '-Command',
-          script,
-        ],
-        runInShell: false,
-      );
+      final result = _runPowerShell(script);
       if (result.exitCode == 0) return null;
       return '${result.stderr}${result.stdout}'.trim();
     } catch (error) {
@@ -499,6 +462,23 @@ class _WindowsCustomerDisplaySerialWriter {
 
   String _psString(String value) {
     return "'${value.replaceAll("'", "''")}'";
+  }
+
+  ProcessResult _runPowerShell(String script) {
+    final windir = Platform.environment['WINDIR'] ?? r'C:\Windows';
+    final executable = '$windir\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
+    final arguments = [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      script,
+    ];
+    try {
+      return Process.runSync(executable, arguments, runInShell: false);
+    } on ProcessException {
+      return Process.runSync('powershell.exe', arguments, runInShell: false);
+    }
   }
 
   void _writeBytes(int handle, Arena alloc, Uint8List bytes) {
