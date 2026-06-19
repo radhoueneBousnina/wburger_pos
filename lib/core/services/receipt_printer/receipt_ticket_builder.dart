@@ -37,6 +37,7 @@ class ReceiptTicketBuilder {
       0x1b, 0x70, 0x31, 0x32, 0xfa, // Pin 5 ('1')
       0x07, // BEL command (works on some SPRT/Xprinter models)
       0x1c, 0x67, 0x00, // FS g command (Chinese printers variant)
+      0x10, 0x14, 0x01, 0x00, 0x05, // DLE DC4 real-time pulse
     ]);
   }
 

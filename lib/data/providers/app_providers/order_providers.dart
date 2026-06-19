@@ -724,6 +724,17 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         printerResult: printerResult,
       );
     }
+    final printerResult = await ReceiptPrinterService.instance.openCashDrawer();
+    if (!printerResult.isSuccess) {
+      apiClient.logError(
+          'Open cash drawer hardware error', printerResult.message);
+      return CashDrawerOpenResult(
+        logSaved: false,
+        printerResult: printerResult,
+      );
+    }
+
+    String? logError;
     try {
       await apiClient.dio.post(
         ApiConstants.drawerLogs,
@@ -734,36 +745,22 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       );
     } on DioException catch (e) {
       apiClient.logError('Open cash drawer log error', e);
-      return CashDrawerOpenResult(
-        logSaved: false,
-        error: apiClient.describeError(
-          e,
-          fallback: 'Cash drawer opening was not logged.',
-        ),
+      logError = apiClient.describeError(
+        e,
+        fallback: 'Cash drawer opening was not logged.',
       );
     } catch (e) {
       apiClient.logError('Open cash drawer log error', e);
-      return CashDrawerOpenResult(
-        logSaved: false,
-        error: apiClient.describeError(
-          e,
-          fallback: 'Cash drawer opening was not logged.',
-        ),
+      logError = apiClient.describeError(
+        e,
+        fallback: 'Cash drawer opening was not logged.',
       );
     }
 
-    final printerResult = await ReceiptPrinterService.instance.openCashDrawer();
-    if (!printerResult.isSuccess) {
-      apiClient.logError(
-          'Open cash drawer hardware error', printerResult.message);
-      return CashDrawerOpenResult(
-        logSaved: true,
-        printerResult: printerResult,
-      );
-    }
     return CashDrawerOpenResult(
-      logSaved: true,
+      logSaved: logError == null,
       printerResult: printerResult,
+      error: logError,
     );
   }
 
