@@ -323,6 +323,8 @@ class ReceiptPrintResult {
     this.successMessage,
   });
 
+  bool get sentToAnyPrinter => printerCount > 0 && printedCount > 0;
+
   bool get isSuccess =>
       error == null && printerCount > 0 && printedCount == printerCount;
 

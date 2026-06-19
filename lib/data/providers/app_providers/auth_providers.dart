@@ -178,7 +178,7 @@ class CashDrawerOpenResult {
     this.error,
   });
 
-  bool get isSuccess => logSaved && printerResult?.isSuccess == true;
+  bool get isSuccess => logSaved && printerResult?.sentToAnyPrinter == true;
 
   String get message {
     if (isSuccess) return 'Cash drawer opened and logged.';

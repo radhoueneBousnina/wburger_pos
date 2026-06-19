@@ -80,6 +80,9 @@ class ReceiptPrinterService {
           'failed=${out.failedPrinters}',
         );
       }
+      if (shouldOpenDrawer && !out.sentToAnyPrinter) {
+        clearExpectedDrawerOpen();
+      }
       if (out.isSuccess) {
         PosMonitoringService.instance.updatePrinterStatus('ok');
       } else {
@@ -93,6 +96,9 @@ class ReceiptPrinterService {
       }
       return out;
     } catch (error, stackTrace) {
+      if (shouldOpenDrawer) {
+        clearExpectedDrawerOpen();
+      }
       if (kDebugMode) {
         debugPrint('[Printer] Exception during printReceipt: $error');
         debugPrintStack(stackTrace: stackTrace);
@@ -210,6 +216,9 @@ class ReceiptPrinterService {
         successMessage: result.successMessage ??
             'Cash drawer pulse sent to the thermal printer.',
       );
+      if (!out.sentToAnyPrinter) {
+        clearExpectedDrawerOpen();
+      }
       if (out.isSuccess) {
         PosMonitoringService.instance.updatePrinterStatus('ok');
       } else {
@@ -217,6 +226,7 @@ class ReceiptPrinterService {
       }
       return out;
     } catch (error, stackTrace) {
+      clearExpectedDrawerOpen();
       if (kDebugMode) {
         debugPrint('[Printer] Cash drawer open exception: $error');
         debugPrintStack(stackTrace: stackTrace);
@@ -260,6 +270,10 @@ class ReceiptPrinterService {
     Duration window = _expectedDrawerOpenWindow,
   }) {
     _expectedDrawerOpenUntil = DateTime.now().add(window);
+  }
+
+  void clearExpectedDrawerOpen() {
+    _expectedDrawerOpenUntil = null;
   }
 
   bool consumeExpectedDrawerOpen() {

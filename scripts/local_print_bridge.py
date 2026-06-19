@@ -210,6 +210,7 @@ def _read_drawer_status() -> tuple[dict[str, Any], int]:
         )
 
     errors: list[str] = []
+    closed_payload: dict[str, Any] | None = None
     for device in devices:
         try:
             dle_eot_status = _query_status_byte(device, b"\x10\x04\x01")
@@ -226,18 +227,22 @@ def _read_drawer_status() -> tuple[dict[str, Any], int]:
             )
             open_when_high = _bool_env("CASH_DRAWER_OPEN_WHEN_PIN3_HIGH", True)
             is_open = pin3_high if open_when_high else not pin3_high
-            return (
-                {
-                    "status": "success",
-                    "supported": True,
-                    "is_open": is_open,
-                    "pin3_high": pin3_high,
-                    "source": device,
-                },
-                200,
-            )
+            payload = {
+                "status": "success",
+                "supported": True,
+                "is_open": is_open,
+                "pin3_high": pin3_high,
+                "source": device,
+            }
+            if is_open:
+                return (payload, 200)
+            if closed_payload is None:
+                closed_payload = payload
         except Exception as exc:
             errors.append(f"{device}: {exc}")
+
+    if closed_payload is not None:
+        return (closed_payload, 200)
 
     return (
         {
@@ -416,8 +421,12 @@ class PrintBridgeHandler(BaseHTTPRequestHandler):
         if errors:
             self._send_json(
                 {
-                    "status": "error",
-                    "message": "Failed to print on some local printers.",
+                    "status": "partial" if printed_count > 0 else "error",
+                    "message": (
+                        "Ticket queued on some local printers."
+                        if printed_count > 0
+                        else "Failed to print on local printers."
+                    ),
                     "details": errors,
                     "detected_printers": printers,
                     "printer_count": len(printers),

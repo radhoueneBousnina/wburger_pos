@@ -11,18 +11,25 @@ Future<RawCashDrawerStatusResult> _readCashDrawerStatusOnUnix() async {
   }
 
   final errors = <String>[];
+  RawCashDrawerStatusResult? closedResult;
   for (final device in devices) {
     try {
       final pin3High = await rawDevices.readDrawerPin3High(device);
-      return RawCashDrawerStatusResult(
+      final isOpen = _isDrawerOpenFromPin3High(pin3High);
+      final result = RawCashDrawerStatusResult(
         supported: true,
+        isOpen: isOpen,
         pin3High: pin3High,
         source: device.path,
       );
+      if (isOpen) return result;
+      closedResult ??= result;
     } catch (error) {
       errors.add('${device.path} (${error.toString()})');
     }
   }
+
+  if (closedResult != null) return closedResult;
 
   return RawCashDrawerStatusResult(
     supported: false,
@@ -30,6 +37,22 @@ Future<RawCashDrawerStatusResult> _readCashDrawerStatusOnUnix() async {
         ? 'Drawer status was not available from the connected printer.'
         : 'Drawer status was not available: ${errors.join(' ')}',
   );
+}
+
+bool _isDrawerOpenFromPin3High(bool pin3High) {
+  const compiledOpenWhenHigh = bool.fromEnvironment(
+    'CASH_DRAWER_OPEN_WHEN_PIN3_HIGH',
+    defaultValue: true,
+  );
+  final runtimeValue = Platform.environment['CASH_DRAWER_OPEN_WHEN_PIN3_HIGH'];
+  final openWhenHigh = runtimeValue == null
+      ? compiledOpenWhenHigh
+      : _isTruthyEnvironmentValue(runtimeValue);
+  return openWhenHigh ? pin3High : !pin3High;
+}
+
+bool _isTruthyEnvironmentValue(String value) {
+  return const {'1', 'true', 'yes', 'on'}.contains(value.trim().toLowerCase());
 }
 
 Future<RawTicketPrinterBackendResult> _printTicketOnUnix(

@@ -84,17 +84,14 @@ class RawTicketPrinterBackend {
 
         if (response.statusCode == 200) {
           final data = response.data;
-          if (data is Map && data['status'] == 'success') {
-            if (kDebugMode) {
-              debugPrint('[Printer] Local print bridge success: $endpoint');
+          if (data is Map) {
+            final bridgeResult = _readBridgePrintResult(data);
+            if (bridgeResult != null) {
+              if (kDebugMode) {
+                debugPrint('[Printer] Local print bridge response: $endpoint');
+              }
+              return bridgeResult;
             }
-            final printerCount = _readPrinterCount(data);
-            return RawTicketPrinterBackendResult(
-              printerCount: printerCount,
-              printedCount: _readPrintedCount(data, fallback: printerCount),
-              successMessage: (data['message'] as String?) ??
-                  'Ticket queued through the web print bridge.',
-            );
           }
           if (data is Map) {
             final details = _backendPrintMessage(data);
@@ -273,19 +270,64 @@ String _endpointLabel(String endpoint) {
   return 'Local USB print bridge';
 }
 
-int _readPrinterCount(Map data) {
+RawTicketPrinterBackendResult? _readBridgePrintResult(Map data) {
+  final status = data['status']?.toString();
+  final hasPrintCounts =
+      data.containsKey('printer_count') || data.containsKey('printed_count');
+  if (status == null && !hasPrintCounts) return null;
+
+  final isSuccessStatus = status == 'success';
+  final printerCount = _readPrinterCount(
+    data,
+    fallback: isSuccessStatus ? 1 : 0,
+  );
+  final printedCount = _readPrintedCount(
+    data,
+    fallback: isSuccessStatus ? printerCount : 0,
+  );
+  final failedPrinters = _readFailedPrinters(data);
+  final message = _backendPrintMessage(data);
+
+  return RawTicketPrinterBackendResult(
+    printerCount: printerCount,
+    printedCount: printedCount,
+    failedPrinters: failedPrinters,
+    error: printedCount > 0
+        ? null
+        : message ?? 'Local USB print bridge did not print the ticket.',
+    successMessage: printedCount == printerCount && printedCount > 0
+        ? message ?? 'Ticket queued through the web print bridge.'
+        : null,
+  );
+}
+
+int _readPrinterCount(Map data, {int fallback = 1}) {
   final count = data['printer_count'];
   if (count is int && count > 0) return count;
 
   final printers = data['detected_printers'];
   if (printers is List && printers.isNotEmpty) return printers.length;
-  return 1;
+  return fallback;
 }
 
 int _readPrintedCount(Map data, {required int fallback}) {
   final count = data['printed_count'];
   if (count is int && count >= 0) return count;
   return fallback;
+}
+
+List<String> _readFailedPrinters(Map data) {
+  final failedPrinters = data['failed_printers'];
+  if (failedPrinters is List) {
+    return failedPrinters.map((value) => value.toString()).toList();
+  }
+
+  final details = data['details'];
+  if (details is List) {
+    return details.map((value) => value.toString()).toList();
+  }
+
+  return const [];
 }
 
 String? _backendPrintMessage(Map data) {

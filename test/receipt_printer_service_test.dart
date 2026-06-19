@@ -442,6 +442,28 @@ void main() {
     );
   });
 
+  test('tracks partial multi-printer delivery separately from full success',
+      () {
+    const result = ReceiptPrintResult(
+      printerCount: 2,
+      printedCount: 1,
+      failedPrinters: ['KitchenPrinter (offline)'],
+    );
+
+    expect(result.sentToAnyPrinter, isTrue);
+    expect(result.isSuccess, isFalse);
+    expect(result.message, contains('Ticket queued on 1 of 2 printers'));
+  });
+
+  test('can consume expected drawer openings after a hardware pulse', () {
+    final service = ReceiptPrinterService.instance;
+
+    service.markDrawerOpenExpected(window: const Duration(seconds: 1));
+
+    expect(service.consumeExpectedDrawerOpen(), isTrue);
+    expect(service.consumeExpectedDrawerOpen(), isFalse);
+  });
+
   test('prefers explicit success messages for non-native web print flows', () {
     const result = ReceiptPrintResult(
       printerCount: 1,

@@ -105,6 +105,7 @@ class _WindowsCashDrawerStatusReader {
 
         return RawCashDrawerStatusResult(
           supported: true,
+          isOpen: _isDrawerOpenFromPin3High(pin3High),
           pin3High: pin3High,
           source: source,
         );

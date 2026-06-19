@@ -73,10 +73,7 @@ class _SuccessOverlay extends StatelessWidget {
     if (result == null) return 'Customer display: detecting...';
     if (!result.configured) return null;
     if (result.success) {
-      final source = result.source?.trim();
-      return source == null || source.isEmpty
-          ? 'Customer display: updated'
-          : 'Customer display: $source';
+      return 'Customer display: updated';
     }
     return 'Customer display: not detected';
   }

@@ -504,7 +504,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
           receiptData,
           allowBrowserFallback: false,
         );
-        final drawerOpenedForCashOrder = result.isSuccess &&
+        final drawerOpenedForCashOrder = result.sentToAnyPrinter &&
             ReceiptPrinterService.instance
                 .shouldOpenDrawerForReceipt(receiptData);
         if (drawerOpenedForCashOrder) {
