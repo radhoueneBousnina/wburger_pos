@@ -15,6 +15,10 @@ on:
         description: "Optional Windows COM port for physical-key drawer status, for example COM3"
         required: false
         default: ""
+      cash_drawer_printer_host:
+        description: "Only for Ethernet/Wi-Fi printers. Leave empty when the receipt printer is USB, even if the drawer cable plugs into the printer."
+        required: false
+        default: ""
       cash_drawer_open_when_pin3_high:
         description: "Whether pin 3 high means drawer open for the connected printer"
         required: true
@@ -60,6 +64,7 @@ jobs:
           API_BASE_URL: ${{ inputs.api_base_url }}
           POS_PRINTER_NAMES: ${{ inputs.pos_printer_names }}
           CASH_DRAWER_STATUS_PORT: ${{ inputs.cash_drawer_status_port }}
+          CASH_DRAWER_PRINTER_HOST: ${{ inputs.cash_drawer_printer_host }}
           CASH_DRAWER_OPEN_WHEN_PIN3_HIGH: ${{ inputs.cash_drawer_open_when_pin3_high }}
         run: |
           $buildArgs = @(
@@ -69,6 +74,7 @@ jobs:
             "--dart-define=API_BASE_URL=$env:API_BASE_URL"
             "--dart-define=POS_PRINTER_NAMES=$env:POS_PRINTER_NAMES"
             "--dart-define=CASH_DRAWER_STATUS_PORT=$env:CASH_DRAWER_STATUS_PORT"
+            "--dart-define=CASH_DRAWER_PRINTER_HOST=$env:CASH_DRAWER_PRINTER_HOST"
             "--dart-define=CASH_DRAWER_OPEN_WHEN_PIN3_HIGH=$env:CASH_DRAWER_OPEN_WHEN_PIN3_HIGH"
           )
           & flutter @buildArgs

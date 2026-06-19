@@ -83,6 +83,23 @@ Cash drawer opening is sent through the printer using ESC/POS drawer-pulse
 commands. The POS sends that pulse when the Cash Drawer button is used and at
 the start of a paid cash receipt. Manual button openings send the hardware pulse
 first, then save the log entry after the printer accepts the drawer job.
+If the drawer cable plugs into the receipt printer and the printer is connected
+to Windows by USB, leave `CASH_DRAWER_PRINTER_HOST` empty. The drawer pulse is
+sent to the USB printer through the Windows RAW spooler, and the printer opens
+the drawer through its drawer port. For Ethernet/Wi-Fi receipt printers only,
+the Windows app can send cash receipts that include a drawer pulse, and manual
+drawer pulses, directly to the printer's raw TCP port. If Windows installed an
+Ethernet/Wi-Fi printer as a WSD port, set the cash drawer printer IP explicitly:
+
+```sh
+setx CASH_DRAWER_PRINTER_HOST 192.168.1.50
+```
+
+or bake it into the Windows build:
+
+```sh
+flutter build windows --release --dart-define=CASH_DRAWER_PRINTER_HOST=192.168.1.50
+```
 
 Physical key-open logging needs a drawer-status signal from the printer/drawer.
 On Linux web testing, the bridge polls raw bidirectional printer devices such as

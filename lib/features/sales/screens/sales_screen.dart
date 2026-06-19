@@ -607,37 +607,30 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       try {
         final shouldOpenDrawer = ReceiptPrinterService.instance
             .shouldOpenDrawerForReceipt(receiptData);
-        ReceiptPrintResult? drawerResult;
-        if (shouldOpenDrawer) {
-          drawerResult = await ReceiptPrinterService.instance.openCashDrawer();
-          if (drawerResult.sentToAnyPrinter) {
-            final logResult =
-                await ref.read(ordersProvider.notifier).logOrderDrawerOpening(
-                      ticketNumber: receiptData.ticketNumber,
-                      orderId: receiptData.orderId,
-                    );
-            if (!logResult.logSaved && kDebugMode) {
-              debugPrint('Cash order drawer log failed: ${logResult.message}');
-            }
-            if (!logResult.logSaved && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(logResult.message),
-                  backgroundColor: AppColors.warning,
-                  duration: const Duration(seconds: 6),
-                ),
-              );
-            }
-          }
-        }
         unawaited(CustomerDisplayService.instance.showZeroes());
         final result = await ReceiptPrinterService.instance.printReceipt(
           receiptData,
           openDrawer: shouldOpenDrawer,
           allowBrowserFallback: false,
         );
-        if (drawerResult != null && !drawerResult.sentToAnyPrinter) {
-          _showPrintResult(drawerResult);
+        if (shouldOpenDrawer && result.sentToAnyPrinter) {
+          final logResult =
+              await ref.read(ordersProvider.notifier).logOrderDrawerOpening(
+                    ticketNumber: receiptData.ticketNumber,
+                    orderId: receiptData.orderId,
+                  );
+          if (!logResult.logSaved && kDebugMode) {
+            debugPrint('Cash order drawer log failed: ${logResult.message}');
+          }
+          if (!logResult.logSaved && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(logResult.message),
+                backgroundColor: AppColors.warning,
+                duration: const Duration(seconds: 6),
+              ),
+            );
+          }
         }
         _showPrintResult(result);
       } catch (error, stackTrace) {

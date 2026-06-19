@@ -198,6 +198,15 @@ Future<RawTicketPrinterBackendResult> _printTicketOnWindows(
   Uint8List bytes,
 ) async {
   try {
+    if (_isCashDrawerJob(jobName)) {
+      final configuredNetworkResult =
+          await _printCashDrawerToConfiguredNetworkEndpoints(bytes);
+      if (configuredNetworkResult != null &&
+          configuredNetworkResult.printedCount > 0) {
+        return configuredNetworkResult;
+      }
+    }
+
     final spooler = _WindowsPrinterSpooler();
     final printers = spooler.listTicketPrinters();
     if (printers.isEmpty) {
@@ -211,6 +220,7 @@ Future<RawTicketPrinterBackendResult> _printTicketOnWindows(
       printers.map((printer) => Isolate.run(
             () => _printTicketOnSingleWindowsPrinter(
               printer.name,
+              printer.portName,
               jobName,
               bytes,
             ),
@@ -235,11 +245,58 @@ Future<RawTicketPrinterBackendResult> _printTicketOnWindows(
   }
 }
 
-String? _printTicketOnSingleWindowsPrinter(
+Future<RawTicketPrinterBackendResult?>
+    _printCashDrawerToConfiguredNetworkEndpoints(Uint8List bytes) async {
+  final endpoints = _configuredCashDrawerNetworkEndpoints();
+  if (endpoints.isEmpty) return null;
+
+  final printResults = await Future.wait(
+    endpoints.map((endpoint) async {
+      try {
+        await _writeRawBytesToNetworkPrinter(endpoint, bytes);
+        return null;
+      } catch (error) {
+        return '${endpoint.label} (${error.toString()})';
+      }
+    }),
+  );
+  final failedPrinters = printResults.whereType<String>().toList();
+
+  return RawTicketPrinterBackendResult(
+    printerCount: endpoints.length,
+    printedCount: endpoints.length - failedPrinters.length,
+    failedPrinters: failedPrinters,
+    successMessage: failedPrinters.isEmpty
+        ? 'Cash drawer pulse sent directly to ${endpoints.map((endpoint) => endpoint.label).join(', ')}.'
+        : null,
+    error: failedPrinters.length == endpoints.length
+        ? 'Direct cash drawer network pulse failed: ${failedPrinters.join(' ')}'
+        : null,
+  );
+}
+
+Future<String?> _printTicketOnSingleWindowsPrinter(
   String printerName,
+  String portName,
   String jobName,
   Uint8List bytes,
-) {
+) async {
+  String? networkError;
+  final shouldTryNetworkRaw =
+      _isCashDrawerJob(jobName) || _containsCashDrawerPulse(bytes);
+  final networkEndpoint = shouldTryNetworkRaw
+      ? _networkPrinterEndpointFromWindowsPort(portName)
+      : null;
+
+  if (networkEndpoint != null) {
+    try {
+      await _writeRawBytesToNetworkPrinter(networkEndpoint, bytes);
+      return null;
+    } catch (error) {
+      networkError = '${networkEndpoint.label} (${error.toString()})';
+    }
+  }
+
   try {
     _WindowsPrinterSpooler().printRawBytes(
       printerName: printerName,
@@ -248,8 +305,136 @@ String? _printTicketOnSingleWindowsPrinter(
     );
     return null;
   } catch (error) {
+    if (networkError != null) {
+      return '$printerName (network raw failed: $networkError; Windows spooler failed: ${error.toString()})';
+    }
     return '$printerName (${error.toString()})';
   }
+}
+
+bool _isCashDrawerJob(String jobName) {
+  return jobName.toLowerCase().contains('cash drawer');
+}
+
+bool _containsCashDrawerPulse(Uint8List bytes) {
+  for (var i = 0; i < bytes.length - 1; i++) {
+    if (bytes[i] == 0x1b && bytes[i + 1] == 0x70) return true;
+  }
+  for (var i = 0; i < bytes.length - 2; i++) {
+    if (bytes[i] == 0x10 && bytes[i + 1] == 0x14 && bytes[i + 2] == 0x01) {
+      return true;
+    }
+  }
+  return false;
+}
+
+List<_NetworkPrinterEndpoint> _configuredCashDrawerNetworkEndpoints() {
+  const compiledHost = String.fromEnvironment('CASH_DRAWER_PRINTER_HOST');
+  const compiledHosts = String.fromEnvironment('CASH_DRAWER_PRINTER_HOSTS');
+  final rawValues = <String>[
+    compiledHost,
+    compiledHosts,
+    Platform.environment['CASH_DRAWER_PRINTER_HOST'] ?? '',
+    Platform.environment['CASH_DRAWER_PRINTER_HOSTS'] ?? '',
+  ];
+
+  final endpoints = <_NetworkPrinterEndpoint>[];
+  final seen = <String>{};
+  for (final rawValue in rawValues) {
+    for (final part in rawValue.split(',')) {
+      final endpoint = _networkPrinterEndpointFromHost(part);
+      if (endpoint == null) continue;
+      final key = endpoint.label.toLowerCase();
+      if (seen.add(key)) {
+        endpoints.add(endpoint);
+      }
+    }
+  }
+  return endpoints;
+}
+
+Future<void> _writeRawBytesToNetworkPrinter(
+  _NetworkPrinterEndpoint endpoint,
+  Uint8List bytes,
+) async {
+  final socket = await Socket.connect(
+    endpoint.host,
+    endpoint.port,
+    timeout: const Duration(seconds: 2),
+  );
+  try {
+    socket.add(bytes);
+    await socket.flush().timeout(const Duration(seconds: 2));
+  } finally {
+    socket.destroy();
+  }
+}
+
+_NetworkPrinterEndpoint? _networkPrinterEndpointFromHost(String rawValue) {
+  final value = rawValue.trim();
+  if (value.isEmpty) return null;
+
+  final match = RegExp(
+    r'^([A-Za-z0-9.-]+)(?::(\d{2,5}))?$',
+  ).firstMatch(value);
+  if (match == null) return null;
+
+  return _NetworkPrinterEndpoint(
+    host: match.group(1)!,
+    port: int.tryParse(match.group(2) ?? '') ?? 9100,
+  );
+}
+
+_NetworkPrinterEndpoint? _networkPrinterEndpointFromWindowsPort(
+  String portName,
+) {
+  final trimmed = portName.trim();
+  if (trimmed.isEmpty) return null;
+
+  final ipMatch = RegExp(
+    r'((?:\d{1,3}\.){3}\d{1,3})(?::(\d{2,5}))?',
+  ).firstMatch(trimmed);
+  if (ipMatch != null) {
+    return _NetworkPrinterEndpoint(
+      host: ipMatch.group(1)!,
+      port: int.tryParse(ipMatch.group(2) ?? '') ?? 9100,
+    );
+  }
+
+  var value = trimmed;
+  if (value.toUpperCase().startsWith('IP_')) {
+    value = value.substring(3);
+  }
+  if (RegExp(r'^(COM|LPT|USB|WSD|FILE|PORTPROMPT)', caseSensitive: false)
+      .hasMatch(value)) {
+    return null;
+  }
+  if (value.contains(r'\') || value.contains('/')) return null;
+
+  final hostMatch = RegExp(
+    r'^([A-Za-z0-9.-]+)(?::(\d{2,5}))?$',
+  ).firstMatch(value);
+  if (hostMatch == null) return null;
+
+  final host = hostMatch.group(1)!;
+  if (!host.contains('.') && !host.contains('-')) return null;
+
+  return _NetworkPrinterEndpoint(
+    host: host,
+    port: int.tryParse(hostMatch.group(2) ?? '') ?? 9100,
+  );
+}
+
+class _NetworkPrinterEndpoint {
+  final String host;
+  final int port;
+
+  const _NetworkPrinterEndpoint({
+    required this.host,
+    required this.port,
+  });
+
+  String get label => '$host:$port';
 }
 
 class _CupsRawPrinter {

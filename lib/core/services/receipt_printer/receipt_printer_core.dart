@@ -200,7 +200,7 @@ class ReceiptPrinterService {
     }
     markDrawerOpenExpected();
     try {
-      final bytes = buildCashDrawerSpoolerJobBytes();
+      final bytes = buildCashDrawerPulseBytes();
       final result = await _backend.printTicket(
         jobName: 'W Burger Cash Drawer',
         bytes: bytes,
@@ -294,10 +294,6 @@ class ReceiptPrinterService {
       onTime: onTime,
       offTime: offTime,
     );
-  }
-
-  Uint8List buildCashDrawerSpoolerJobBytes() {
-    return ReceiptTicketBuilder.buildCashDrawerSpoolerJobBytes();
   }
 
   Future<Uint8List> buildReceiptTicketBytes(
