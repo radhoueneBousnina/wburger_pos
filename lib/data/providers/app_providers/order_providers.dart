@@ -725,7 +725,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       );
     }
     final printerResult = await ReceiptPrinterService.instance.openCashDrawer();
-    if (!printerResult.isSuccess) {
+    if (!printerResult.sentToAnyPrinter) {
       apiClient.logError(
           'Open cash drawer hardware error', printerResult.message);
       return CashDrawerOpenResult(

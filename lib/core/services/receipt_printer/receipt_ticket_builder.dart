@@ -41,6 +41,16 @@ class ReceiptTicketBuilder {
     ]);
   }
 
+  static Uint8List buildCashDrawerSpoolerJobBytes() {
+    final pulse = buildCashDrawerPulseBytes();
+    return Uint8List.fromList([
+      ...pulse,
+      0x0d, 0x0a, // Flush tiny command-only jobs through Windows drivers.
+      ...pulse,
+      0x0d, 0x0a,
+    ]);
+  }
+
   static Uint8List buildBrandCheckerStripBytes({
     required int columns,
   }) {

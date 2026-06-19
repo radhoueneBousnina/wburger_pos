@@ -385,6 +385,18 @@ void main() {
     expect(_containsBytes(bytes, const [0x1d, 0x56]), isFalse);
   });
 
+  test('builds a spooler-safe cash drawer job for standalone opening', () {
+    final pulse = ReceiptPrinterService.instance.buildCashDrawerPulseBytes();
+    final bytes =
+        ReceiptPrinterService.instance.buildCashDrawerSpoolerJobBytes();
+
+    expect(bytes.take(pulse.length).toList(), pulse);
+    expect(_countBytes(bytes, const [0x1b, 0x70, 0x00]), 2);
+    expect(_countBytes(bytes, const [0x1b, 0x70, 0x01]), 2);
+    expect(_countBytes(bytes, const [0x0d, 0x0a]), 2);
+    expect(_containsBytes(bytes, const [0x1d, 0x56]), isFalse);
+  });
+
   test('can combine a sample receipt with the cash drawer pulse', () async {
     final bytes = await ReceiptPrinterService.instance.buildReceiptTicketBytes(
       ReceiptData.sampleTestReceipt(),

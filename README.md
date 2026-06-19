@@ -81,8 +81,8 @@ flutter build windows --release --dart-define=POS_PRINTER_NAMES=CashierPrinter
 
 Cash drawer opening is sent through the printer using ESC/POS drawer-pulse
 commands. The POS sends that pulse when the Cash Drawer button is used and at
-the start of a paid cash receipt. Manual button openings are logged before the
-pulse is sent.
+the start of a paid cash receipt. Manual button openings send the hardware pulse
+first, then save the log entry after the printer accepts the drawer job.
 
 Physical key-open logging needs a drawer-status signal from the printer/drawer.
 On Linux web testing, the bridge polls raw bidirectional printer devices such as

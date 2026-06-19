@@ -633,7 +633,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
         unawaited(CustomerDisplayService.instance.showZeroes());
         final result = await ReceiptPrinterService.instance.printReceipt(
           receiptData,
-          openDrawer: false,
+          openDrawer: shouldOpenDrawer,
           allowBrowserFallback: false,
         );
         if (drawerResult != null && !drawerResult.sentToAnyPrinter) {
