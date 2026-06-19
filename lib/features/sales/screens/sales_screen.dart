@@ -39,15 +39,18 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   static const bool _enableTestWebcamScanner = false;
   static const Duration _scannerCharacterGap = Duration(milliseconds: 350);
   static const Duration _scannerIdleFlushDelay = Duration(milliseconds: 180);
+  static const Duration _mobileOrderPollInterval = Duration(seconds: 3);
   static const int _scannerBufferMaxLength = 512;
 
   final _searchCtrl = TextEditingController();
   final _salesFocusNode = FocusNode(debugLabel: 'sales-screen-focus');
   final StringBuffer _scanBuffer = StringBuffer();
   Timer? _scanIdleTimer;
+  Timer? _mobileOrderPollTimer;
   DateTime? _lastScanCharacterAt;
   bool _showSuccess = false;
   bool _isProcessingQr = false;
+  bool _isCheckingMobileOrder = false;
   String? _lastTicket;
   CustomerDisplayBackendResult? _customerDisplayResult;
 
@@ -66,6 +69,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     CustomerDisplayService.instance.lastResult
         .removeListener(_handleCustomerDisplayResult);
     _scanIdleTimer?.cancel();
+    _mobileOrderPollTimer?.cancel();
     _searchCtrl.dispose();
     _salesFocusNode.dispose();
     super.dispose();
@@ -252,6 +256,99 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     return replace ?? false;
   }
 
+  void _startMobileOrderMonitor(String token) {
+    final trimmedToken = token.trim();
+    if (trimmedToken.isEmpty) return;
+    _mobileOrderPollTimer?.cancel();
+    _mobileOrderPollTimer = Timer.periodic(
+      _mobileOrderPollInterval,
+      (_) => unawaited(_checkImportedMobileOrder()),
+    );
+  }
+
+  void _stopMobileOrderMonitor() {
+    _mobileOrderPollTimer?.cancel();
+    _mobileOrderPollTimer = null;
+  }
+
+  Future<void> _checkImportedMobileOrder() async {
+    if (_isCheckingMobileOrder || _isProcessingQr || !mounted) return;
+
+    final cart = ref.read(cartProvider);
+    final token = cart.redemptionToken?.trim();
+    if (token == null || token.isEmpty) {
+      _stopMobileOrderMonitor();
+      return;
+    }
+
+    _isCheckingMobileOrder = true;
+    try {
+      final qrOrder = await ref.read(ordersProvider.notifier).lookupQrOrder(
+            token,
+          );
+      if (qrOrder.status == OrderStatus.cancelled) {
+        _handleMobileOrderCancelled(
+          token,
+          reason: qrOrder.cancellationReason,
+        );
+      }
+    } catch (error) {
+      if (_looksLikeCancelledMobileOrder(error)) {
+        _handleMobileOrderCancelled(token);
+      } else if (kDebugMode) {
+        debugPrint('Mobile order status refresh failed: $error');
+      }
+    } finally {
+      _isCheckingMobileOrder = false;
+    }
+  }
+
+  bool _looksLikeCancelledMobileOrder(Object error) {
+    final value = error.toString().toLowerCase();
+    return value.contains('cancelled') || value.contains('canceled');
+  }
+
+  void _handleMobileOrderCancelled(String token, {String? reason}) {
+    _showMobileOrderCancelled(token, reason: reason, requireLoadedCart: true);
+  }
+
+  void _showMobileOrderCancelled(
+    String token, {
+    String? reason,
+    required bool requireLoadedCart,
+  }) {
+    if (!mounted) return;
+
+    final currentCart = ref.read(cartProvider);
+    final cartToken = currentCart.redemptionToken?.trim();
+    final cancelledToken = token.trim();
+    if (requireLoadedCart && cartToken != cancelledToken) return;
+
+    if (cartToken == cancelledToken) {
+      _stopMobileOrderMonitor();
+      ref.read(cartProvider.notifier).clear();
+      _searchCtrl.clear();
+      ref.read(searchQueryProvider.notifier).state = '';
+      ref.read(selectedCategoryProvider.notifier).state = null;
+    }
+    unawaited(ref.read(ordersProvider.notifier).fetchTodayOrders(
+          showLoading: false,
+          force: true,
+        ));
+
+    final cleanReason = reason?.trim();
+    final message = cleanReason == null || cleanReason.isEmpty
+        ? 'Mobile order was cancelled by the customer.'
+        : 'Mobile order was cancelled by the customer: $cleanReason';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.warning,
+        duration: const Duration(seconds: 6),
+      ),
+    );
+  }
+
   Future<void> _importQrOrder(String token) async {
     final trimmedToken = token.trim();
     if (_isProcessingQr || trimmedToken.isEmpty) return;
@@ -268,7 +365,16 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     try {
       final qrOrder =
           await ref.read(ordersProvider.notifier).lookupQrOrder(trimmedToken);
+      if (qrOrder.status == OrderStatus.cancelled) {
+        _showMobileOrderCancelled(
+          trimmedToken,
+          reason: qrOrder.cancellationReason,
+          requireLoadedCart: false,
+        );
+        return;
+      }
       ref.read(cartProvider.notifier).loadFromQrOrder(qrOrder);
+      _startMobileOrderMonitor(trimmedToken);
       _searchCtrl.clear();
       ref.read(searchQueryProvider.notifier).state = '';
       ref.read(selectedCategoryProvider.notifier).state = null;
@@ -716,6 +822,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
         });
 
         // Clear cart after showing success to avoid any UI flickering
+        _stopMobileOrderMonitor();
         ref.read(cartProvider.notifier).clear();
 
         Future.delayed(const Duration(seconds: 3), () {
