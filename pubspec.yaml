@@ -40,7 +40,7 @@ dependencies:
   # Icons
   cupertino_icons: ^1.0.8
   dio: ^5.9.2
-  flutter_secure_storage: ^9.2.2
+  flutter_secure_storage: ^10.3.1
   shared_preferences: ^2.5.5
   window_manager: ^0.4.3
 

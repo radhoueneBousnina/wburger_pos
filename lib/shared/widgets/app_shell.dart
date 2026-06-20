@@ -34,6 +34,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     final testMode = ref.watch(testModeProvider);
     ref.watch(cashDrawerKeyMonitorProvider);
     final path = GoRouterState.of(context).uri.path;
+    final isSalesPage = path == AppRoutes.sales;
     final canCloseSession =
         ref.watch(authProvider).permissions['can_close_session'] == true;
 
@@ -95,9 +96,10 @@ class _AppShellState extends ConsumerState<AppShell> {
                     Expanded(
                       child: Column(
                         children: [
-                          TopBar(
-                              showMenuButton:
-                                  !showSidebar && !widget.lockNavigation),
+                          if (!isSalesPage)
+                            TopBar(
+                                showMenuButton:
+                                    !showSidebar && !widget.lockNavigation),
                           if (testMode.isActive) const _TrainingModeBanner(),
                           Expanded(child: widget.child),
                         ],

@@ -25,7 +25,16 @@ Equivalent manual commands:
 
 ```sh
 python3 scripts/local_print_bridge.py
-flutter run -d chrome --web-hostname localhost --web-port 3000 --dart-define=API_BASE_URL=https://w-burger.com --dart-define=PRINT_BRIDGE_BASE_URL=http://127.0.0.1:19100
+flutter run -d chrome --wasm --web-hostname localhost --web-port 3000 --dart-define=API_BASE_URL=https://w-burger.com --dart-define=PRINT_BRIDGE_BASE_URL=http://127.0.0.1:19100
+```
+
+The web helper uses `--wasm` by default so Chrome uses the `skwasm` renderer
+instead of the default CanvasKit path during local development. This avoids a
+Flutter web engine context-loss crash that can happen after hot restart. To
+temporarily return to default CanvasKit mode, run:
+
+```sh
+WBURGER_POS_WEB_WASM=0 ./scripts/run_pos_web_vps.sh
 ```
 
 To print the same ticket to a cashier printer and a kitchen printer during web

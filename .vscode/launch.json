@@ -11,6 +11,7 @@
         "localhost",
         "--web-port",
         "5173",
+        "--wasm",
         "--dart-define",
         "API_BASE_URL=https://w-burger.com"
       ]

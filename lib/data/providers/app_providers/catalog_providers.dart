@@ -49,15 +49,6 @@ class CategoriesNotifier extends StateNotifier<AsyncValue<List<Category>>> {
 
       final List<Category> cats =
           data.map((j) => Category.fromJson(j)).toList();
-      cats.insert(
-        0,
-        const Category(
-          id: 'meals',
-          name: 'Meals & Combos',
-          iconEmoji: '🍔',
-          imageUrl: null,
-        ),
-      );
 
       _lastFetchedAt = DateTime.now();
       state = AsyncValue.data(cats);
@@ -122,29 +113,35 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<Product>>> {
         state = const AsyncValue.loading();
       }
 
-      final responses = await Future.wait([
-        apiClient.dio.get(
-          ApiConstants.products,
-          queryParameters: const {'active_only': 'true'},
-        ),
-        apiClient.dio.get(
-          ApiConstants.meals,
-          queryParameters: const {'active_only': 'true'},
-        ),
-      ]);
+      final List productData = [];
+      String? nextUrl = ApiConstants.products;
+      Map<String, dynamic>? queryParameters = const {
+        'active_only': 'true',
+        'page_size': 100,
+      };
+      var pageCount = 0;
 
-      final List productData = responses[0].data is List
-          ? responses[0].data
-          : (responses[0].data['results'] ?? []);
+      while (nextUrl != null && pageCount < 50) {
+        final response = await apiClient.dio.get(
+          nextUrl,
+          queryParameters: queryParameters,
+        );
+        final data = response.data;
+        if (data is List) {
+          productData.addAll(data);
+          break;
+        }
+        productData.addAll((data['results'] as List?) ?? const []);
+        final next = data['next'];
+        nextUrl =
+            next == null || next.toString().isEmpty ? null : next.toString();
+        queryParameters = null;
+        pageCount += 1;
+      }
       final products = productData.map((j) => Product.fromJson(j)).toList();
 
-      final List mealData = responses[1].data is List
-          ? responses[1].data
-          : (responses[1].data['results'] ?? []);
-      final meals = mealData.map((j) => Product.fromMealJson(j)).toList();
-
       _lastFetchedAt = DateTime.now();
-      state = AsyncValue.data([...meals, ...products]);
+      state = AsyncValue.data(products);
     } catch (e, st) {
       apiClient.logError('Products error', e);
       if (!silent || !hadData) {

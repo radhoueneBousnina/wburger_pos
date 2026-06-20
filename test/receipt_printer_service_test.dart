@@ -277,6 +277,38 @@ void main() {
     expect(preview, contains('- Sauce: Mayo'));
   });
 
+  test('prints cashier note newlines as separate receipt lines', () {
+    final item = CartItem(
+      product: Product(
+        id: 'burger-1',
+        categoryId: 'burgers',
+        name: 'Classic Burger',
+        description: '',
+        price: 12,
+      ),
+      note: 'No onions\nExtra crispy\r\nSauce on side',
+    );
+
+    final preview = ReceiptPrinterService.instance.buildPreviewText(
+      ReceiptData(
+        ticketNumber: 'W-020526-105',
+        soldAt: DateTime(2026, 5, 2, 18, 42),
+        lines: [ReceiptLine.fromCartItem(item)],
+        orderType: OrderType.takeaway,
+        sourceLabel: 'POS sale',
+        subtotal: item.originalTotal,
+        discountAmount: 0,
+        totalAmount: item.total,
+      ),
+      printedAt: DateTime(2026, 5, 2, 18, 42),
+    );
+
+    expect(preview, contains('- No onions'));
+    expect(preview, contains('- Extra crispy'));
+    expect(preview, contains('- Sauce on side'));
+    expect(preview, isNot(contains('No onions Extra crispy')));
+  });
+
   test('reprint receipt keeps subtotal, discount, and total consistent', () {
     final item = CartItem(
       product: Product(

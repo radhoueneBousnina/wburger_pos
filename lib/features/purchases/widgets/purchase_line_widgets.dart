@@ -1,5 +1,12 @@
 part of '../screens/create_purchase_screen.dart';
 
+final _purchaseDecimalInputFormatter = TextInputFormatter.withFunction(
+  (oldValue, newValue) {
+    final valid = RegExp(r'^\d*\.?\d{0,3}$').hasMatch(newValue.text);
+    return valid ? newValue : oldValue;
+  },
+);
+
 class _SummaryRow extends StatelessWidget {
   final String label;
   final String value;
@@ -101,7 +108,12 @@ class _PurchaseLineRow extends StatelessWidget {
                 const SizedBox(height: 4),
                 TextField(
                   controller: entry.quantityCtrl,
-                  keyboardType: TextInputType.number,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                    _purchaseDecimalInputFormatter,
+                  ],
                   onChanged: (_) => onChanged(),
                   style: AppTextStyles.titleSm.copyWith(color: textColor),
                   decoration: InputDecoration(
@@ -132,7 +144,12 @@ class _PurchaseLineRow extends StatelessWidget {
                 const SizedBox(height: 4),
                 TextField(
                   controller: entry.priceCtrl,
-                  keyboardType: TextInputType.number,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                    _purchaseDecimalInputFormatter,
+                  ],
                   onChanged: (_) => onChanged(),
                   style: AppTextStyles.titleSm.copyWith(color: textColor),
                   decoration: InputDecoration(

@@ -436,26 +436,48 @@ class _ProductCard extends ConsumerWidget {
     await Future.wait([
       stockNotifier.fetchRecipes(),
       stockNotifier.refreshIfStale(maxAge: const Duration(minutes: 5)),
+      ref
+          .read(posSettingsProvider.notifier)
+          .refreshIfStale(maxAge: const Duration(minutes: 5)),
     ]);
     if (!context.mounted) return;
 
     final sauceGroups = _sauceGroupsForProduct(stockNotifier, product);
-    if (sauceGroups.isEmpty) {
+    final mealAddOnPrice =
+        ref.read(posSettingsProvider).valueOrNull?.mealAddOnPrice ?? 0;
+    final sodaProduct = _mealSodaProduct(
+      ref.read(productsProvider).valueOrNull ?? const <Product>[],
+    );
+    final canMealUpgrade = !product.isSoda && sodaProduct != null;
+    if (sauceGroups.isEmpty && !canMealUpgrade) {
       ref.read(cartProvider.notifier).addProduct(product);
       return;
     }
 
-    final selections = await _showSaucePicker(
+    final options = await _showProductOptions(
       context,
       product: product,
       groups: sauceGroups,
+      canMealUpgrade: canMealUpgrade,
+      mealAddOnPrice: mealAddOnPrice,
+      sodaProduct: sodaProduct,
     );
-    if (selections == null || !context.mounted) return;
+    if (options == null || !context.mounted) return;
 
     ref.read(cartProvider.notifier).addProduct(
           product,
-          sauces: selections,
+          sauces: options.sauces,
+          isMealUpgrade: options.isMealUpgrade,
+          mealAddOnPrice: options.isMealUpgrade ? mealAddOnPrice : 0,
+          mealSodaProduct: options.isMealUpgrade ? sodaProduct : null,
         );
+  }
+
+  Product? _mealSodaProduct(List<Product> products) {
+    for (final product in products) {
+      if (product.isActive && product.isSoda) return product;
+    }
+    return null;
   }
 
   List<_SauceChoiceGroup> _sauceGroupsForProduct(
@@ -492,18 +514,23 @@ class _ProductCard extends ConsumerWidget {
     ];
   }
 
-  Future<List<CartSauceSelection>?> _showSaucePicker(
+  Future<_ProductOptionsResult?> _showProductOptions(
     BuildContext context, {
     required Product product,
     required List<_SauceChoiceGroup> groups,
+    required bool canMealUpgrade,
+    required double mealAddOnPrice,
+    Product? sodaProduct,
   }) {
     final selectedKeys = <String>{};
+    var isMealUpgrade = false;
+    final optionsScrollController = ScrollController();
 
     String optionKey(_SauceChoiceGroup group, ProductSauceOption option) {
       return '${group.productId}|${option.stockItemId}';
     }
 
-    return showDialog<List<CartSauceSelection>>(
+    return showDialog<_ProductOptionsResult>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) {
@@ -580,9 +607,16 @@ class _ProductCard extends ConsumerWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                selectedKeys.isEmpty
-                                    ? 'Choose sauces'
-                                    : '${selectedKeys.length} sauce${selectedKeys.length == 1 ? '' : 's'} selected',
+                                [
+                                  if (selectedKeys.isEmpty)
+                                    groups.isEmpty
+                                        ? 'Meal upgrade available'
+                                        : 'Choose sauces'
+                                  else
+                                    '${selectedKeys.length} sauce${selectedKeys.length == 1 ? '' : 's'} selected',
+                                  if (isMealUpgrade)
+                                    'Meal +${mealAddOnPrice.toStringAsFixed(3)} DT',
+                                ].join(' • '),
                                 style: AppTextStyles.bodySm.copyWith(
                                   color: AppColors.textSecondaryFor(ctx),
                                   fontWeight: FontWeight.w700,
@@ -604,12 +638,25 @@ class _ProductCard extends ConsumerWidget {
                   ),
                   Flexible(
                     child: Scrollbar(
+                      controller: optionsScrollController,
                       child: SingleChildScrollView(
+                        controller: optionsScrollController,
                         padding: EdgeInsets.all(layout.isCompact ? 14 : 18),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            if (groups.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Text(
+                                  'No sauce choices for this product.',
+                                  style: AppTextStyles.body.copyWith(
+                                    color: AppColors.textSecondaryFor(ctx),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
                             for (final group in groups) ...[
                               Container(
                                 width: double.infinity,
@@ -746,6 +793,96 @@ class _ProductCard extends ConsumerWidget {
                               if (group != groups.last)
                                 const SizedBox(height: 12),
                             ],
+                            if (canMealUpgrade) ...[
+                              if (groups.isNotEmpty) const SizedBox(height: 12),
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      isMealUpgrade = !isMealUpgrade;
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 140),
+                                    width: double.infinity,
+                                    padding: EdgeInsets.all(
+                                      layout.isCompact ? 12 : 14,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isMealUpgrade
+                                          ? AppColors.yellow
+                                          : AppColors.surfaceFor(ctx),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: isMealUpgrade
+                                            ? AppColors.yellow
+                                            : AppColors.borderFor(ctx),
+                                        width: isMealUpgrade ? 2 : 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          isMealUpgrade
+                                              ? Icons.check_circle_rounded
+                                              : Icons
+                                                  .add_circle_outline_rounded,
+                                          color: isMealUpgrade
+                                              ? AppColors.blue
+                                              : AppColors.accentFor(ctx),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Mark as Meal',
+                                                style: AppTextStyles.titleSm
+                                                    .copyWith(
+                                                  color: isMealUpgrade
+                                                      ? AppColors.blue
+                                                      : AppColors
+                                                          .textPrimaryFor(ctx),
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '${sodaProduct?.name ?? 'Soda'} included • +${mealAddOnPrice.toStringAsFixed(3)} DT',
+                                                style: AppTextStyles.bodySm
+                                                    .copyWith(
+                                                  color: isMealUpgrade
+                                                      ? AppColors.blue
+                                                      : AppColors
+                                                          .textSecondaryFor(
+                                                              ctx),
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Switch.adaptive(
+                                          value: isMealUpgrade,
+                                          activeThumbColor: AppColors.blue,
+                                          activeTrackColor: AppColors.yellow
+                                              .withValues(alpha: 0.45),
+                                          onChanged: (value) {
+                                            setState(() {
+                                              isMealUpgrade = value;
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -766,9 +903,12 @@ class _ProductCard extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            selectedKeys.isEmpty
-                                ? 'No sauce selected'
-                                : '${selectedKeys.length} selected',
+                            [
+                              selectedKeys.isEmpty
+                                  ? 'No sauce selected'
+                                  : '${selectedKeys.length} selected',
+                              if (isMealUpgrade) '- Meal',
+                            ].join(' • '),
                             style: AppTextStyles.body.copyWith(
                               color: AppColors.textSecondaryFor(ctx),
                               fontWeight: FontWeight.w700,
@@ -798,7 +938,13 @@ class _ProductCard extends ConsumerWidget {
                                   ));
                                 }
                               }
-                              Navigator.pop(ctx, selections);
+                              Navigator.pop(
+                                ctx,
+                                _ProductOptionsResult(
+                                  sauces: selections,
+                                  isMealUpgrade: isMealUpgrade,
+                                ),
+                              );
                             },
                             icon: const Icon(Icons.check_rounded),
                             label: const Text('Submit'),
@@ -821,7 +967,7 @@ class _ProductCard extends ConsumerWidget {
           );
         },
       ),
-    );
+    ).whenComplete(optionsScrollController.dispose);
   }
 }
 
@@ -838,6 +984,16 @@ class _SauceChoiceGroup {
     required this.productName,
     required this.quantity,
     required this.options,
+  });
+}
+
+class _ProductOptionsResult {
+  final List<CartSauceSelection> sauces;
+  final bool isMealUpgrade;
+
+  const _ProductOptionsResult({
+    required this.sauces,
+    required this.isMealUpgrade,
   });
 }
 

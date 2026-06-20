@@ -7,6 +7,11 @@ print_bridge_host="127.0.0.1"
 print_bridge_url="${PRINT_BRIDGE_BASE_URL:-http://127.0.0.1:${print_bridge_port}}"
 web_port="${WEB_PORT:-3000}"
 print_bridge_log="${PRINT_BRIDGE_LOG:-/tmp/wburger-pos-print-bridge.log}"
+web_mode_args=()
+
+if [[ "${WBURGER_POS_WEB_WASM:-1}" != "0" ]]; then
+  web_mode_args+=(--wasm)
+fi
 
 bridge_is_up() {
   python3 - "$print_bridge_host" "$print_bridge_port" <<'PY'
@@ -58,9 +63,15 @@ fi
 echo "[wburger-pos] API: https://w-burger.com"
 echo "[wburger-pos] Web: http://localhost:$web_port"
 echo "[wburger-pos] Print bridge: $print_bridge_url"
+if ((${#web_mode_args[@]})); then
+  echo "[wburger-pos] Web mode: wasm/skwasm"
+else
+  echo "[wburger-pos] Web mode: default canvaskit"
+fi
 
 flutter run \
   -d chrome \
+  "${web_mode_args[@]}" \
   --web-hostname localhost \
   --web-port "$web_port" \
   --dart-define=API_BASE_URL=https://w-burger.com \

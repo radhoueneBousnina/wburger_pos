@@ -314,7 +314,7 @@ class ReceiptTicketBuilder {
       _writeModifier(builder, modifier);
     }
     if (_hasText(line.note)) {
-      builder.modifierRow('- ${line.note!.trim()}');
+      _writeNoteLines(builder, '- ', line.note!);
     }
     for (final sauce in line.sauceLines) {
       builder.modifierRow('- Sauce: $sauce');
@@ -330,10 +330,23 @@ class ReceiptTicketBuilder {
   ) {
     builder.modifierRow('- ${component.quantity}x ${component.name}');
     if (_hasText(component.note)) {
-      builder.modifierRow('  ${component.note!.trim()}');
+      _writeNoteLines(builder, '  ', component.note!);
     }
     for (final sauce in component.sauceLines) {
       builder.modifierRow('  - Sauce: $sauce');
+    }
+  }
+
+  void _writeNoteLines(
+    _TicketComposer builder,
+    String prefix,
+    String note,
+  ) {
+    final normalized = note.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    for (final rawLine in normalized.split('\n')) {
+      final line = rawLine.trim();
+      if (line.isEmpty) continue;
+      builder.modifierRow('$prefix$line');
     }
   }
 

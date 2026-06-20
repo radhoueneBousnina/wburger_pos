@@ -33,15 +33,19 @@ class StaffMember {
 
 class PosSettings {
   final double staffDiscountPercent;
+  final double mealAddOnPrice;
 
   const PosSettings({
     this.staffDiscountPercent = 0,
+    this.mealAddOnPrice = 0,
   });
 
   factory PosSettings.fromJson(Map<String, dynamic> json) {
     final percent = _parseNullableDouble(json['staff_discount_percent']) ?? 0;
+    final mealAddOn = _parseNullableDouble(json['meal_add_on_price']) ?? 0;
     return PosSettings(
       staffDiscountPercent: percent.clamp(0, 100).toDouble(),
+      mealAddOnPrice: mealAddOn < 0 ? 0 : mealAddOn,
     );
   }
 }
@@ -138,12 +142,14 @@ class MealComponent {
   final String productId;
   final String name;
   final int quantity;
+  final bool hasSauces;
   final List<ProductSauceOption> sauceOptions;
 
   const MealComponent({
     required this.productId,
     required this.name,
     required this.quantity,
+    this.hasSauces = false,
     this.sauceOptions = const [],
   });
 
@@ -166,6 +172,8 @@ class MealComponent {
       productId: productId,
       name: name,
       quantity: _parseInt(json['quantity'], fallback: 1),
+      hasSauces:
+          productMap?['has_sauces'] == true || json['has_sauces'] == true,
       sauceOptions: _parseRecipeSauceOptions(
         productMap?['recipe'],
         productId: productId,
@@ -181,6 +189,7 @@ class MealComponent {
       productId: productId,
       name: name,
       quantity: quantity,
+      hasSauces: hasSauces,
       sauceOptions: sauceOptions ?? this.sauceOptions,
     );
   }
@@ -217,8 +226,7 @@ class CartSauceSelection {
       if (productId != null && productId!.isNotEmpty) 'product_id': productId,
       if (productName != null && productName!.isNotEmpty)
         'product_name': productName,
-      if (quantityRequired > 0)
-        'quantity_required': quantityRequired.toStringAsFixed(3),
+      if (quantityRequired > 0) 'quantity': quantityRequired.toStringAsFixed(3),
     };
   }
 
@@ -289,6 +297,8 @@ class Product {
   final int? pointsPrice;
   final bool isActive;
   final bool isMeal;
+  final bool hasSauces;
+  final bool isSoda;
   final List<ProductSauceOption> sauceOptions;
   final List<MealComponent> mealComponents;
 
@@ -303,6 +313,8 @@ class Product {
     this.pointsPrice,
     this.isActive = true,
     this.isMeal = false,
+    this.hasSauces = false,
+    this.isSoda = false,
     this.sauceOptions = const [],
     this.mealComponents = const [],
   });
@@ -327,6 +339,8 @@ class Product {
       pointsPrice: json['points_price'] as int?,
       isActive: json['is_active'] as bool? ?? true,
       isMeal: false,
+      hasSauces: json['has_sauces'] == true,
+      isSoda: json['is_soda'] == true,
       sauceOptions: _parseRecipeSauceOptions(
         json['recipe'],
         productId: id,
@@ -348,6 +362,8 @@ class Product {
       pointsPrice: null, // Meals cannot be bought with points
       isActive: json['is_active'] as bool? ?? true,
       isMeal: true,
+      hasSauces: false,
+      isSoda: false,
       mealComponents: items
           .whereType<Map>()
           .map((item) => MealComponent.fromJson(
@@ -369,6 +385,8 @@ class Product {
     int? pointsPrice,
     bool? isActive,
     bool? isMeal,
+    bool? hasSauces,
+    bool? isSoda,
     List<ProductSauceOption>? sauceOptions,
     List<MealComponent>? mealComponents,
   }) {
@@ -383,6 +401,8 @@ class Product {
       pointsPrice: pointsPrice ?? this.pointsPrice,
       isActive: isActive ?? this.isActive,
       isMeal: isMeal ?? this.isMeal,
+      hasSauces: hasSauces ?? this.hasSauces,
+      isSoda: isSoda ?? this.isSoda,
       sauceOptions: sauceOptions ?? this.sauceOptions,
       mealComponents: mealComponents ?? this.mealComponents,
     );
@@ -407,6 +427,7 @@ class Product {
       pointsPrice: null,
       isActive: json['is_active'] as bool? ?? true,
       isMeal: false,
+      isSoda: false,
     );
   }
 }
@@ -421,6 +442,9 @@ class CartItem {
   final bool isDealComponent;
   final String? parentDealName;
   final List<CartSauceSelection> sauces;
+  final bool isMealUpgrade;
+  final double mealAddOnPrice;
+  final Product? mealSodaProduct;
 
   CartItem({
     this.lineId,
@@ -432,17 +456,24 @@ class CartItem {
     this.isDealComponent = false,
     this.parentDealName,
     this.sauces = const [],
+    this.isMealUpgrade = false,
+    this.mealAddOnPrice = 0,
+    this.mealSodaProduct,
   });
+
+  double get configuredUnitPrice =>
+      product.price + (isMealUpgrade ? mealAddOnPrice : 0);
 
   double get unitPrice => isDealComponent
       ? 0
       : discountPercent != null
-          ? product.price * (1 - discountPercent! / 100)
-          : product.price;
+          ? configuredUnitPrice * (1 - discountPercent! / 100)
+          : configuredUnitPrice;
 
   double get total => unitPrice * quantity;
 
-  double get originalTotal => isDealComponent ? 0 : product.price * quantity;
+  double get originalTotal =>
+      isDealComponent ? 0 : configuredUnitPrice * quantity;
 
   double get discountAmount {
     final discount = originalTotal - total;
@@ -452,6 +483,9 @@ class CartItem {
   List<String> get sauceDisplayLines => sauces
       .map((sauce) => sauce.displayLabel(includeProduct: product.isMeal))
       .toList();
+
+  String get displayName =>
+      isMealUpgrade ? '${product.name} - Meal' : product.name;
 
   CartItem copyWith({
     String? lineId,
@@ -463,6 +497,9 @@ class CartItem {
     bool? isDealComponent,
     String? parentDealName,
     List<CartSauceSelection>? sauces,
+    bool? isMealUpgrade,
+    double? mealAddOnPrice,
+    Product? mealSodaProduct,
   }) {
     return CartItem(
       lineId: lineId ?? this.lineId,
@@ -474,6 +511,9 @@ class CartItem {
       isDealComponent: isDealComponent ?? this.isDealComponent,
       parentDealName: parentDealName ?? this.parentDealName,
       sauces: sauces ?? this.sauces,
+      isMealUpgrade: isMealUpgrade ?? this.isMealUpgrade,
+      mealAddOnPrice: mealAddOnPrice ?? this.mealAddOnPrice,
+      mealSodaProduct: mealSodaProduct ?? this.mealSodaProduct,
     );
   }
 
@@ -486,11 +526,16 @@ class CartItem {
       'order': orderId,
       if (product.isMeal) 'meal': product.id else 'product': product.id,
       'quantity': quantity,
-      'unit_price':
-          (includeItemDiscount ? unitPrice : product.price).toStringAsFixed(3),
+      'unit_price': (includeItemDiscount ? unitPrice : configuredUnitPrice)
+          .toStringAsFixed(3),
       if (note != null && note!.isNotEmpty) 'note': note,
       if (sauces.isNotEmpty)
         'selected_sauces': sauces.map((sauce) => sauce.toJson()).toList(),
+      if (isMealUpgrade) ...{
+        'is_meal_upgrade': true,
+        'meal_add_on_price': mealAddOnPrice.toStringAsFixed(3),
+        if (mealSodaProduct != null) 'meal_soda': mealSodaProduct!.id,
+      },
     };
   }
 }
@@ -737,9 +782,13 @@ class Order {
         final isDealComponent = itemMap['is_deal_component'] == true;
         final pDetails = _asStringKeyMap(itemMap['product_details']);
         final mDetails = _asStringKeyMap(itemMap['meal_details']);
+        final mealSodaDetails = _asStringKeyMap(itemMap['meal_soda_details']);
         final dDetails = _asStringKeyMap(itemMap['deal_details']);
         final unitPrice =
             double.tryParse((itemMap['unit_price'] ?? '0').toString()) ?? 0.0;
+        final isMealUpgrade = itemMap['is_meal_upgrade'] == true;
+        final mealAddOnPrice =
+            _parseNullableDouble(itemMap['meal_add_on_price']) ?? 0;
 
         Product? product;
         if (pDetails != null) {
@@ -762,7 +811,15 @@ class Order {
             parentDealDetails?['name'],
           ]);
 
-          product = product.copyWith(price: isDealComponent ? 0 : unitPrice);
+          final parsedMealSoda = mealSodaDetails == null
+              ? null
+              : Product.fromJson(mealSodaDetails);
+          final baseMealPrice = unitPrice - mealAddOnPrice;
+          final displayUnitPrice = isMealUpgrade
+              ? (baseMealPrice > 0 ? baseMealPrice : 0.0)
+              : unitPrice;
+          product =
+              product.copyWith(price: isDealComponent ? 0 : displayUnitPrice);
           parsedItems.add(CartItem(
             lineId: itemMap['id']?.toString(),
             parentLineId: itemMap['parent_item']?.toString(),
@@ -775,6 +832,9 @@ class Order {
             sauces: CartSauceSelection.listFromJson(
               itemMap['selected_sauces'],
             ),
+            isMealUpgrade: isMealUpgrade,
+            mealAddOnPrice: mealAddOnPrice,
+            mealSodaProduct: parsedMealSoda,
           ));
         }
       }

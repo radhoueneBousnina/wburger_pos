@@ -92,19 +92,18 @@ class CartNotifier extends StateNotifier<CartState> {
   void addProduct(
     Product product, {
     List<CartSauceSelection> sauces = const [],
+    bool isMealUpgrade = false,
+    double mealAddOnPrice = 0,
+    Product? mealSodaProduct,
   }) {
-    final items = List<CartItem>.from(state.items);
-    final index = items.indexWhere(
-      (i) =>
-          i.product.id == product.id &&
-          i.note == null &&
-          CartSauceSelection.sameList(i.sauces, sauces),
-    );
-    if (index >= 0) {
-      items[index] = items[index].copyWith(quantity: items[index].quantity + 1);
-    } else {
-      items.add(CartItem(product: product, sauces: sauces));
-    }
+    final items = List<CartItem>.from(state.items)
+      ..add(CartItem(
+        product: product,
+        sauces: sauces,
+        isMealUpgrade: isMealUpgrade,
+        mealAddOnPrice: mealAddOnPrice,
+        mealSodaProduct: mealSodaProduct,
+      ));
     state = state.copyWith(items: items);
   }
 
@@ -136,6 +135,9 @@ class CartNotifier extends StateNotifier<CartState> {
       isDealComponent: items[index].isDealComponent,
       parentDealName: items[index].parentDealName,
       sauces: items[index].sauces,
+      isMealUpgrade: items[index].isMealUpgrade,
+      mealAddOnPrice: items[index].mealAddOnPrice,
+      mealSodaProduct: items[index].mealSodaProduct,
     );
     state = state.copyWith(items: items);
   }
@@ -152,6 +154,9 @@ class CartNotifier extends StateNotifier<CartState> {
       isDealComponent: items[index].isDealComponent,
       parentDealName: items[index].parentDealName,
       sauces: items[index].sauces,
+      isMealUpgrade: items[index].isMealUpgrade,
+      mealAddOnPrice: items[index].mealAddOnPrice,
+      mealSodaProduct: items[index].mealSodaProduct,
     );
     state = state.copyWith(items: items);
   }

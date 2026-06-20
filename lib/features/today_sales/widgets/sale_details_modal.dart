@@ -525,7 +525,7 @@ class _ItemsSection extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              group.item.product.name,
+                              group.item.displayName,
                               style: AppTextStyles.title.copyWith(
                                 color: AppColors.textPrimaryFor(context),
                                 fontWeight: FontWeight.w800,
@@ -542,7 +542,7 @@ class _ItemsSection extends StatelessWidget {
                             for (final component in group.components) ...[
                               const SizedBox(height: 4),
                               Text(
-                                '- ${component.quantity}x ${component.product.name}',
+                                '- ${component.quantity}x ${component.displayName}',
                                 style: AppTextStyles.bodySm.copyWith(
                                   color: AppColors.textPrimaryFor(context),
                                   fontWeight: FontWeight.w700,

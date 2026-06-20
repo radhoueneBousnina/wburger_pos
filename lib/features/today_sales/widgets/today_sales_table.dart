@@ -370,8 +370,8 @@ class _OrderItemsSummary extends StatelessWidget {
       final item = group.item;
       return Text(
         group.components.isEmpty
-            ? '${item.quantity}x ${item.product.name}'
-            : '${item.product.name} - ${group.components.map((component) => '${component.quantity}x ${component.product.name}').join(', ')}',
+            ? '${item.quantity}x ${item.displayName}'
+            : '${item.displayName} - ${group.components.map((component) => '${component.quantity}x ${component.displayName}').join(', ')}',
         style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
@@ -383,8 +383,8 @@ class _OrderItemsSummary extends StatelessWidget {
       children: [
         Text(
           itemGroups.first.components.isEmpty
-              ? '${itemGroups.first.item.quantity}x ${itemGroups.first.item.product.name} ...'
-              : '${itemGroups.first.item.product.name} ...',
+              ? '${itemGroups.first.item.quantity}x ${itemGroups.first.item.displayName} ...'
+              : '${itemGroups.first.item.displayName} ...',
           style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

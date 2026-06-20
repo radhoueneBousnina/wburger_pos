@@ -131,7 +131,7 @@ class ReceiptLineComponent {
 
   factory ReceiptLineComponent.fromCartItem(CartItem item) {
     return ReceiptLineComponent(
-      name: item.product.name,
+      name: item.displayName,
       quantity: item.quantity,
       note: item.note,
       sauceLines: item.sauceDisplayLines,
@@ -169,7 +169,7 @@ class ReceiptLine {
     final discountAmount = item.discountAmount;
     final discountPercent = item.discountPercent;
     return ReceiptLine(
-      name: item.product.name,
+      name: item.displayName,
       quantity: item.quantity,
       unitPrice: item.isDealComponent
           ? 0

@@ -40,7 +40,7 @@ void main() {
     expect(cart.discountAmountFor(PaymentType.other), 10);
   });
 
-  test('cart keeps different sauce selections on separate lines', () {
+  test('product taps always create separate cart lines', () {
     final product = Product(
       id: '1',
       categoryId: 'burgers',
@@ -68,9 +68,12 @@ void main() {
     notifier.addProduct(product, sauces: const [mayo]);
     notifier.addProduct(product, sauces: const [ketchup]);
 
-    expect(notifier.state.items, hasLength(2));
-    expect(notifier.state.items.first.quantity, 2);
+    expect(notifier.state.items, hasLength(3));
+    expect(notifier.state.items.first.quantity, 1);
     expect(notifier.state.items.last.quantity, 1);
+
+    notifier.updateQuantity(0, 2);
+    expect(notifier.state.items.first.quantity, 2);
 
     final json = notifier.state.items.first.toJson('order-1');
     expect(json['selected_sauces'], isA<List>());

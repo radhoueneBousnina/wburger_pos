@@ -19,6 +19,7 @@ import '../../../data/providers/app_providers.dart';
 import '../../../shared/widgets/app_image.dart';
 import '../../../shared/widgets/brand_patterns.dart';
 import '../../../shared/widgets/payment_modal.dart';
+import '../../../shared/widgets/top_bar.dart';
 import '../utils/qr_order_token.dart';
 
 part '../widgets/cart_panel.dart';
@@ -836,71 +837,84 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   Widget build(BuildContext context) {
     final layout = context.posLayout;
     final testMode = ref.watch(testModeProvider);
+    final showSalesMenuButton = layout.width < 1700;
 
     return Focus(
       focusNode: _salesFocusNode,
       autofocus: true,
-      child: Scaffold(
-        backgroundColor:
+      child: ColoredBox(
+        color:
             testMode.isActive ? AppColors.trainingBackground : AppColors.white,
-        floatingActionButton: _enableTestWebcamScanner
-            ? Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FloatingActionButton.small(
-                    heroTag: 'sample-ticket',
-                    onPressed: _printSampleReceipt,
-                    tooltip: 'Print sample ticket',
-                    backgroundColor: AppColors.blue,
-                    foregroundColor: AppColors.white,
-                    child: const Icon(Icons.print_rounded),
-                  ),
-                  const SizedBox(height: 10),
-                  FloatingActionButton.small(
-                    heroTag: 'test-qr',
-                    onPressed: _openTestWebcamScanner,
-                    tooltip: 'Test webcam QR scanner',
-                    backgroundColor: AppColors.yellow,
-                    foregroundColor: AppColors.blue,
-                    child: const Icon(Icons.qr_code_scanner_rounded),
-                  ),
-                ],
-              )
-            : null,
-        body: Stack(
+        child: Stack(
           children: [
-            if (layout.stackPanels)
-              Column(
-                children: [
-                  Expanded(
-                    flex: 7,
-                    child: _ProductsPanel(
-                      searchCtrl: _searchCtrl,
-                      onSearch: _onSearch,
-                      onSearchSubmitted: _handleSearchSubmitted,
-                      onCategorySelected: _onCategorySelected,
+            Positioned.fill(
+              child: layout.stackPanels
+                  ? Column(
+                      children: [
+                        TopBar(showMenuButton: showSalesMenuButton),
+                        Expanded(
+                          flex: 7,
+                          child: _ProductsPanel(
+                            searchCtrl: _searchCtrl,
+                            onSearch: _onSearch,
+                            onSearchSubmitted: _handleSearchSubmitted,
+                            onCategorySelected: _onCategorySelected,
+                          ),
+                        ),
+                        SizedBox(
+                            height: math.min(420, layout.height * 0.42),
+                            child: _CartPanel(onCheckout: _checkout)),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              TopBar(showMenuButton: showSalesMenuButton),
+                              Expanded(
+                                child: _ProductsPanel(
+                                  searchCtrl: _searchCtrl,
+                                  onSearch: _onSearch,
+                                  onSearchSubmitted: _handleSearchSubmitted,
+                                  onCategorySelected: _onCategorySelected,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                            width: layout.cartPanelWidth,
+                            child: _CartPanel(onCheckout: _checkout)),
+                      ],
                     ),
-                  ),
-                  SizedBox(
-                      height: math.min(420, layout.height * 0.42),
-                      child: _CartPanel(onCheckout: _checkout)),
-                ],
-              )
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: _ProductsPanel(
-                      searchCtrl: _searchCtrl,
-                      onSearch: _onSearch,
-                      onSearchSubmitted: _handleSearchSubmitted,
-                      onCategorySelected: _onCategorySelected,
+            ),
+            if (_enableTestWebcamScanner)
+              Positioned(
+                right: 18,
+                bottom: 18,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FloatingActionButton.small(
+                      heroTag: 'sample-ticket',
+                      onPressed: _printSampleReceipt,
+                      tooltip: 'Print sample ticket',
+                      backgroundColor: AppColors.blue,
+                      foregroundColor: AppColors.white,
+                      child: const Icon(Icons.print_rounded),
                     ),
-                  ),
-                  SizedBox(
-                      width: layout.cartPanelWidth,
-                      child: _CartPanel(onCheckout: _checkout)),
-                ],
+                    const SizedBox(height: 10),
+                    FloatingActionButton.small(
+                      heroTag: 'test-qr',
+                      onPressed: _openTestWebcamScanner,
+                      tooltip: 'Test webcam QR scanner',
+                      backgroundColor: AppColors.yellow,
+                      foregroundColor: AppColors.blue,
+                      child: const Icon(Icons.qr_code_scanner_rounded),
+                    ),
+                  ],
+                ),
               ),
             if (_isProcessingQr)
               const Positioned(

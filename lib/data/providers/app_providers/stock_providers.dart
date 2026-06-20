@@ -183,14 +183,10 @@ class StockNotifier extends StateNotifier<AsyncValue<List<StockItem>>> {
   }
 
   List<ProductSauceOption> sauceOptionsForProduct(Product product) {
-    final recipeOptions = product.sauceOptions.isNotEmpty
-        ? product.sauceOptions
-        : _recipeSauceOptionsForProductId(product.id, product.name);
-    if (recipeOptions.isEmpty) return const [];
+    if (!product.hasSauces) return const [];
     return _allSauceOptionsForProduct(
       productId: product.id,
       productName: product.name,
-      recipeOptions: recipeOptions,
     );
   }
 
@@ -198,65 +194,32 @@ class StockNotifier extends StateNotifier<AsyncValue<List<StockItem>>> {
     if (!meal.isMeal) return const [];
     return meal.mealComponents
         .map((component) {
-          final recipeOptions = component.sauceOptions.isNotEmpty
-              ? component.sauceOptions
-              : _recipeSauceOptionsForProductId(
-                  component.productId,
-                  component.name,
-                );
-          final options = recipeOptions.isEmpty
-              ? const <ProductSauceOption>[]
-              : _allSauceOptionsForProduct(
+          final options = component.hasSauces
+              ? _allSauceOptionsForProduct(
                   productId: component.productId,
                   productName: component.name,
-                  recipeOptions: recipeOptions,
-                );
+                )
+              : const <ProductSauceOption>[];
           return component.copyWith(sauceOptions: options);
         })
         .where((component) => component.sauceOptions.isNotEmpty)
         .toList();
   }
 
-  List<ProductSauceOption> _recipeSauceOptionsForProductId(
-    String productId,
-    String productName,
-  ) {
-    return _recipes
-        .where((line) => line.productId == productId && line.isSauce)
-        .map((line) => ProductSauceOption(
-              stockItemId: line.stockItemId,
-              name: line.stockItemName,
-              unit: line.stockItemUnit,
-              quantityRequired: line.quantity,
-              productId: productId,
-              productName: productName,
-            ))
-        .toList();
-  }
-
   List<ProductSauceOption> _allSauceOptionsForProduct({
     required String productId,
     required String productName,
-    required List<ProductSauceOption> recipeOptions,
   }) {
     final sauceStockItems =
         state.asData?.value.where((item) => item.isSauce).toList() ?? const [];
-    if (sauceStockItems.isEmpty) return recipeOptions;
-
-    final recipeByStockItemId = {
-      for (final option in recipeOptions) option.stockItemId: option,
-    };
-    final defaultQuantity = recipeOptions
-        .map((option) => option.quantityRequired)
-        .firstWhere((quantity) => quantity > 0, orElse: () => 1);
+    if (sauceStockItems.isEmpty) return const [];
 
     return sauceStockItems.map((stockItem) {
-      final recipeOption = recipeByStockItemId[stockItem.id];
       return ProductSauceOption(
         stockItemId: stockItem.id,
         name: stockItem.name,
         unit: stockItem.unit,
-        quantityRequired: recipeOption?.quantityRequired ?? defaultQuantity,
+        quantityRequired: 1,
         productId: productId,
         productName: productName,
       );
@@ -274,7 +237,7 @@ class StockNotifier extends StateNotifier<AsyncValue<List<StockItem>>> {
         final componentQuantity =
             component.quantity <= 0 ? 1 : component.quantity;
         for (final recipe in _recipesForProductId(component.productId)) {
-          if (recipe.isSauce) continue;
+          if (recipe.isSauce && component.hasSauces) continue;
           deltas[recipe.stockItemId] = (deltas[recipe.stockItemId] ?? 0) +
               (direction * recipe.quantity * componentQuantity * item.quantity);
         }
@@ -283,10 +246,23 @@ class StockNotifier extends StateNotifier<AsyncValue<List<StockItem>>> {
     }
 
     for (final recipe in _recipesForProduct(item.product)) {
-      if (recipe.isSauce) continue;
+      if (_shouldSkipRecipeLine(item.product, recipe)) continue;
       deltas[recipe.stockItemId] = (deltas[recipe.stockItemId] ?? 0) +
           (direction * recipe.quantity * item.quantity);
     }
+
+    final sodaProduct = item.mealSodaProduct;
+    if (item.isMealUpgrade && sodaProduct != null) {
+      for (final recipe in _recipesForProduct(sodaProduct)) {
+        if (_shouldSkipRecipeLine(sodaProduct, recipe)) continue;
+        deltas[recipe.stockItemId] = (deltas[recipe.stockItemId] ?? 0) +
+            (direction * recipe.quantity * item.quantity);
+      }
+    }
+  }
+
+  bool _shouldSkipRecipeLine(Product product, StockRecipeLine recipe) {
+    return recipe.isSauce && product.hasSauces;
   }
 
   void _addSelectedSauceDeltas(
@@ -296,37 +272,28 @@ class StockNotifier extends StateNotifier<AsyncValue<List<StockItem>>> {
   }) {
     for (final sauce in item.sauces) {
       if (sauce.stockItemId.isEmpty) continue;
-      final quantity = sauce.quantityRequired > 0
-          ? sauce.quantityRequired * _componentQuantityForSauce(item, sauce)
-          : _recipeQuantityForSauce(item, sauce);
+      final portionCount =
+          sauce.quantityRequired > 0 ? sauce.quantityRequired : 1;
+      final quantity = portionCount *
+          _saucePortionQuantity(sauce.stockItemId) *
+          _componentQuantityForSauce(item, sauce);
       if (quantity <= 0) continue;
       deltas[sauce.stockItemId] = (deltas[sauce.stockItemId] ?? 0) +
           (direction * quantity * item.quantity);
     }
   }
 
-  double _recipeQuantityForSauce(CartItem item, CartSauceSelection sauce) {
-    final selectedProductId =
-        sauce.productId?.isNotEmpty == true ? sauce.productId : null;
-    final productId =
-        selectedProductId ?? (item.product.isMeal ? null : item.product.id);
-    if (productId == null) return 0;
-
-    for (final recipe in _recipesForProductId(productId)) {
-      if (recipe.stockItemId != sauce.stockItemId) continue;
-      if (!recipe.isSauce) continue;
-      var quantity = recipe.quantity;
-      if (item.product.isMeal) {
-        for (final component in item.product.mealComponents) {
-          if (component.productId == productId) {
-            quantity *= component.quantity <= 0 ? 1 : component.quantity;
-            break;
-          }
-        }
+  double _saucePortionQuantity(String stockItemId) {
+    final stockItems = state.asData?.value ?? const <StockItem>[];
+    for (final item in stockItems) {
+      if (item.id != stockItemId) continue;
+      final unit = item.unit.trim().toLowerCase();
+      if (unit == 'kg' || unit == 'kilogram' || unit == 'kilograms') {
+        return 0.050;
       }
-      return quantity;
+      return 50.000;
     }
-    return 0;
+    return 50.000;
   }
 
   int _componentQuantityForSauce(CartItem item, CartSauceSelection sauce) {

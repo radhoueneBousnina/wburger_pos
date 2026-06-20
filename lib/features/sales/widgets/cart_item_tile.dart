@@ -36,42 +36,53 @@ class _CartItemTile extends ConsumerWidget {
         children: [
           Row(
             children: [
-              // Qty stepper — bigger
               if (readonly && hasComponents)
-                SizedBox(width: layout.isCompact ? 54 : 60)
+                SizedBox(width: layout.isCompact ? 42 : 46)
               else if (!readonly)
                 _QtyBtn(
-                    icon: Icons.remove_rounded,
-                    onTap: () => cart.updateQuantity(index, item.quantity - 1))
+                  icon: Icons.remove_rounded,
+                  onTap: () => cart.updateQuantity(index, item.quantity - 1),
+                )
               else
                 _ReadonlyQtyBadge(quantity: item.quantity),
               if (!readonly)
                 Container(
-                  width: layout.isCompact ? 48 : 54,
+                  width: layout.isCompact ? 30 : 34,
                   alignment: Alignment.center,
                   child: Text(
                     '${item.quantity}',
                     style: AppTextStyles.title.copyWith(
-                      fontSize: layout.isCompact ? 18 : 20,
+                      fontSize: layout.isCompact ? 16 : 18,
                       color: AppColors.textPrimaryFor(context),
                     ),
                   ),
                 ),
               if (!readonly)
                 _QtyBtn(
-                    icon: Icons.add_rounded,
-                    onTap: () => cart.updateQuantity(index, item.quantity + 1)),
-              const SizedBox(width: 10),
+                  icon: Icons.add_rounded,
+                  onTap: () => cart.updateQuantity(index, item.quantity + 1),
+                ),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item.product.name,
+                    Text(item.displayName,
                         style: AppTextStyles.titleSm.copyWith(
                           color: AppColors.textPrimaryFor(context),
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis),
+                    if (item.isMealUpgrade)
+                      Text(
+                        'Includes ${item.mealSodaProduct?.name ?? 'soda'} • +${item.mealAddOnPrice.toStringAsFixed(3)} DT',
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.textSecondaryFor(context),
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     if (hasComponents)
                       for (final component in components)
                         _DealComponentLine(component: component),
@@ -97,56 +108,62 @@ class _CartItemTile extends ConsumerWidget {
                     .copyWith(fontSize: layout.isCompact ? 16 : 18),
               ),
               if (!readonly) ...[
-                const SizedBox(width: 8),
-                PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_vert_rounded,
-                    size: layout.isCompact ? 30 : 32,
-                    color: AppColors.textSecondaryFor(context),
-                  ),
-                  padding: EdgeInsets.zero,
-                  iconSize: layout.isCompact ? 30 : 32,
-                  tooltip: 'Options',
-                  onSelected: (val) {
-                    if (val == 'note') {
-                      _showNoteDialog(context, ref, index, item.note);
-                    }
-                    if (val == 'discount') {
-                      if (canApplyDiscount) {
-                        _showDiscountDialog(
-                            context, ref, index, item.discountPercent);
-                      }
-                    }
-                    if (val == 'remove') cart.removeItem(index);
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'note',
-                      child: Row(children: [
-                        Icon(Icons.note_rounded, size: 18),
-                        SizedBox(width: 10),
-                        Text('Add Note')
-                      ]),
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: layout.isCompact ? 34 : 38,
+                  child: PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    tooltip: 'Options',
+                    child: SizedBox(
+                      height: layout.isCompact ? 42 : 46,
+                      child: Icon(
+                        Icons.more_vert_rounded,
+                        size: layout.isCompact ? 24 : 26,
+                        color: AppColors.textSecondaryFor(context),
+                      ),
                     ),
-                    if (canApplyDiscount)
+                    onSelected: (val) {
+                      if (val == 'note') {
+                        _showNoteDialog(context, ref, index, item.note);
+                      }
+                      if (val == 'discount') {
+                        if (canApplyDiscount) {
+                          _showDiscountDialog(
+                              context, ref, index, item.discountPercent);
+                        }
+                      }
+                      if (val == 'remove') cart.removeItem(index);
+                    },
+                    itemBuilder: (_) => [
                       const PopupMenuItem(
-                        value: 'discount',
+                        value: 'note',
                         child: Row(children: [
-                          Icon(Icons.local_offer_rounded, size: 18),
+                          Icon(Icons.note_rounded, size: 18),
                           SizedBox(width: 10),
-                          Text('Discount')
+                          Text('Add Note')
                         ]),
                       ),
-                    const PopupMenuItem(
-                      value: 'remove',
-                      child: Row(children: [
-                        Icon(Icons.delete_rounded,
-                            size: 18, color: AppColors.error),
-                        SizedBox(width: 10),
-                        Text('Remove', style: TextStyle(color: AppColors.error))
-                      ]),
-                    ),
-                  ],
+                      if (canApplyDiscount)
+                        const PopupMenuItem(
+                          value: 'discount',
+                          child: Row(children: [
+                            Icon(Icons.local_offer_rounded, size: 18),
+                            SizedBox(width: 10),
+                            Text('Discount')
+                          ]),
+                        ),
+                      const PopupMenuItem(
+                        value: 'remove',
+                        child: Row(children: [
+                          Icon(Icons.delete_rounded,
+                              size: 18, color: AppColors.error),
+                          SizedBox(width: 10),
+                          Text('Remove',
+                              style: TextStyle(color: AppColors.error))
+                        ]),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ],
@@ -280,7 +297,7 @@ class _DealComponentLine extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '- ${component.quantity}x ${component.product.name}',
+            '- ${component.quantity}x ${component.displayName}',
             style: AppTextStyles.bodySm.copyWith(
               color: AppColors.textPrimaryFor(context),
               fontWeight: FontWeight.w700,
@@ -381,19 +398,20 @@ class _ReadonlyQtyBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = context.posLayout;
+    final size = layout.isCompact ? 42.0 : 46.0;
 
     return Container(
-      width: layout.isCompact ? 54 : 60,
-      height: layout.iconTouchTarget,
+      width: size,
+      height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: AppColors.elevatedSurfaceFor(context),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         'x$quantity',
         style: AppTextStyles.title.copyWith(
-          fontSize: layout.isCompact ? 16 : 18,
+          fontSize: layout.isCompact ? 14 : 16,
           color: AppColors.textPrimaryFor(context),
         ),
       ),
@@ -409,22 +427,23 @@ class _QtyBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = context.posLayout;
+    final size = layout.isCompact ? 42.0 : 46.0;
 
     return Material(
       color: AppColors.elevatedSurfaceFor(context),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          width: layout.iconTouchTarget,
-          height: layout.iconTouchTarget,
+          width: size,
+          height: size,
           decoration: BoxDecoration(
             color: AppColors.elevatedSurfaceFor(context),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon,
-              size: layout.isCompact ? 26 : 28, color: AppColors.blue),
+              size: layout.isCompact ? 22 : 24, color: AppColors.blue),
         ),
       ),
     );
