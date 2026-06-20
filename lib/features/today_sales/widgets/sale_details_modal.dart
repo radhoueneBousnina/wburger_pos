@@ -559,6 +559,28 @@ class _ItemsSection extends StatelessWidget {
                                   ),
                                 ),
                               ],
+                              for (final sauce
+                                  in component.sauceDisplayLines) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  '  - Sauce: $sauce',
+                                  style: AppTextStyles.bodySm.copyWith(
+                                    color: AppColors.textSecondaryFor(context),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ],
+                            for (final sauce
+                                in group.item.sauceDisplayLines) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                '- Sauce: $sauce',
+                                style: AppTextStyles.bodySm.copyWith(
+                                  color: AppColors.textSecondaryFor(context),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ],
                             if (group.item.note?.trim().isNotEmpty == true) ...[
                               const SizedBox(height: 4),

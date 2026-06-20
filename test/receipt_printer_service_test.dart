@@ -244,6 +244,39 @@ void main() {
     );
   });
 
+  test('prints selected sauces one per receipt line', () {
+    final item = CartItem(
+      product: Product(
+        id: 'burger-1',
+        categoryId: 'burgers',
+        name: 'Classic Burger',
+        description: '',
+        price: 12,
+      ),
+      sauces: const [
+        CartSauceSelection(stockItemId: '11', name: 'Ketchup'),
+        CartSauceSelection(stockItemId: '12', name: 'Mayo'),
+      ],
+    );
+
+    final preview = ReceiptPrinterService.instance.buildPreviewText(
+      ReceiptData(
+        ticketNumber: 'W-020526-104',
+        soldAt: DateTime(2026, 5, 2, 18, 42),
+        lines: [ReceiptLine.fromCartItem(item)],
+        orderType: OrderType.takeaway,
+        sourceLabel: 'POS sale',
+        subtotal: item.originalTotal,
+        discountAmount: 0,
+        totalAmount: item.total,
+      ),
+      printedAt: DateTime(2026, 5, 2, 18, 42),
+    );
+
+    expect(preview, contains('- Sauce: Ketchup'));
+    expect(preview, contains('- Sauce: Mayo'));
+  });
+
   test('reprint receipt keeps subtotal, discount, and total consistent', () {
     final item = CartItem(
       product: Product(

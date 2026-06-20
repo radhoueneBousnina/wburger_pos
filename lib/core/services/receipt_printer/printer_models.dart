@@ -120,11 +120,13 @@ class ReceiptLineComponent {
   final String name;
   final int quantity;
   final String? note;
+  final List<String> sauceLines;
 
   const ReceiptLineComponent({
     required this.name,
     required this.quantity,
     this.note,
+    this.sauceLines = const [],
   });
 
   factory ReceiptLineComponent.fromCartItem(CartItem item) {
@@ -132,6 +134,7 @@ class ReceiptLineComponent {
       name: item.product.name,
       quantity: item.quantity,
       note: item.note,
+      sauceLines: item.sauceDisplayLines,
     );
   }
 }
@@ -145,6 +148,7 @@ class ReceiptLine {
   final bool isDealComponent;
   final String? parentDealName;
   final List<ReceiptLineComponent> components;
+  final List<String> sauceLines;
 
   const ReceiptLine({
     required this.name,
@@ -155,6 +159,7 @@ class ReceiptLine {
     this.isDealComponent = false,
     this.parentDealName,
     this.components = const [],
+    this.sauceLines = const [],
   });
 
   factory ReceiptLine.fromCartItem(
@@ -184,6 +189,7 @@ class ReceiptLine {
       isDealComponent: item.isDealComponent,
       parentDealName: item.parentDealName,
       components: components.map(ReceiptLineComponent.fromCartItem).toList(),
+      sauceLines: item.sauceDisplayLines,
     );
   }
 

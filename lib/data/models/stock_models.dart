@@ -8,6 +8,7 @@ class StockItem {
   final double minThreshold;
   final double purchasePrice;
   final double basePrice;
+  final bool isSauce;
 
   const StockItem({
     required this.id,
@@ -17,6 +18,7 @@ class StockItem {
     required this.minThreshold,
     required this.purchasePrice,
     required this.basePrice,
+    this.isSauce = false,
   });
 
   bool get isLowStock => quantity <= minThreshold;
@@ -31,6 +33,7 @@ class StockItem {
       minThreshold: minThreshold,
       purchasePrice: purchasePrice,
       basePrice: basePrice,
+      isSauce: isSauce,
     );
   }
 
@@ -47,19 +50,26 @@ class StockItem {
       purchasePrice:
           double.tryParse(json['base_price']?.toString() ?? '0') ?? 0.0,
       basePrice: double.tryParse(json['base_price']?.toString() ?? '0') ?? 0.0,
+      isSauce: json['is_sauce'] == true,
     );
   }
 }
 
 class StockRecipeLine {
   final String stockItemId;
+  final String stockItemName;
+  final String stockItemUnit;
   final String? productId;
   final String? mealId;
   final double quantity;
+  final bool isSauce;
 
   const StockRecipeLine({
     required this.stockItemId,
+    required this.stockItemName,
+    required this.stockItemUnit,
     required this.quantity,
+    this.isSauce = false,
     this.productId,
     this.mealId,
   });
@@ -70,9 +80,18 @@ class StockRecipeLine {
       return value?.toString();
     }
 
+    final stockDetails = json['stock_item_details'];
+    final stockMap = stockDetails is Map ? stockDetails : const {};
+
     return StockRecipeLine(
       stockItemId:
           idFrom(json['stock_item'] ?? json['stock_item_details']) ?? '',
+      stockItemName: (json['stock_item_name'] ??
+              stockMap['name'] ??
+              json['name'] ??
+              'Stock item')
+          .toString(),
+      stockItemUnit: (json['unit'] ?? stockMap['unit'] ?? '').toString(),
       productId: idFrom(json['product'] ?? json['product_details']),
       mealId: idFrom(json['meal'] ?? json['meal_details']),
       quantity: double.tryParse(
@@ -83,6 +102,7 @@ class StockRecipeLine {
                 .toString(),
           ) ??
           0,
+      isSauce: json['is_sauce'] == true || stockMap['is_sauce'] == true,
     );
   }
 }

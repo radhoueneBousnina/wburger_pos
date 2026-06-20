@@ -39,4 +39,41 @@ void main() {
     expect(cart.payableTotalFor(PaymentType.other), 10);
     expect(cart.discountAmountFor(PaymentType.other), 10);
   });
+
+  test('cart keeps different sauce selections on separate lines', () {
+    final product = Product(
+      id: '1',
+      categoryId: 'burgers',
+      name: 'Classic',
+      description: '',
+      price: 10,
+    );
+    const ketchup = CartSauceSelection(
+      stockItemId: '11',
+      name: 'Ketchup',
+      productId: '1',
+      productName: 'Classic',
+      quantityRequired: 0.02,
+    );
+    const mayo = CartSauceSelection(
+      stockItemId: '12',
+      name: 'Mayo',
+      productId: '1',
+      productName: 'Classic',
+      quantityRequired: 0.02,
+    );
+
+    final notifier = CartNotifier();
+    notifier.addProduct(product, sauces: const [ketchup]);
+    notifier.addProduct(product, sauces: const [mayo]);
+    notifier.addProduct(product, sauces: const [ketchup]);
+
+    expect(notifier.state.items, hasLength(2));
+    expect(notifier.state.items.first.quantity, 2);
+    expect(notifier.state.items.last.quantity, 1);
+
+    final json = notifier.state.items.first.toJson('order-1');
+    expect(json['selected_sauces'], isA<List>());
+    expect(json['selected_sauces'].first['name'], 'Ketchup');
+  });
 }

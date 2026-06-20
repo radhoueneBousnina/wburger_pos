@@ -71,6 +71,213 @@ class Category {
   }
 }
 
+class ProductSauceOption {
+  final String stockItemId;
+  final String name;
+  final String unit;
+  final double quantityRequired;
+  final String? productId;
+  final String? productName;
+
+  const ProductSauceOption({
+    required this.stockItemId,
+    required this.name,
+    required this.unit,
+    required this.quantityRequired,
+    this.productId,
+    this.productName,
+  });
+
+  factory ProductSauceOption.fromRecipeJson(
+    Map<String, dynamic> json, {
+    String? productId,
+    String? productName,
+  }) {
+    final stockDetails = _asStringKeyMap(json['stock_item_details']);
+    final stockItemId = _firstNonEmptyString([
+          json['stock_item'],
+          json['stock_item_id'],
+          stockDetails?['id'],
+        ]) ??
+        '';
+    final stockName = _firstNonEmptyString([
+          json['name'],
+          json['stock_item_name'],
+          stockDetails?['name'],
+        ]) ??
+        'Sauce';
+
+    return ProductSauceOption(
+      stockItemId: stockItemId,
+      name: stockName,
+      unit: _firstNonEmptyString([json['unit'], stockDetails?['unit']]) ?? '',
+      quantityRequired:
+          _parseNullableDouble(json['quantity_required'] ?? json['quantity']) ??
+              0,
+      productId: productId,
+      productName: productName,
+    );
+  }
+
+  CartSauceSelection toSelection({
+    String? productId,
+    String? productName,
+    double quantityMultiplier = 1,
+  }) {
+    return CartSauceSelection(
+      stockItemId: stockItemId,
+      name: name,
+      productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
+      quantityRequired: quantityRequired * quantityMultiplier,
+    );
+  }
+}
+
+class MealComponent {
+  final String productId;
+  final String name;
+  final int quantity;
+  final List<ProductSauceOption> sauceOptions;
+
+  const MealComponent({
+    required this.productId,
+    required this.name,
+    required this.quantity,
+    this.sauceOptions = const [],
+  });
+
+  factory MealComponent.fromJson(Map<String, dynamic> json) {
+    final productMap = _asStringKeyMap(json['product']);
+    final productId = _firstNonEmptyString([
+          json['product_id'],
+          json['product'],
+          productMap?['id'],
+        ]) ??
+        '';
+    final name = _firstNonEmptyString([
+          json['name'],
+          json['product_name'],
+          productMap?['name'],
+        ]) ??
+        'Product';
+
+    return MealComponent(
+      productId: productId,
+      name: name,
+      quantity: _parseInt(json['quantity'], fallback: 1),
+      sauceOptions: _parseRecipeSauceOptions(
+        productMap?['recipe'],
+        productId: productId,
+        productName: name,
+      ),
+    );
+  }
+
+  MealComponent copyWith({
+    List<ProductSauceOption>? sauceOptions,
+  }) {
+    return MealComponent(
+      productId: productId,
+      name: name,
+      quantity: quantity,
+      sauceOptions: sauceOptions ?? this.sauceOptions,
+    );
+  }
+}
+
+class CartSauceSelection {
+  final String stockItemId;
+  final String name;
+  final String? productId;
+  final String? productName;
+  final double quantityRequired;
+
+  const CartSauceSelection({
+    required this.stockItemId,
+    required this.name,
+    this.productId,
+    this.productName,
+    this.quantityRequired = 0,
+  });
+
+  String displayLabel({bool includeProduct = false}) {
+    final cleanName = name.trim().isNotEmpty ? name.trim() : 'Sauce';
+    final cleanProduct = productName?.trim();
+    if (includeProduct && cleanProduct != null && cleanProduct.isNotEmpty) {
+      return '$cleanProduct: $cleanName';
+    }
+    return cleanName;
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'stock_item': stockItemId,
+      'name': name,
+      if (productId != null && productId!.isNotEmpty) 'product_id': productId,
+      if (productName != null && productName!.isNotEmpty)
+        'product_name': productName,
+      if (quantityRequired > 0)
+        'quantity_required': quantityRequired.toStringAsFixed(3),
+    };
+  }
+
+  factory CartSauceSelection.fromJson(Map<String, dynamic> json) {
+    final stockDetails = _asStringKeyMap(json['stock_item_details']);
+    return CartSauceSelection(
+      stockItemId: _firstNonEmptyString([
+            json['stock_item'],
+            json['stock_item_id'],
+            json['id'],
+            stockDetails?['id'],
+          ]) ??
+          '',
+      name: _firstNonEmptyString([
+            json['name'],
+            json['label'],
+            json['stock_item_name'],
+            stockDetails?['name'],
+          ]) ??
+          'Sauce',
+      productId: _firstNonEmptyString([json['product_id'], json['product']]),
+      productName: _firstNonEmptyString([
+        json['product_name'],
+        json['product_label'],
+      ]),
+      quantityRequired:
+          _parseNullableDouble(json['quantity_required'] ?? json['quantity']) ??
+              0,
+    );
+  }
+
+  static List<CartSauceSelection> listFromJson(Object? value) {
+    if (value is! List) return const [];
+    return value
+        .whereType<Map>()
+        .map((json) => CartSauceSelection.fromJson(
+              Map<String, dynamic>.from(json),
+            ))
+        .where((sauce) => sauce.stockItemId.isNotEmpty || sauce.name.isNotEmpty)
+        .toList();
+  }
+
+  static bool sameList(
+    List<CartSauceSelection> left,
+    List<CartSauceSelection> right,
+  ) {
+    if (left.length != right.length) return false;
+    final leftKeys = left.map((sauce) => sauce._signature).toList()..sort();
+    final rightKeys = right.map((sauce) => sauce._signature).toList()..sort();
+    for (var index = 0; index < leftKeys.length; index++) {
+      if (leftKeys[index] != rightKeys[index]) return false;
+    }
+    return true;
+  }
+
+  String get _signature =>
+      '${productId ?? ''}|$stockItemId|${quantityRequired.toStringAsFixed(3)}';
+}
+
 class Product {
   final String id;
   final String categoryId;
@@ -82,6 +289,8 @@ class Product {
   final int? pointsPrice;
   final bool isActive;
   final bool isMeal;
+  final List<ProductSauceOption> sauceOptions;
+  final List<MealComponent> mealComponents;
 
   const Product({
     required this.id,
@@ -94,31 +303,41 @@ class Product {
     this.pointsPrice,
     this.isActive = true,
     this.isMeal = false,
+    this.sauceOptions = const [],
+    this.mealComponents = const [],
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
+    final id = json['id'].toString();
     final categoryValue = json['category'];
     final categoryId = categoryValue is Map<String, dynamic>
         ? categoryValue['id']?.toString()
         : categoryValue is Map
             ? categoryValue['id']?.toString()
             : json['category_id']?.toString();
+    final name = json['name'] as String? ?? 'Unknown';
 
     return Product(
-      id: json['id'].toString(),
+      id: id,
       categoryId: categoryId ?? '',
-      name: json['name'] as String? ?? 'Unknown',
+      name: name,
       description: json['description'] as String? ?? '',
       price: double.tryParse((json['price'] ?? '0').toString()) ?? 0.0,
       imageUrl: ApiConstants.resolveImageUrl(json['image'] as String?),
       pointsPrice: json['points_price'] as int?,
       isActive: json['is_active'] as bool? ?? true,
       isMeal: false,
+      sauceOptions: _parseRecipeSauceOptions(
+        json['recipe'],
+        productId: id,
+        productName: name,
+      ),
     );
   }
 
   // Helper factory to map Meal backend to Product frontend model
   factory Product.fromMealJson(Map<String, dynamic> json) {
+    final items = json['items'] as List? ?? const [];
     return Product(
       id: json['id'].toString(),
       categoryId: 'meals', // We will inject a virtual "Meals" category
@@ -129,6 +348,13 @@ class Product {
       pointsPrice: null, // Meals cannot be bought with points
       isActive: json['is_active'] as bool? ?? true,
       isMeal: true,
+      mealComponents: items
+          .whereType<Map>()
+          .map((item) => MealComponent.fromJson(
+                Map<String, dynamic>.from(item),
+              ))
+          .where((item) => item.productId.isNotEmpty)
+          .toList(),
     );
   }
 
@@ -143,6 +369,8 @@ class Product {
     int? pointsPrice,
     bool? isActive,
     bool? isMeal,
+    List<ProductSauceOption>? sauceOptions,
+    List<MealComponent>? mealComponents,
   }) {
     return Product(
       id: id ?? this.id,
@@ -155,6 +383,8 @@ class Product {
       pointsPrice: pointsPrice ?? this.pointsPrice,
       isActive: isActive ?? this.isActive,
       isMeal: isMeal ?? this.isMeal,
+      sauceOptions: sauceOptions ?? this.sauceOptions,
+      mealComponents: mealComponents ?? this.mealComponents,
     );
   }
 
@@ -190,6 +420,7 @@ class CartItem {
   double? discountPercent;
   final bool isDealComponent;
   final String? parentDealName;
+  final List<CartSauceSelection> sauces;
 
   CartItem({
     this.lineId,
@@ -200,6 +431,7 @@ class CartItem {
     this.discountPercent,
     this.isDealComponent = false,
     this.parentDealName,
+    this.sauces = const [],
   });
 
   double get unitPrice => isDealComponent
@@ -217,6 +449,10 @@ class CartItem {
     return discount > 0 ? discount : 0;
   }
 
+  List<String> get sauceDisplayLines => sauces
+      .map((sauce) => sauce.displayLabel(includeProduct: product.isMeal))
+      .toList();
+
   CartItem copyWith({
     String? lineId,
     String? parentLineId,
@@ -226,6 +462,7 @@ class CartItem {
     double? discountPercent,
     bool? isDealComponent,
     String? parentDealName,
+    List<CartSauceSelection>? sauces,
   }) {
     return CartItem(
       lineId: lineId ?? this.lineId,
@@ -236,6 +473,7 @@ class CartItem {
       discountPercent: discountPercent ?? this.discountPercent,
       isDealComponent: isDealComponent ?? this.isDealComponent,
       parentDealName: parentDealName ?? this.parentDealName,
+      sauces: sauces ?? this.sauces,
     );
   }
 
@@ -251,6 +489,8 @@ class CartItem {
       'unit_price':
           (includeItemDiscount ? unitPrice : product.price).toStringAsFixed(3),
       if (note != null && note!.isNotEmpty) 'note': note,
+      if (sauces.isNotEmpty)
+        'selected_sauces': sauces.map((sauce) => sauce.toJson()).toList(),
     };
   }
 }
@@ -532,6 +772,9 @@ class Order {
             discountPercent: null, // Deals compute total instead
             isDealComponent: isDealComponent,
             parentDealName: isDealComponent ? parentDealName : null,
+            sauces: CartSauceSelection.listFromJson(
+              itemMap['selected_sauces'],
+            ),
           ));
         }
       }
@@ -584,6 +827,31 @@ class Order {
       hasBackendTotal: json.containsKey('total_amount'),
     );
   }
+}
+
+List<ProductSauceOption> _parseRecipeSauceOptions(
+  Object? recipe, {
+  String? productId,
+  String? productName,
+}) {
+  final recipeMap = _asStringKeyMap(recipe);
+  final rawItems = recipeMap?['items'];
+  if (rawItems is! List) return const [];
+
+  return rawItems
+      .whereType<Map>()
+      .map((item) => Map<String, dynamic>.from(item))
+      .where((item) {
+        final stockDetails = _asStringKeyMap(item['stock_item_details']);
+        return item['is_sauce'] == true || stockDetails?['is_sauce'] == true;
+      })
+      .map((item) => ProductSauceOption.fromRecipeJson(
+            item,
+            productId: productId,
+            productName: productName,
+          ))
+      .where((option) => option.stockItemId.isNotEmpty)
+      .toList();
 }
 
 Map<String, dynamic>? _asStringKeyMap(Object? value) {

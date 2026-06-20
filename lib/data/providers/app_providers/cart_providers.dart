@@ -89,14 +89,21 @@ class CartState {
 class CartNotifier extends StateNotifier<CartState> {
   CartNotifier() : super(const CartState());
 
-  void addProduct(Product product) {
+  void addProduct(
+    Product product, {
+    List<CartSauceSelection> sauces = const [],
+  }) {
     final items = List<CartItem>.from(state.items);
-    final index =
-        items.indexWhere((i) => i.product.id == product.id && i.note == null);
+    final index = items.indexWhere(
+      (i) =>
+          i.product.id == product.id &&
+          i.note == null &&
+          CartSauceSelection.sameList(i.sauces, sauces),
+    );
     if (index >= 0) {
       items[index] = items[index].copyWith(quantity: items[index].quantity + 1);
     } else {
-      items.add(CartItem(product: product));
+      items.add(CartItem(product: product, sauces: sauces));
     }
     state = state.copyWith(items: items);
   }
@@ -128,6 +135,7 @@ class CartNotifier extends StateNotifier<CartState> {
       discountPercent: items[index].discountPercent,
       isDealComponent: items[index].isDealComponent,
       parentDealName: items[index].parentDealName,
+      sauces: items[index].sauces,
     );
     state = state.copyWith(items: items);
   }
@@ -143,6 +151,7 @@ class CartNotifier extends StateNotifier<CartState> {
       discountPercent: percent,
       isDealComponent: items[index].isDealComponent,
       parentDealName: items[index].parentDealName,
+      sauces: items[index].sauces,
     );
     state = state.copyWith(items: items);
   }

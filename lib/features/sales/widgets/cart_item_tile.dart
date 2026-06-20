@@ -31,121 +31,131 @@ class _CartItemTile extends ConsumerWidget {
         horizontal: layout.isCompact ? 12 : 16,
         vertical: layout.isCompact ? 10 : 12,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Qty stepper — bigger
-          if (readonly && hasComponents)
-            SizedBox(width: layout.isCompact ? 54 : 60)
-          else if (!readonly)
-            _QtyBtn(
-                icon: Icons.remove_rounded,
-                onTap: () => cart.updateQuantity(index, item.quantity - 1))
-          else
-            _ReadonlyQtyBadge(quantity: item.quantity),
-          if (!readonly)
-            Container(
-              width: layout.isCompact ? 48 : 54,
-              alignment: Alignment.center,
-              child: Text(
-                '${item.quantity}',
-                style: AppTextStyles.title.copyWith(
-                  fontSize: layout.isCompact ? 18 : 20,
-                  color: AppColors.textPrimaryFor(context),
-                ),
-              ),
-            ),
-          if (!readonly)
-            _QtyBtn(
-                icon: Icons.add_rounded,
-                onTap: () => cart.updateQuantity(index, item.quantity + 1)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.product.name,
-                    style: AppTextStyles.titleSm.copyWith(
+          Row(
+            children: [
+              // Qty stepper — bigger
+              if (readonly && hasComponents)
+                SizedBox(width: layout.isCompact ? 54 : 60)
+              else if (!readonly)
+                _QtyBtn(
+                    icon: Icons.remove_rounded,
+                    onTap: () => cart.updateQuantity(index, item.quantity - 1))
+              else
+                _ReadonlyQtyBadge(quantity: item.quantity),
+              if (!readonly)
+                Container(
+                  width: layout.isCompact ? 48 : 54,
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${item.quantity}',
+                    style: AppTextStyles.title.copyWith(
+                      fontSize: layout.isCompact ? 18 : 20,
                       color: AppColors.textPrimaryFor(context),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                if (hasComponents)
-                  for (final component in components)
-                    _DealComponentLine(component: component),
-                if (effectiveNote != null)
-                  Text(
-                    effectiveNote,
-                    style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.textSecondaryFor(context),
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                if (item.discountPercent != null)
-                  Text('🏷 -${item.discountPercent!.toStringAsFixed(0)}%',
-                      style: AppTextStyles.bodySm
-                          .copyWith(color: AppColors.success)),
-              ],
-            ),
-          ),
-          Text(
-            item.total.toStringAsFixed(1),
-            style: AppTextStyles.priceSm
-                .copyWith(fontSize: layout.isCompact ? 16 : 18),
-          ),
-          if (!readonly) ...[
-            const SizedBox(width: 8),
-            PopupMenuButton<String>(
-              icon: Icon(
-                Icons.more_vert_rounded,
-                size: layout.isCompact ? 30 : 32,
-                color: AppColors.textSecondaryFor(context),
+                ),
+              if (!readonly)
+                _QtyBtn(
+                    icon: Icons.add_rounded,
+                    onTap: () => cart.updateQuantity(index, item.quantity + 1)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.product.name,
+                        style: AppTextStyles.titleSm.copyWith(
+                          color: AppColors.textPrimaryFor(context),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                    if (hasComponents)
+                      for (final component in components)
+                        _DealComponentLine(component: component),
+                    if (effectiveNote != null)
+                      Text(
+                        effectiveNote,
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.textSecondaryFor(context),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (item.discountPercent != null)
+                      Text('🏷 -${item.discountPercent!.toStringAsFixed(0)}%',
+                          style: AppTextStyles.bodySm
+                              .copyWith(color: AppColors.success)),
+                  ],
+                ),
               ),
-              padding: EdgeInsets.zero,
-              iconSize: layout.isCompact ? 30 : 32,
-              tooltip: 'Options',
-              onSelected: (val) {
-                if (val == 'note') {
-                  _showNoteDialog(context, ref, index, item.note);
-                }
-                if (val == 'discount') {
-                  if (canApplyDiscount) {
-                    _showDiscountDialog(
-                        context, ref, index, item.discountPercent);
-                  }
-                }
-                if (val == 'remove') cart.removeItem(index);
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                  value: 'note',
-                  child: Row(children: [
-                    Icon(Icons.note_rounded, size: 18),
-                    SizedBox(width: 10),
-                    Text('Add Note')
-                  ]),
-                ),
-                if (canApplyDiscount)
-                  const PopupMenuItem(
-                    value: 'discount',
-                    child: Row(children: [
-                      Icon(Icons.local_offer_rounded, size: 18),
-                      SizedBox(width: 10),
-                      Text('Discount')
-                    ]),
+              Text(
+                item.total.toStringAsFixed(1),
+                style: AppTextStyles.priceSm
+                    .copyWith(fontSize: layout.isCompact ? 16 : 18),
+              ),
+              if (!readonly) ...[
+                const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    size: layout.isCompact ? 30 : 32,
+                    color: AppColors.textSecondaryFor(context),
                   ),
-                const PopupMenuItem(
-                  value: 'remove',
-                  child: Row(children: [
-                    Icon(Icons.delete_rounded,
-                        size: 18, color: AppColors.error),
-                    SizedBox(width: 10),
-                    Text('Remove', style: TextStyle(color: AppColors.error))
-                  ]),
+                  padding: EdgeInsets.zero,
+                  iconSize: layout.isCompact ? 30 : 32,
+                  tooltip: 'Options',
+                  onSelected: (val) {
+                    if (val == 'note') {
+                      _showNoteDialog(context, ref, index, item.note);
+                    }
+                    if (val == 'discount') {
+                      if (canApplyDiscount) {
+                        _showDiscountDialog(
+                            context, ref, index, item.discountPercent);
+                      }
+                    }
+                    if (val == 'remove') cart.removeItem(index);
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'note',
+                      child: Row(children: [
+                        Icon(Icons.note_rounded, size: 18),
+                        SizedBox(width: 10),
+                        Text('Add Note')
+                      ]),
+                    ),
+                    if (canApplyDiscount)
+                      const PopupMenuItem(
+                        value: 'discount',
+                        child: Row(children: [
+                          Icon(Icons.local_offer_rounded, size: 18),
+                          SizedBox(width: 10),
+                          Text('Discount')
+                        ]),
+                      ),
+                    const PopupMenuItem(
+                      value: 'remove',
+                      child: Row(children: [
+                        Icon(Icons.delete_rounded,
+                            size: 18, color: AppColors.error),
+                        SizedBox(width: 10),
+                        Text('Remove', style: TextStyle(color: AppColors.error))
+                      ]),
+                    ),
+                  ],
                 ),
               ],
+            ],
+          ),
+          if (item.sauces.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _SauceLines(lines: item.sauceDisplayLines),
             ),
-          ],
         ],
       ),
     );
@@ -286,6 +296,76 @@ class _DealComponentLine extends StatelessWidget {
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
+            ),
+          if (component.sauces.isNotEmpty)
+            _SauceLines(lines: component.sauceDisplayLines, indent: '  '),
+        ],
+      ),
+    );
+  }
+}
+
+class _SauceLines extends StatelessWidget {
+  final List<String> lines;
+  final String indent;
+
+  const _SauceLines({
+    required this.lines,
+    this.indent = '',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isTraining = AppColors.isTraining(context);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        top: 6,
+        left: indent.isEmpty ? 0 : 12,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final line in lines)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.yellow.withValues(
+                    alpha: isTraining ? 0.18 : 0.24,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.yellow.withValues(alpha: 0.72),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.restaurant_menu_rounded,
+                      size: 15,
+                      color: AppColors.blue,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Sauce: $line',
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.blue,
+                          fontWeight: FontWeight.w900,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
         ],
       ),

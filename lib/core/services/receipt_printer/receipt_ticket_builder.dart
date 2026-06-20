@@ -316,6 +316,9 @@ class ReceiptTicketBuilder {
     if (_hasText(line.note)) {
       builder.modifierRow('- ${line.note!.trim()}');
     }
+    for (final sauce in line.sauceLines) {
+      builder.modifierRow('- Sauce: $sauce');
+    }
     for (final component in line.components) {
       _writeComponent(builder, component);
     }
@@ -328,6 +331,9 @@ class ReceiptTicketBuilder {
     builder.modifierRow('- ${component.quantity}x ${component.name}');
     if (_hasText(component.note)) {
       builder.modifierRow('  ${component.note!.trim()}');
+    }
+    for (final sauce in component.sauceLines) {
+      builder.modifierRow('  - Sauce: $sauce');
     }
   }
 
