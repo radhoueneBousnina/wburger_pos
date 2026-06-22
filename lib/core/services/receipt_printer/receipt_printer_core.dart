@@ -336,8 +336,8 @@ class ReceiptPrinterService {
   }
 
   String _jobName(ReceiptData data) {
-    final ticket =
-        data.ticketNumber.replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '_');
+    final ticket = _ticketDisplayNumber(data.ticketNumber)
+        .replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '_');
     return 'W Burger Ticket $ticket';
   }
 

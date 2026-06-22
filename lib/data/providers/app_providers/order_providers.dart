@@ -152,6 +152,7 @@ class OfflineQueuedOrder {
 
 class OfflineOrderQueueStore {
   static const _storageKey = 'wburger_offline_order_queue_v1';
+  static const _ticketCounterKey = 'wburger_ticket_counters_v1';
 
   SharedPreferences? _prefs;
   Future<void>? _initFuture;
@@ -200,6 +201,89 @@ class OfflineOrderQueueStore {
         .toList();
     await save([...withoutExisting, entry]);
   }
+
+  Future<void> rememberTicketNumbers(Iterable<String> ticketNumbers) async {
+    await init();
+    final counters = _readTicketCounters();
+    var changed = false;
+    for (final ticketNumber in ticketNumbers) {
+      final parsed = _parseTicketNumber(ticketNumber);
+      if (parsed == null) continue;
+      final current = counters[parsed.dateStr] ?? 100;
+      if (parsed.sequence > current) {
+        counters[parsed.dateStr] = parsed.sequence;
+        changed = true;
+      }
+    }
+    if (changed) await _writeTicketCounters(counters);
+  }
+
+  Future<String> reserveTicketNumber({
+    required String dateStr,
+    Iterable<String> knownTicketNumbers = const [],
+  }) async {
+    await rememberTicketNumbers(knownTicketNumbers);
+    final counters = _readTicketCounters();
+    final nextSequence = (counters[dateStr] ?? 100) + 1;
+    counters[dateStr] = nextSequence;
+    await _writeTicketCounters(counters);
+    return 'W-$dateStr-$nextSequence';
+  }
+
+  Map<String, int> _readTicketCounters() {
+    final raw = _prefs?.getString(_ticketCounterKey);
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return {};
+      return decoded.map((key, value) {
+        final parsed = value is int ? value : int.tryParse(value.toString());
+        return MapEntry(key.toString(), parsed ?? 100);
+      });
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> _writeTicketCounters(Map<String, int> counters) async {
+    await _prefs?.setString(_ticketCounterKey, jsonEncode(counters));
+  }
+}
+
+class _ParsedTicketNumber {
+  final String dateStr;
+  final int sequence;
+
+  const _ParsedTicketNumber({
+    required this.dateStr,
+    required this.sequence,
+  });
+}
+
+_ParsedTicketNumber? _parseTicketNumber(String ticketNumber) {
+  final parts = ticketNumber.trim().split('-');
+  if (parts.length != 3 || parts.first != 'W') return null;
+  final dateStr = parts[1];
+  if (!RegExp(r'^\d{6}$').hasMatch(dateStr)) return null;
+  final sequence = int.tryParse(parts[2]);
+  if (sequence == null) return null;
+  return _ParsedTicketNumber(dateStr: dateStr, sequence: sequence);
+}
+
+String _ticketDateFromDateTime(DateTime value) {
+  String two(int number) => number.toString().padLeft(2, '0');
+  return '${two(value.day)}${two(value.month)}${value.year % 100}';
+}
+
+String? _ticketDateFromSessionDate(String? value) {
+  if (value == null || value.trim().isEmpty) return null;
+  final parts = value.trim().split('-');
+  if (parts.length != 3) return null;
+  final year = int.tryParse(parts[0]);
+  final month = int.tryParse(parts[1]);
+  final day = int.tryParse(parts[2]);
+  if (year == null || month == null || day == null) return null;
+  return _ticketDateFromDateTime(DateTime(year, month, day));
 }
 
 Map<String, dynamic>? _offlineAsMap(Object? value) {
@@ -249,6 +333,9 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     unawaited(_offlineQueueStore.init().then((_) async {
       final queued = await _offlineQueueStore.load();
       PosMonitoringService.instance.setUnsyncedOrdersCount(queued.length);
+      await _offlineQueueStore.rememberTicketNumbers(
+        queued.map((entry) => entry.localOrder.ticketNumber),
+      );
       if (queued.isNotEmpty) {
         _restoreOfflineOrders(queued);
       }
@@ -309,11 +396,21 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
 
   String _newClientOrderId() => 'pos-${const Uuid().v4()}';
 
-  String _newOfflineTicketNumber(DateTime now) {
-    String two(int value) => value.toString().padLeft(2, '0');
-    final date = '${two(now.day)}${two(now.month)}${now.year % 100}';
-    final time = '${two(now.hour)}${two(now.minute)}${two(now.second)}';
-    return 'OFF-$date-$time${now.millisecond.toString().padLeft(3, '0')}';
+  Future<String> _reserveNextTicketNumber(DateTime now) async {
+    final sessionDate =
+        ref.read(activeSessionStatusProvider).valueOrNull?.activeSessionDate;
+    final dateStr =
+        _ticketDateFromSessionDate(sessionDate) ?? _ticketDateFromDateTime(now);
+    final localTickets =
+        state.asData?.value.map((order) => order.ticketNumber) ?? const [];
+    final queued = await _offlineQueueStore.load();
+    return _offlineQueueStore.reserveTicketNumber(
+      dateStr: dateStr,
+      knownTicketNumbers: [
+        ...localTickets,
+        ...queued.map((entry) => entry.localOrder.ticketNumber),
+      ],
+    );
   }
 
   Map<String, dynamic> _createOrderPayload({
@@ -338,6 +435,8 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     String? staffId,
     String? glovoOrderId,
     String? giftRecipient,
+    DateTime? clientConfirmedAt,
+    String? ticketNumber,
   }) {
     final effectivePaymentType = orderType == null
         ? paymentType
@@ -354,6 +453,10 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       if (staffId != null) 'staff_member': staffId,
       if (giftRecipient != null && giftRecipient.trim().isNotEmpty)
         'gift_recipient': giftRecipient.trim(),
+      if (clientConfirmedAt != null)
+        'client_confirmed_at': clientConfirmedAt.toUtc().toIso8601String(),
+      if (ticketNumber != null && ticketNumber.trim().isNotEmpty)
+        'ticket_number': ticketNumber.trim(),
     };
   }
 
@@ -474,6 +577,9 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         );
         orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       }
+      await _offlineQueueStore.rememberTicketNumbers(
+        orders.map((order) => order.ticketNumber),
+      );
       if (!mounted) return;
       _lastFetchedAt = DateTime.now();
       state = AsyncValue.data(orders);
@@ -992,6 +1098,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _lastFetchedAt = DateTime.now();
     state = AsyncValue.data(next);
+    unawaited(_offlineQueueStore.rememberTicketNumbers([order.ticketNumber]));
   }
 
   void _replaceLocalOfflineOrder({
@@ -1007,6 +1114,9 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _lastFetchedAt = DateTime.now();
     state = AsyncValue.data(next);
+    unawaited(
+      _offlineQueueStore.rememberTicketNumbers([syncedOrder.ticketNumber]),
+    );
   }
 
   Future<Order?> _fetchOrderById(String orderId) async {
@@ -1031,7 +1141,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         _paymentTypeForOrder(cart.orderType, paymentType);
     final now = DateTime.now();
     final localOrderId = 'offline-$clientOrderId';
-    final ticketNumber = _newOfflineTicketNumber(now);
+    final ticketNumber = await _reserveNextTicketNumber(now);
     final localOrder = _confirmedOrderFromCart(
       orderId: localOrderId,
       cart: cart,
@@ -1074,6 +1184,8 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         staffId: staffId,
         glovoOrderId: glovoOrderId,
         giftRecipient: giftRecipient,
+        clientConfirmedAt: now,
+        ticketNumber: ticketNumber,
       ),
       localOrderJson: localOrder.toLocalJson(),
     );

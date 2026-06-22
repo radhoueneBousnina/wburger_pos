@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wburger_pos/data/models/order_models.dart';
 import 'package:wburger_pos/data/providers/app_providers.dart';
 
@@ -133,7 +134,7 @@ void main() {
     );
     final order = Order(
       id: 'offline-pos-order',
-      ticketNumber: 'OFF-220626-120000000',
+      ticketNumber: 'W-220626-106',
       createdAt: DateTime(2026, 6, 22, 12),
       items: [item],
       orderType: OrderType.takeaway,
@@ -156,5 +157,27 @@ void main() {
     );
     expect(itemPayload['client_line_id'], 'client-order-line-1');
     expect(itemPayload['is_meal_upgrade'], isTrue);
+  });
+
+  test('offline ticket counter continues from known daily ticket', () async {
+    SharedPreferences.setMockInitialValues({});
+    final store = OfflineOrderQueueStore();
+
+    await store.rememberTicketNumbers(['W-220626-105']);
+
+    expect(
+      await store.reserveTicketNumber(dateStr: '220626'),
+      'W-220626-106',
+    );
+    expect(
+      await store.reserveTicketNumber(dateStr: '220626'),
+      'W-220626-107',
+    );
+
+    await store.rememberTicketNumbers(['W-220626-150']);
+    expect(
+      await store.reserveTicketNumber(dateStr: '220626'),
+      'W-220626-151',
+    );
   });
 }
