@@ -23,6 +23,7 @@ class CheckoutResult {
   final String? ticketNumber;
   final Order? confirmedOrder;
   final List<StockOverrideWarning> warnings;
+  final bool queuedOffline;
 
   const CheckoutResult({
     this.error,
@@ -30,6 +31,7 @@ class CheckoutResult {
     this.ticketNumber,
     this.confirmedOrder,
     this.warnings = const [],
+    this.queuedOffline = false,
   });
 
   bool get isSuccess => error == null && warnings.isEmpty;
@@ -51,6 +53,174 @@ PaymentType _paymentTypeForOrder(OrderType orderType, PaymentType paymentType) {
   return orderType == OrderType.glovo ? PaymentType.glovo : paymentType;
 }
 
+class OfflineQueuedOrder {
+  final String clientOrderId;
+  final String localOrderId;
+  final String? serverOrderId;
+  final DateTime queuedAt;
+  final Map<String, dynamic> createPayload;
+  final List<Map<String, dynamic>> itemPayloads;
+  final Map<String, dynamic>? discountPayload;
+  final Map<String, dynamic> confirmPayload;
+  final Map<String, dynamic> localOrderJson;
+  final int attempts;
+  final String? lastError;
+
+  const OfflineQueuedOrder({
+    required this.clientOrderId,
+    required this.localOrderId,
+    required this.serverOrderId,
+    required this.queuedAt,
+    required this.createPayload,
+    required this.itemPayloads,
+    required this.discountPayload,
+    required this.confirmPayload,
+    required this.localOrderJson,
+    this.attempts = 0,
+    this.lastError,
+  });
+
+  Order get localOrder => Order.fromLocalJson(localOrderJson);
+
+  OfflineQueuedOrder copyWith({
+    String? serverOrderId,
+    int? attempts,
+    String? lastError,
+  }) {
+    return OfflineQueuedOrder(
+      clientOrderId: clientOrderId,
+      localOrderId: localOrderId,
+      serverOrderId: serverOrderId ?? this.serverOrderId,
+      queuedAt: queuedAt,
+      createPayload: createPayload,
+      itemPayloads: itemPayloads,
+      discountPayload: discountPayload,
+      confirmPayload: confirmPayload,
+      localOrderJson: localOrderJson,
+      attempts: attempts ?? this.attempts,
+      lastError: lastError ?? this.lastError,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'client_order_id': clientOrderId,
+      'local_order_id': localOrderId,
+      if (serverOrderId != null) 'server_order_id': serverOrderId,
+      'queued_at': queuedAt.toIso8601String(),
+      'create_payload': createPayload,
+      'item_payloads': itemPayloads,
+      if (discountPayload != null) 'discount_payload': discountPayload,
+      'confirm_payload': confirmPayload,
+      'local_order': localOrderJson,
+      'attempts': attempts,
+      if (lastError != null) 'last_error': lastError,
+    };
+  }
+
+  factory OfflineQueuedOrder.fromJson(Map<String, dynamic> json) {
+    List<Map<String, dynamic>> mapList(Object? value) {
+      return (value as List? ?? const [])
+          .whereType<Map>()
+          .map((entry) => Map<String, dynamic>.from(entry))
+          .toList();
+    }
+
+    return OfflineQueuedOrder(
+      clientOrderId: json['client_order_id']?.toString() ?? '',
+      localOrderId: json['local_order_id']?.toString() ?? '',
+      serverOrderId: _offlineFirstNonEmptyString([json['server_order_id']]),
+      queuedAt:
+          DateTime.tryParse(json['queued_at']?.toString() ?? '')?.toLocal() ??
+              DateTime.now(),
+      createPayload: Map<String, dynamic>.from(
+        _offlineAsMap(json['create_payload']) ?? const {},
+      ),
+      itemPayloads: mapList(json['item_payloads']),
+      discountPayload: _offlineAsMap(json['discount_payload']),
+      confirmPayload: Map<String, dynamic>.from(
+        _offlineAsMap(json['confirm_payload']) ?? const {},
+      ),
+      localOrderJson: Map<String, dynamic>.from(
+        _offlineAsMap(json['local_order']) ?? const {},
+      ),
+      attempts: _offlineParseInt(json['attempts'], fallback: 0),
+      lastError: _offlineFirstNonEmptyString([json['last_error']]),
+    );
+  }
+}
+
+class OfflineOrderQueueStore {
+  static const _storageKey = 'wburger_offline_order_queue_v1';
+
+  SharedPreferences? _prefs;
+  Future<void>? _initFuture;
+
+  Future<void> init() {
+    return _initFuture ??= _initialize();
+  }
+
+  Future<void> _initialize() async {
+    _prefs = await SharedPreferences.getInstance();
+  }
+
+  Future<List<OfflineQueuedOrder>> load() async {
+    await init();
+    final raw = _prefs?.getString(_storageKey);
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      return decoded
+          .whereType<Map>()
+          .map((entry) => OfflineQueuedOrder.fromJson(
+                Map<String, dynamic>.from(entry),
+              ))
+          .where((entry) =>
+              entry.clientOrderId.isNotEmpty && entry.localOrderId.isNotEmpty)
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> save(List<OfflineQueuedOrder> queue) async {
+    await init();
+    await _prefs?.setString(
+      _storageKey,
+      jsonEncode(queue.map((entry) => entry.toJson()).toList()),
+    );
+    PosMonitoringService.instance.setUnsyncedOrdersCount(queue.length);
+  }
+
+  Future<void> enqueue(OfflineQueuedOrder entry) async {
+    final queue = await load();
+    final withoutExisting = queue
+        .where((queued) => queued.clientOrderId != entry.clientOrderId)
+        .toList();
+    await save([...withoutExisting, entry]);
+  }
+}
+
+Map<String, dynamic>? _offlineAsMap(Object? value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return Map<String, dynamic>.from(value);
+  return null;
+}
+
+String? _offlineFirstNonEmptyString(Iterable<Object?> values) {
+  for (final value in values) {
+    final text = value?.toString().trim();
+    if (text != null && text.isNotEmpty) return text;
+  }
+  return null;
+}
+
+int _offlineParseInt(Object? value, {required int fallback}) {
+  if (value is int) return value;
+  return int.tryParse(value?.toString() ?? '') ?? fallback;
+}
+
 // ============================================================
 // ORDERS PROVIDER (Today's Sales)
 // ============================================================
@@ -59,17 +229,132 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
   final Ref ref;
 
   OrdersNotifier(this.ref) : super(const AsyncValue.loading()) {
+    _bootstrapOfflineQueue();
     fetchTodayOrders();
   }
 
   bool _isFetchingTodayOrders = false;
+  bool _isSyncingOfflineOrders = false;
   DateTime? _lastFetchedAt;
+  Timer? _offlineSyncTimer;
+  final OfflineOrderQueueStore _offlineQueueStore = OfflineOrderQueueStore();
+
+  @override
+  void dispose() {
+    _offlineSyncTimer?.cancel();
+    super.dispose();
+  }
+
+  void _bootstrapOfflineQueue() {
+    unawaited(_offlineQueueStore.init().then((_) async {
+      final queued = await _offlineQueueStore.load();
+      PosMonitoringService.instance.setUnsyncedOrdersCount(queued.length);
+      if (queued.isNotEmpty) {
+        _restoreOfflineOrders(queued);
+      }
+      _offlineSyncTimer?.cancel();
+      _offlineSyncTimer = Timer.periodic(
+        const Duration(seconds: 12),
+        (_) => unawaited(syncOfflineOrders()),
+      );
+      unawaited(syncOfflineOrders());
+    }));
+  }
 
   Map<String, dynamic>? _asMap(Object? value) {
     if (value is Map) {
       return Map<String, dynamic>.from(value);
     }
     return null;
+  }
+
+  bool _isNetworkFailure(DioException error) {
+    if (error.response != null) return false;
+    return error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.unknown;
+  }
+
+  void _restoreOfflineOrders(List<OfflineQueuedOrder> queued) {
+    if (queued.isEmpty || !mounted) return;
+    final current = state.asData?.value ?? const <Order>[];
+    final currentIds = current.map((order) => order.id).toSet();
+    final restored = queued
+        .map((entry) => entry.localOrder)
+        .where((order) => order.id.isNotEmpty && !currentIds.contains(order.id))
+        .toList();
+    if (restored.isEmpty) return;
+    final next = [...restored, ...current]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _lastFetchedAt = DateTime.now();
+    state = AsyncValue.data(next);
+  }
+
+  CartState _cartWithClientLineIds(
+    CartState cart,
+    String clientOrderId,
+  ) {
+    return cart.copyWith(
+      items: [
+        for (var index = 0; index < cart.items.length; index++)
+          cart.items[index].copyWith(
+            lineId:
+                cart.items[index].lineId ?? '$clientOrderId-line-${index + 1}',
+          ),
+      ],
+    );
+  }
+
+  String _newClientOrderId() => 'pos-${const Uuid().v4()}';
+
+  String _newOfflineTicketNumber(DateTime now) {
+    String two(int value) => value.toString().padLeft(2, '0');
+    final date = '${two(now.day)}${two(now.month)}${now.year % 100}';
+    final time = '${two(now.hour)}${two(now.minute)}${two(now.second)}';
+    return 'OFF-$date-$time${now.millisecond.toString().padLeft(3, '0')}';
+  }
+
+  Map<String, dynamic> _createOrderPayload({
+    required String clientOrderId,
+    required OrderType orderType,
+    required PaymentType paymentType,
+  }) {
+    return {
+      'client_order_id': clientOrderId,
+      'service_type': _serviceTypePayload(orderType),
+      'payment_type': paymentType.name,
+    };
+  }
+
+  Map<String, dynamic> _confirmPaymentPayload({
+    required PaymentType paymentType,
+    required OrderType? orderType,
+    bool allowNegativeStock = false,
+    bool skipKds = false,
+    double? amountGiven,
+    double? changeReturned,
+    String? staffId,
+    String? glovoOrderId,
+    String? giftRecipient,
+  }) {
+    final effectivePaymentType = orderType == null
+        ? paymentType
+        : _paymentTypeForOrder(orderType, paymentType);
+    return {
+      'payment_type': effectivePaymentType.name,
+      if (orderType != null) 'service_type': _serviceTypePayload(orderType),
+      if (glovoOrderId != null && glovoOrderId.trim().isNotEmpty)
+        'glovo_order_id': glovoOrderId.trim(),
+      if (allowNegativeStock) 'allow_negative_stock': true,
+      if (skipKds) 'skip_kds': true,
+      if (amountGiven != null) 'amount_given': amountGiven,
+      if (changeReturned != null) 'change_returned': changeReturned,
+      if (staffId != null) 'staff_member': staffId,
+      if (giftRecipient != null && giftRecipient.trim().isNotEmpty)
+        'gift_recipient': giftRecipient.trim(),
+    };
   }
 
   CheckoutResult _checkoutResultFromDio(
@@ -179,9 +464,20 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         }
         page += 1;
       }
+      final queued = await _offlineQueueStore.load();
+      if (queued.isNotEmpty) {
+        final existingIds = orders.map((order) => order.id).toSet();
+        orders.addAll(
+          queued
+              .map((entry) => entry.localOrder)
+              .where((order) => !existingIds.contains(order.id)),
+        );
+        orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      }
       if (!mounted) return;
       _lastFetchedAt = DateTime.now();
       state = AsyncValue.data(orders);
+      unawaited(syncOfflineOrders());
     } catch (e, st) {
       apiClient.logError('Fetch orders error', e);
       if ((showLoading || state.asData == null) && mounted) {
@@ -216,18 +512,16 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
           : _paymentTypeForOrder(orderType, paymentType);
       final response = await apiClient.dio.post(
         '${ApiConstants.orders}$orderId${ApiConstants.confirmPayment}',
-        data: {
-          'payment_type': effectivePaymentType.name,
-          if (orderType != null) 'service_type': _serviceTypePayload(orderType),
-          if (glovoOrderId != null && glovoOrderId.trim().isNotEmpty)
-            'glovo_order_id': glovoOrderId.trim(),
-          if (allowNegativeStock) 'allow_negative_stock': true,
-          if (amountGiven != null) 'amount_given': amountGiven,
-          if (changeReturned != null) 'change_returned': changeReturned,
-          if (staffId != null) 'staff_member': staffId,
-          if (giftRecipient != null && giftRecipient.trim().isNotEmpty)
-            'gift_recipient': giftRecipient.trim(),
-        },
+        data: _confirmPaymentPayload(
+          paymentType: effectivePaymentType,
+          orderType: orderType,
+          allowNegativeStock: allowNegativeStock,
+          amountGiven: amountGiven,
+          changeReturned: changeReturned,
+          staffId: staffId,
+          glovoOrderId: glovoOrderId,
+          giftRecipient: giftRecipient,
+        ),
       );
 
       final responseData = _asMap(response.data);
@@ -300,27 +594,51 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     }
 
     String? orderId;
+    final clientOrderId = _newClientOrderId();
+    final preparedCart = _cartWithClientLineIds(cart, clientOrderId);
     try {
       final effectivePaymentType =
-          _paymentTypeForOrder(cart.orderType, paymentType);
+          _paymentTypeForOrder(preparedCart.orderType, paymentType);
       // 1. Create order
-      final res = await apiClient.dio.post(ApiConstants.orders, data: {
-        'service_type': _serviceTypePayload(cart.orderType),
-        'payment_type': effectivePaymentType.name,
-      });
+      final createPayload = _createOrderPayload(
+        clientOrderId: clientOrderId,
+        orderType: preparedCart.orderType,
+        paymentType: effectivePaymentType,
+      );
+      final res = await apiClient.dio.post(
+        ApiConstants.orders,
+        data: createPayload,
+      );
       orderId = res.data['id'].toString();
-
-      // 2. Add items
-      for (final item in cart.items) {
-        await apiClient.dio.post(
-            '${ApiConstants.orders}$orderId${ApiConstants.addItem}',
-            data: item.toJson(orderId, includeItemDiscount: false));
+      if (res.data['status'] == 'confirmed') {
+        final syncedOrder = await _fetchOrderById(orderId);
+        if (syncedOrder != null) {
+          _upsertLocalOrder(syncedOrder);
+        }
+        return CheckoutResult(
+          orderId: orderId,
+          ticketNumber: syncedOrder?.ticketNumber,
+          confirmedOrder: syncedOrder,
+        );
       }
 
-      if (cart.discountAmount > 0) {
+      // 2. Add items
+      for (final item in preparedCart.items) {
+        await apiClient.dio
+            .post('${ApiConstants.orders}$orderId${ApiConstants.addItem}',
+                data: item.toJson(
+                  orderId,
+                  includeItemDiscount: false,
+                  clientLineId: item.lineId,
+                ));
+      }
+
+      if (preparedCart.discountAmount > 0) {
         await apiClient.dio.patch(
           '${ApiConstants.orders}$orderId/',
-          data: {'discount_amount': cart.discountAmount.toStringAsFixed(3)},
+          data: {
+            'discount_amount': preparedCart.discountAmount.toStringAsFixed(3),
+          },
         );
       }
 
@@ -328,8 +646,8 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       return await _confirmOrder(
         orderId,
         effectivePaymentType,
-        orderType: cart.orderType,
-        cart: cart,
+        orderType: preparedCart.orderType,
+        cart: preparedCart,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
         staffId: staffId,
@@ -338,6 +656,23 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       );
     } on DioException catch (e) {
       apiClient.logError('Process order error', e);
+      if (_isNetworkFailure(e)) {
+        return _queueOfflineCartOrder(
+          clientOrderId: clientOrderId,
+          serverOrderId: orderId,
+          cart: preparedCart,
+          paymentType: paymentType,
+          amountGiven: amountGiven,
+          changeReturned: changeReturned,
+          staffId: staffId,
+          glovoOrderId: glovoOrderId,
+          giftRecipient: giftRecipient,
+          cause: apiClient.describeError(
+            e,
+            fallback: 'Unable to reach the server. Sale saved offline.',
+          ),
+        );
+      }
       unawaited(PosMonitoringService.instance.recordEvent(
         level: 'error',
         eventType: orderId == null ? 'order_creation_failed' : 'payment_failed',
@@ -659,6 +994,241 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     state = AsyncValue.data(next);
   }
 
+  void _replaceLocalOfflineOrder({
+    required String localOrderId,
+    required Order syncedOrder,
+  }) {
+    final current = state.asData?.value ?? const <Order>[];
+    final withoutLocal = current
+        .where(
+            (order) => order.id != localOrderId && order.id != syncedOrder.id)
+        .toList();
+    final next = [syncedOrder, ...withoutLocal]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _lastFetchedAt = DateTime.now();
+    state = AsyncValue.data(next);
+  }
+
+  Future<Order?> _fetchOrderById(String orderId) async {
+    final response = await apiClient.dio.get('${ApiConstants.orders}$orderId/');
+    final data = _asMap(response.data);
+    return data == null ? null : Order.fromJson(data);
+  }
+
+  Future<CheckoutResult> _queueOfflineCartOrder({
+    required String clientOrderId,
+    required String? serverOrderId,
+    required CartState cart,
+    required PaymentType paymentType,
+    double? amountGiven,
+    double? changeReturned,
+    String? staffId,
+    String? glovoOrderId,
+    String? giftRecipient,
+    required String cause,
+  }) async {
+    final effectivePaymentType =
+        _paymentTypeForOrder(cart.orderType, paymentType);
+    final now = DateTime.now();
+    final localOrderId = 'offline-$clientOrderId';
+    final ticketNumber = _newOfflineTicketNumber(now);
+    final localOrder = _confirmedOrderFromCart(
+      orderId: localOrderId,
+      cart: cart,
+      paymentType: effectivePaymentType,
+      orderType: cart.orderType,
+      ticketNumber: ticketNumber,
+      amountGiven: amountGiven,
+      changeReturned: changeReturned,
+      giftRecipient: giftRecipient,
+    );
+
+    final queuedOrder = OfflineQueuedOrder(
+      clientOrderId: clientOrderId,
+      localOrderId: localOrderId,
+      serverOrderId: serverOrderId,
+      queuedAt: now,
+      createPayload: _createOrderPayload(
+        clientOrderId: clientOrderId,
+        orderType: cart.orderType,
+        paymentType: effectivePaymentType,
+      ),
+      itemPayloads: [
+        for (final item in cart.items)
+          item.toJson(
+            localOrderId,
+            includeItemDiscount: false,
+            clientLineId: item.lineId,
+          ),
+      ],
+      discountPayload: cart.discountAmount > 0
+          ? {'discount_amount': cart.discountAmount.toStringAsFixed(3)}
+          : null,
+      confirmPayload: _confirmPaymentPayload(
+        paymentType: effectivePaymentType,
+        orderType: cart.orderType,
+        allowNegativeStock: true,
+        skipKds: true,
+        amountGiven: amountGiven,
+        changeReturned: changeReturned,
+        staffId: staffId,
+        glovoOrderId: glovoOrderId,
+        giftRecipient: giftRecipient,
+      ),
+      localOrderJson: localOrder.toLocalJson(),
+    );
+
+    await _offlineQueueStore.enqueue(queuedOrder);
+    _afterConfirmedOrder(
+      orderId: localOrderId,
+      paymentType: effectivePaymentType,
+      orderType: cart.orderType,
+      cart: cart,
+      ticketNumber: ticketNumber,
+      confirmedOrder: localOrder,
+      amountGiven: amountGiven,
+      changeReturned: changeReturned,
+      giftRecipient: giftRecipient,
+      applyLocalStock: true,
+      refreshRemote: false,
+    );
+    unawaited(PosMonitoringService.instance.recordEvent(
+      level: 'warning',
+      eventType: 'offline_order_queued',
+      message: 'POS sale saved offline and queued for sync.',
+      metadata: {
+        'client_order_id': clientOrderId,
+        'local_order_id': localOrderId,
+        'server_order_id': serverOrderId,
+        'cause': cause,
+      },
+    ));
+    unawaited(syncOfflineOrders());
+    return CheckoutResult(
+      orderId: localOrderId,
+      ticketNumber: ticketNumber,
+      confirmedOrder: localOrder,
+      queuedOffline: true,
+    );
+  }
+
+  Future<void> syncOfflineOrders() async {
+    if (_isSyncingOfflineOrders || ref.read(testModeProvider).isActive) return;
+    _isSyncingOfflineOrders = true;
+    try {
+      final queue = await _offlineQueueStore.load();
+      if (queue.isEmpty) {
+        PosMonitoringService.instance.setUnsyncedOrdersCount(0);
+        return;
+      }
+
+      final remaining = <OfflineQueuedOrder>[];
+      for (var index = 0; index < queue.length; index++) {
+        final queued = queue[index];
+        try {
+          final syncedOrder = await _syncQueuedOrder(queued);
+          if (syncedOrder != null) {
+            _replaceLocalOfflineOrder(
+              localOrderId: queued.localOrderId,
+              syncedOrder: syncedOrder,
+            );
+          }
+          unawaited(PosMonitoringService.instance.recordEvent(
+            level: 'info',
+            eventType: 'offline_order_synced',
+            message: 'Offline POS sale synced to backend.',
+            metadata: {
+              'client_order_id': queued.clientOrderId,
+              'local_order_id': queued.localOrderId,
+              'server_order_id': syncedOrder?.id,
+            },
+          ));
+        } on DioException catch (error) {
+          final updated = queued.copyWith(
+            attempts: queued.attempts + 1,
+            lastError: apiClient.describeError(
+              error,
+              fallback: 'Offline order sync failed.',
+            ),
+          );
+          remaining.add(updated);
+          if (_isNetworkFailure(error)) {
+            remaining.addAll(queue.skip(index + 1));
+            break;
+          }
+        } catch (error) {
+          remaining.add(queued.copyWith(
+            attempts: queued.attempts + 1,
+            lastError: apiClient.describeError(
+              error,
+              fallback: 'Offline order sync failed.',
+            ),
+          ));
+        }
+      }
+
+      await _offlineQueueStore.save(remaining);
+      if (remaining.isEmpty) {
+        unawaited(fetchTodayOrders(showLoading: false, force: true));
+      }
+    } finally {
+      _isSyncingOfflineOrders = false;
+    }
+  }
+
+  Future<Order?> _syncQueuedOrder(OfflineQueuedOrder queued) async {
+    String? orderId = queued.serverOrderId;
+    if (orderId != null && orderId.isNotEmpty) {
+      final existing = await _fetchOrderById(orderId);
+      if (existing != null && existing.status == OrderStatus.validated) {
+        return existing;
+      }
+    }
+
+    if (orderId == null || orderId.isEmpty) {
+      final response = await apiClient.dio.post(
+        ApiConstants.orders,
+        data: queued.createPayload,
+      );
+      orderId = response.data['id']?.toString();
+      if (orderId == null || orderId.isEmpty) {
+        throw StateError('Backend did not return an order id.');
+      }
+      if (response.data['status'] == 'confirmed') {
+        return _fetchOrderById(orderId);
+      }
+    }
+
+    for (final payload in queued.itemPayloads) {
+      await apiClient.dio.post(
+        '${ApiConstants.orders}$orderId${ApiConstants.addItem}',
+        data: {
+          ...payload,
+          'order': orderId,
+        },
+      );
+    }
+
+    final discountPayload = queued.discountPayload;
+    if (discountPayload != null && discountPayload.isNotEmpty) {
+      await apiClient.dio.patch(
+        '${ApiConstants.orders}$orderId/',
+        data: discountPayload,
+      );
+    }
+
+    final response = await apiClient.dio.post(
+      '${ApiConstants.orders}$orderId${ApiConstants.confirmPayment}',
+      data: queued.confirmPayload,
+    );
+    final responseData = _asMap(response.data);
+    final orderData = _asMap(responseData?['order']);
+    if (orderData != null) {
+      return Order.fromJson(orderData);
+    }
+    return _fetchOrderById(orderId);
+  }
+
   void _markOrderCancelled(String id, String reason) {
     final current = state.asData?.value;
     if (current == null) return;
@@ -785,6 +1355,8 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? amountGiven,
     double? changeReturned,
     String? giftRecipient,
+    bool applyLocalStock = false,
+    bool refreshRemote = true,
   }) {
     if (confirmedOrder != null) {
       _upsertLocalOrder(confirmedOrder);
@@ -803,9 +1375,12 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       );
     }
 
-    if (cart != null && ref.read(testModeProvider).isActive) {
+    if (cart != null &&
+        (ref.read(testModeProvider).isActive || applyLocalStock)) {
       ref.read(stockProvider.notifier).applySaleCart(cart);
     }
+
+    if (!refreshRemote) return;
 
     unawaited(fetchTodayOrders(showLoading: false, force: true));
 

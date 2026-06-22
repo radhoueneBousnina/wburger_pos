@@ -641,10 +641,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   Future<void> _checkout() async {
     final cart = ref.read(cartProvider);
     if (cart.items.isEmpty) return;
-    await ref.read(posSettingsProvider.notifier).fetchSettings(
-          silent: false,
-          force: true,
-        );
+    await ref.read(posSettingsProvider.notifier).refreshIfStale();
     if (!mounted) return;
     final settingsState = ref.read(posSettingsProvider);
     if (settingsState.hasError || settingsState.valueOrNull == null) {

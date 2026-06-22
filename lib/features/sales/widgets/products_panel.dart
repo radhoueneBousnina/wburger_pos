@@ -448,7 +448,8 @@ class _ProductCard extends ConsumerWidget {
     final sodaProduct = _mealSodaProduct(
       ref.read(productsProvider).valueOrNull ?? const <Product>[],
     );
-    final canMealUpgrade = !product.isSoda && sodaProduct != null;
+    final canMealUpgrade =
+        product.canBeMeal && !product.isSoda && sodaProduct != null;
     if (sauceGroups.isEmpty && !canMealUpgrade) {
       ref.read(cartProvider.notifier).addProduct(product);
       return;

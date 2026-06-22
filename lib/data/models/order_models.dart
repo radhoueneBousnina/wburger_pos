@@ -136,6 +136,28 @@ class ProductSauceOption {
       quantityRequired: quantityRequired * quantityMultiplier,
     );
   }
+
+  Map<String, dynamic> toLocalJson() {
+    return {
+      'stock_item_id': stockItemId,
+      'name': name,
+      'unit': unit,
+      'quantity_required': quantityRequired,
+      if (productId != null) 'product_id': productId,
+      if (productName != null) 'product_name': productName,
+    };
+  }
+
+  factory ProductSauceOption.fromLocalJson(Map<String, dynamic> json) {
+    return ProductSauceOption(
+      stockItemId: json['stock_item_id']?.toString() ?? '',
+      name: json['name']?.toString() ?? 'Sauce',
+      unit: json['unit']?.toString() ?? '',
+      quantityRequired: _parseNullableDouble(json['quantity_required']) ?? 0,
+      productId: _firstNonEmptyString([json['product_id']]),
+      productName: _firstNonEmptyString([json['product_name']]),
+    );
+  }
 }
 
 class MealComponent {
@@ -191,6 +213,32 @@ class MealComponent {
       quantity: quantity,
       hasSauces: hasSauces,
       sauceOptions: sauceOptions ?? this.sauceOptions,
+    );
+  }
+
+  Map<String, dynamic> toLocalJson() {
+    return {
+      'product_id': productId,
+      'name': name,
+      'quantity': quantity,
+      'has_sauces': hasSauces,
+      'sauce_options':
+          sauceOptions.map((option) => option.toLocalJson()).toList(),
+    };
+  }
+
+  factory MealComponent.fromLocalJson(Map<String, dynamic> json) {
+    return MealComponent(
+      productId: json['product_id']?.toString() ?? '',
+      name: json['name']?.toString() ?? 'Product',
+      quantity: _parseInt(json['quantity'], fallback: 1),
+      hasSauces: json['has_sauces'] == true,
+      sauceOptions: (json['sauce_options'] as List? ?? const [])
+          .whereType<Map>()
+          .map((option) => ProductSauceOption.fromLocalJson(
+                Map<String, dynamic>.from(option),
+              ))
+          .toList(),
     );
   }
 }
@@ -297,6 +345,7 @@ class Product {
   final int? pointsPrice;
   final bool isActive;
   final bool isMeal;
+  final bool canBeMeal;
   final bool hasSauces;
   final bool isSoda;
   final List<ProductSauceOption> sauceOptions;
@@ -313,6 +362,7 @@ class Product {
     this.pointsPrice,
     this.isActive = true,
     this.isMeal = false,
+    this.canBeMeal = false,
     this.hasSauces = false,
     this.isSoda = false,
     this.sauceOptions = const [],
@@ -339,6 +389,7 @@ class Product {
       pointsPrice: json['points_price'] as int?,
       isActive: json['is_active'] as bool? ?? true,
       isMeal: false,
+      canBeMeal: json['can_be_meal'] == true,
       hasSauces: json['has_sauces'] == true,
       isSoda: json['is_soda'] == true,
       sauceOptions: _parseRecipeSauceOptions(
@@ -362,6 +413,7 @@ class Product {
       pointsPrice: null, // Meals cannot be bought with points
       isActive: json['is_active'] as bool? ?? true,
       isMeal: true,
+      canBeMeal: false,
       hasSauces: false,
       isSoda: false,
       mealComponents: items
@@ -385,6 +437,7 @@ class Product {
     int? pointsPrice,
     bool? isActive,
     bool? isMeal,
+    bool? canBeMeal,
     bool? hasSauces,
     bool? isSoda,
     List<ProductSauceOption>? sauceOptions,
@@ -401,10 +454,65 @@ class Product {
       pointsPrice: pointsPrice ?? this.pointsPrice,
       isActive: isActive ?? this.isActive,
       isMeal: isMeal ?? this.isMeal,
+      canBeMeal: canBeMeal ?? this.canBeMeal,
       hasSauces: hasSauces ?? this.hasSauces,
       isSoda: isSoda ?? this.isSoda,
       sauceOptions: sauceOptions ?? this.sauceOptions,
       mealComponents: mealComponents ?? this.mealComponents,
+    );
+  }
+
+  Map<String, dynamic> toLocalJson() {
+    return {
+      'id': id,
+      'category_id': categoryId,
+      'name': name,
+      'description': description,
+      'price': price,
+      if (imageAsset != null) 'image_asset': imageAsset,
+      if (imageUrl != null) 'image_url': imageUrl,
+      if (pointsPrice != null) 'points_price': pointsPrice,
+      'is_active': isActive,
+      'is_meal': isMeal,
+      'can_be_meal': canBeMeal,
+      'has_sauces': hasSauces,
+      'is_soda': isSoda,
+      'sauce_options':
+          sauceOptions.map((option) => option.toLocalJson()).toList(),
+      'meal_components':
+          mealComponents.map((component) => component.toLocalJson()).toList(),
+    };
+  }
+
+  factory Product.fromLocalJson(Map<String, dynamic> json) {
+    return Product(
+      id: json['id']?.toString() ?? '',
+      categoryId: json['category_id']?.toString() ?? '',
+      name: json['name']?.toString() ?? 'Unknown',
+      description: json['description']?.toString() ?? '',
+      price: _parseNullableDouble(json['price']) ?? 0,
+      imageAsset: _firstNonEmptyString([json['image_asset']]),
+      imageUrl: _firstNonEmptyString([json['image_url']]),
+      pointsPrice: json['points_price'] is int
+          ? json['points_price'] as int
+          : int.tryParse(json['points_price']?.toString() ?? ''),
+      isActive: json['is_active'] != false,
+      isMeal: json['is_meal'] == true,
+      canBeMeal: json['can_be_meal'] == true,
+      hasSauces: json['has_sauces'] == true,
+      isSoda: json['is_soda'] == true,
+      sauceOptions: (json['sauce_options'] as List? ?? const [])
+          .whereType<Map>()
+          .map((option) => ProductSauceOption.fromLocalJson(
+                Map<String, dynamic>.from(option),
+              ))
+          .toList(),
+      mealComponents: (json['meal_components'] as List? ?? const [])
+          .whereType<Map>()
+          .map((component) => MealComponent.fromLocalJson(
+                Map<String, dynamic>.from(component),
+              ))
+          .toList(),
     );
   }
 
@@ -427,6 +535,7 @@ class Product {
       pointsPrice: null,
       isActive: json['is_active'] as bool? ?? true,
       isMeal: false,
+      canBeMeal: false,
       isSoda: false,
     );
   }
@@ -521,9 +630,12 @@ class CartItem {
   Map<String, dynamic> toJson(
     String orderId, {
     bool includeItemDiscount = true,
+    String? clientLineId,
   }) {
     return {
       'order': orderId,
+      if (clientLineId != null && clientLineId.isNotEmpty)
+        'client_line_id': clientLineId,
       if (product.isMeal) 'meal': product.id else 'product': product.id,
       'quantity': quantity,
       'unit_price': (includeItemDiscount ? unitPrice : configuredUnitPrice)
@@ -537,6 +649,52 @@ class CartItem {
         if (mealSodaProduct != null) 'meal_soda': mealSodaProduct!.id,
       },
     };
+  }
+
+  Map<String, dynamic> toLocalJson() {
+    return {
+      if (lineId != null) 'line_id': lineId,
+      if (parentLineId != null) 'parent_line_id': parentLineId,
+      'product': product.toLocalJson(),
+      'quantity': quantity,
+      if (note != null) 'note': note,
+      if (discountPercent != null) 'discount_percent': discountPercent,
+      'is_deal_component': isDealComponent,
+      if (parentDealName != null) 'parent_deal_name': parentDealName,
+      'sauces': sauces.map((sauce) => sauce.toJson()).toList(),
+      'is_meal_upgrade': isMealUpgrade,
+      'meal_add_on_price': mealAddOnPrice,
+      if (mealSodaProduct != null)
+        'meal_soda_product': mealSodaProduct!.toLocalJson(),
+    };
+  }
+
+  factory CartItem.fromLocalJson(Map<String, dynamic> json) {
+    final productMap = _asStringKeyMap(json['product']);
+    final mealSodaMap = _asStringKeyMap(json['meal_soda_product']);
+    return CartItem(
+      lineId: _firstNonEmptyString([json['line_id']]),
+      parentLineId: _firstNonEmptyString([json['parent_line_id']]),
+      product: productMap == null
+          ? const Product(
+              id: '',
+              categoryId: '',
+              name: 'Unknown',
+              description: '',
+              price: 0,
+            )
+          : Product.fromLocalJson(productMap),
+      quantity: _parseInt(json['quantity'], fallback: 1),
+      note: _firstNonEmptyString([json['note']]),
+      discountPercent: _parseNullableDouble(json['discount_percent']),
+      isDealComponent: json['is_deal_component'] == true,
+      parentDealName: _firstNonEmptyString([json['parent_deal_name']]),
+      sauces: CartSauceSelection.listFromJson(json['sauces']),
+      isMealUpgrade: json['is_meal_upgrade'] == true,
+      mealAddOnPrice: _parseNullableDouble(json['meal_add_on_price']) ?? 0,
+      mealSodaProduct:
+          mealSodaMap == null ? null : Product.fromLocalJson(mealSodaMap),
+    );
   }
 }
 
@@ -734,6 +892,63 @@ class Order {
       amountGiven: amountGiven ?? this.amountGiven,
       changeReturned: changeReturned ?? this.changeReturned,
       hasBackendTotal: hasBackendTotal,
+    );
+  }
+
+  Map<String, dynamic> toLocalJson() {
+    return {
+      'id': id,
+      'ticket_number': ticketNumber,
+      'created_at': createdAt.toIso8601String(),
+      'items': items.map((item) => item.toLocalJson()).toList(),
+      'order_type': orderType.name,
+      if (paymentType != null) 'payment_type': paymentType!.name,
+      'status': status.name,
+      if (cancellationReason != null) 'cancellation_reason': cancellationReason,
+      if (customerName != null) 'customer_name': customerName,
+      if (customerPhone != null) 'customer_phone': customerPhone,
+      if (customerId != null) 'customer_id': customerId,
+      if (customerNote != null) 'customer_note': customerNote,
+      if (giftRecipient != null) 'gift_recipient': giftRecipient,
+      'is_qr_order': isQrOrder,
+      if (redemptionToken != null) 'redemption_token': redemptionToken,
+      'total_amount': totalAmount,
+      'discount_amount': discountAmount,
+      'amount_given': amountGiven,
+      'change_returned': changeReturned,
+      'has_backend_total': hasBackendTotal,
+    };
+  }
+
+  factory Order.fromLocalJson(Map<String, dynamic> json) {
+    return Order(
+      id: json['id']?.toString() ?? '',
+      ticketNumber: json['ticket_number']?.toString() ?? '',
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '')?.toLocal() ??
+              DateTime.now(),
+      items: (json['items'] as List? ?? const [])
+          .whereType<Map>()
+          .map((item) => CartItem.fromLocalJson(
+                Map<String, dynamic>.from(item),
+              ))
+          .toList(),
+      orderType: _orderTypeFromName(json['order_type']?.toString()),
+      paymentType: _paymentTypeFromName(json['payment_type']?.toString()),
+      status: _orderStatusFromName(json['status']?.toString()),
+      cancellationReason: _firstNonEmptyString([json['cancellation_reason']]),
+      customerName: _firstNonEmptyString([json['customer_name']]),
+      customerPhone: _firstNonEmptyString([json['customer_phone']]),
+      customerId: _firstNonEmptyString([json['customer_id']]),
+      customerNote: _firstNonEmptyString([json['customer_note']]),
+      giftRecipient: _firstNonEmptyString([json['gift_recipient']]),
+      isQrOrder: json['is_qr_order'] == true,
+      redemptionToken: _firstNonEmptyString([json['redemption_token']]),
+      totalAmount: _parseNullableDouble(json['total_amount']) ?? 0,
+      discountAmount: _parseNullableDouble(json['discount_amount']) ?? 0,
+      amountGiven: _parseNullableDouble(json['amount_given']) ?? 0,
+      changeReturned: _parseNullableDouble(json['change_returned']) ?? 0,
+      hasBackendTotal: json['has_backend_total'] == true,
     );
   }
 
@@ -937,6 +1152,54 @@ double? _parseNullableDouble(Object? value) {
   if (value == null) return null;
   if (value is num) return value.toDouble();
   return double.tryParse(value.toString());
+}
+
+OrderType _orderTypeFromName(String? value) {
+  switch (value) {
+    case 'takeaway':
+      return OrderType.takeaway;
+    case 'glovo':
+      return OrderType.glovo;
+    case 'dineIn':
+    case 'dine_in':
+    default:
+      return OrderType.dineIn;
+  }
+}
+
+PaymentType? _paymentTypeFromName(String? value) {
+  switch (value) {
+    case 'cash':
+      return PaymentType.cash;
+    case 'card':
+      return PaymentType.card;
+    case 'glovo':
+      return PaymentType.glovo;
+    case 'staff':
+      return PaymentType.staff;
+    case 'gift':
+      return PaymentType.gift;
+    case 'other':
+      return PaymentType.other;
+    case 'points':
+      return PaymentType.points;
+    case 'deal':
+      return PaymentType.deal;
+  }
+  return null;
+}
+
+OrderStatus _orderStatusFromName(String? value) {
+  switch (value) {
+    case 'validated':
+    case 'confirmed':
+      return OrderStatus.validated;
+    case 'cancelled':
+      return OrderStatus.cancelled;
+    case 'pending':
+    default:
+      return OrderStatus.pending;
+  }
 }
 
 String displayTicketNumberFrom(String ticketNumber) {

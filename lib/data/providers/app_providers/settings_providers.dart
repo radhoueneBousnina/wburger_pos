@@ -34,7 +34,7 @@ class PosSettingsNotifier extends StateNotifier<AsyncValue<PosSettings>> {
   }
 
   Future<void> _fetchSettings({required bool silent}) async {
-    final hadData = state.asData != null && _lastFetchedAt != null;
+    final hadData = state.asData != null;
     try {
       if (!silent || !hadData) {
         state = const AsyncValue.loading();
