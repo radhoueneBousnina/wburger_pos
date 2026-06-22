@@ -461,6 +461,10 @@ void main() {
 
     expect(_containsBytes(bytes, const [0x1b, 0x70, 0x00]), isTrue);
     expect(_containsBytes(bytes, const [0x1b, 0x70, 0x01]), isTrue);
+    expect(
+      _indexOfBytes(bytes, 'Double Cheeseburger'.codeUnits),
+      lessThan(_indexOfBytes(bytes, const [0x1b, 0x70, 0x00])),
+    );
     expect(printableText, contains('Double Cheeseburger'));
     expect(printableText, contains('Total:'));
   });
@@ -543,6 +547,10 @@ void main() {
 }
 
 bool _containsBytes(List<int> bytes, List<int> pattern) {
+  return _indexOfBytes(bytes, pattern) >= 0;
+}
+
+int _indexOfBytes(List<int> bytes, List<int> pattern) {
   for (var index = 0; index <= bytes.length - pattern.length; index++) {
     var matches = true;
     for (var offset = 0; offset < pattern.length; offset++) {
@@ -551,9 +559,9 @@ bool _containsBytes(List<int> bytes, List<int> pattern) {
         break;
       }
     }
-    if (matches) return true;
+    if (matches) return index;
   }
-  return false;
+  return -1;
 }
 
 int _countBytes(List<int> bytes, List<int> pattern) {

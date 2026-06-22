@@ -197,7 +197,7 @@ class _RawTextTicketBuilder extends _PlainTextTicketBuilder {
 
   @override
   void openCashDrawer() {
-    _initialCommands.addAll(ReceiptTicketBuilder.buildCashDrawerPulseBytes());
+    _finalCommands.addAll(ReceiptTicketBuilder.buildCashDrawerPulseBytes());
   }
 
   @override

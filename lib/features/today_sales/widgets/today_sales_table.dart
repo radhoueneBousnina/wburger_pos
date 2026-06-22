@@ -296,7 +296,7 @@ class _OrderRow extends ConsumerWidget {
                   style: AppTextStyles.title.copyWith(color: AppColors.blue)),
               const SizedBox(height: 4),
               Text(
-                  'This action cannot be reversed. Stock will not be affected.',
+                  'This action cannot be reversed. Stock is restored unless the kitchen ticket is already ready.',
                   style: AppTextStyles.body
                       .copyWith(color: AppColors.textSecondary)),
               const SizedBox(height: 16),

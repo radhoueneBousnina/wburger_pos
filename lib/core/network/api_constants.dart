@@ -32,6 +32,7 @@ class ApiConstants {
   static const String lookupByQr = '$apiPrefix/sales/orders/lookup_by_qr/';
   static const String confirmPayment = '/confirm_payment/';
   static const String addItem = '/add_item/';
+  static const String cancelItem = '/cancel_item/';
   static const String printProxy = '$apiPrefix/sales/print-proxy/';
   static const String printProxyBridge = '$printBridgeBaseUrl$printProxy';
   static const String drawerStatusProxy =

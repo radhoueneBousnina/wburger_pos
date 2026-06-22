@@ -42,6 +42,7 @@ class PosMonitoringService {
   static const _queueKey = 'pos_monitoring_event_queue';
   static const _deviceIdKey = 'pos_monitoring_device_id';
   static const _tokenKey = 'wburger_auth_token';
+  static const _eventDedupeWindow = Duration(minutes: 10);
   static const appVersion = String.fromEnvironment(
     'APP_VERSION',
     defaultValue: '1.0.0',
@@ -87,6 +88,7 @@ class PosMonitoringService {
   bool _heartbeatInFlight = false;
   bool _backendOnline = true;
   bool _internetOnline = true;
+  final Map<String, DateTime> _lastMonitoringEventAt = {};
 
   DateTime? _lastSyncAt;
   int _unsyncedOrdersCount = 0;
@@ -172,20 +174,37 @@ class PosMonitoringService {
     Map<String, dynamic> metadata = const {},
   }) async {
     await init();
-    _lastError = level == 'info' ? _lastError : _cleanText(message);
+    final cleanLevel = _cleanText(level);
+    final cleanEventType = _cleanText(eventType);
+    final cleanMessage = _cleanText(message);
+    _lastError = cleanLevel == 'info' ? _lastError : cleanMessage;
     await logLocal(
         '${DateTime.now().toIso8601String()} [$level] $eventType $message');
 
+    if (_isDuplicateMonitoringEvent(
+      level: cleanLevel,
+      eventType: cleanEventType,
+      message: cleanMessage,
+    )) {
+      await logLocal(
+        '${DateTime.now().toIso8601String()} [info] monitoring_duplicate_suppressed $cleanEventType',
+      );
+      return;
+    }
+
     final payload = {
       'source': 'flutter_pos',
-      'level': _cleanText(level),
-      'event_type': _cleanText(eventType),
-      'message': _cleanText(message),
+      'level': cleanLevel,
+      'event_type': cleanEventType,
+      'message': cleanMessage,
       'device_id': await deviceId(),
       'app_version': appVersion,
       'environment': kReleaseMode ? 'production' : 'debug',
+      'notification_channels': ['email'],
+      'suppress_push': true,
       'metadata': _sanitize({
         'platform': kIsWeb ? 'web' : Platform.operatingSystem,
+        'notification_policy': 'email_only',
         ...metadata,
       }),
     };
@@ -456,6 +475,25 @@ class PosMonitoringService {
 
   Future<void> _writeQueue(List<Map<String, dynamic>> queue) async {
     await _prefs?.setString(_queueKey, jsonEncode(queue));
+  }
+
+  bool _isDuplicateMonitoringEvent({
+    required String level,
+    required String eventType,
+    required String message,
+  }) {
+    if (level == 'info') return false;
+    final now = DateTime.now();
+    _lastMonitoringEventAt.removeWhere(
+      (_, timestamp) => now.difference(timestamp) > _eventDedupeWindow,
+    );
+    final fingerprint = '$level|$eventType|$message';
+    final previous = _lastMonitoringEventAt[fingerprint];
+    if (previous != null && now.difference(previous) <= _eventDedupeWindow) {
+      return true;
+    }
+    _lastMonitoringEventAt[fingerprint] = now;
+    return false;
   }
 
   dynamic _sanitize(dynamic value, [int depth = 0]) {

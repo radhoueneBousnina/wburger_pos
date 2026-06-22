@@ -1,11 +1,35 @@
 part of '../screens/today_sales_screen.dart';
 
-class _SaleDetailsModal extends ConsumerWidget {
+class _SaleDetailsModal extends ConsumerStatefulWidget {
   final Order order;
   const _SaleDetailsModal({required this.order});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_SaleDetailsModal> createState() => _SaleDetailsModalState();
+}
+
+class _SaleDetailsModalState extends ConsumerState<_SaleDetailsModal> {
+  late Order _order;
+  String? _cancellingItemId;
+
+  @override
+  void initState() {
+    super.initState();
+    _order = widget.order;
+  }
+
+  @override
+  void didUpdateWidget(covariant _SaleDetailsModal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.order.id != widget.order.id) {
+      _order = widget.order;
+      _cancellingItemId = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final order = _order;
     final screen = MediaQuery.sizeOf(context);
     final layout = context.posLayout;
     final compact = screen.width < 820 || layout.isCompact;
@@ -16,6 +40,11 @@ class _SaleDetailsModal extends ConsumerWidget {
     );
     final contentPadding = compact ? 16.0 : 22.0;
     final contentWidth = modalWidth - (contentPadding * 2);
+    final canCancelItems =
+        ref.watch(authProvider).permissions['can_cancel_order'] == true &&
+            order.status == OrderStatus.validated &&
+            order.paymentType != PaymentType.points &&
+            order.paymentType != PaymentType.deal;
 
     Future<void> reprintReceipt() async {
       final messenger = ScaffoldMessenger.of(context);
@@ -69,6 +98,9 @@ class _SaleDetailsModal extends ConsumerWidget {
                         child: _OrderDetailsContent(
                           order: order,
                           compact: compact,
+                          canCancelItems: canCancelItems,
+                          cancellingItemId: _cancellingItemId,
+                          onCancelItem: _cancelItem,
                         ),
                       ),
                     ),
@@ -84,6 +116,145 @@ class _SaleDetailsModal extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _cancelItem(CartItem item) async {
+    final itemId = item.lineId;
+    if (itemId == null || itemId.isEmpty || _cancellingItemId != null) return;
+
+    final reason = await _showCancelItemReasonDialog(item);
+    if (reason == null || reason.isEmpty || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _cancellingItemId = itemId);
+    try {
+      final updatedOrder =
+          await ref.read(ordersProvider.notifier).cancelOrderItem(
+                orderId: _order.id,
+                itemId: itemId,
+                reason: reason,
+              );
+      if (!mounted) return;
+      setState(() => _order = updatedOrder);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('${item.displayName} cancelled'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _cancellingItemId = null);
+      }
+    }
+  }
+
+  Future<String?> _showCancelItemReasonDialog(CartItem item) {
+    return showDialog<String>(
+      context: context,
+      builder: (_) => _CancelItemReasonDialog(item: item),
+    );
+  }
+}
+
+class _CancelItemReasonDialog extends StatefulWidget {
+  final CartItem item;
+
+  const _CancelItemReasonDialog({required this.item});
+
+  @override
+  State<_CancelItemReasonDialog> createState() =>
+      _CancelItemReasonDialogState();
+}
+
+class _CancelItemReasonDialogState extends State<_CancelItemReasonDialog> {
+  late final TextEditingController _controller;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+    return AlertDialog(
+      title: Row(
+        children: [
+          const Icon(Icons.remove_circle_rounded, color: AppColors.error),
+          const SizedBox(width: 8),
+          Expanded(child: Text('Cancel ${item.displayName}')),
+        ],
+      ),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${item.quantity} x ${item.displayName}',
+              style: AppTextStyles.title.copyWith(color: AppColors.blue),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Only this item line will be removed from the sale.',
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Cancellation Reason *', style: AppTextStyles.label),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _controller,
+              maxLines: 3,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Enter the reason for this item...',
+                errorText: _errorText,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Keep Item'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final text = _controller.text.trim();
+            if (text.isEmpty) {
+              setState(() => _errorText = 'Reason is required');
+              return;
+            }
+            Navigator.of(context).pop(text);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.error,
+          ),
+          child: const Text('Cancel Item'),
+        ),
+      ],
     );
   }
 }
@@ -210,10 +381,16 @@ IconData _todaySaleOrderTypeIcon(OrderType type) {
 class _OrderDetailsContent extends StatelessWidget {
   final Order order;
   final bool compact;
+  final bool canCancelItems;
+  final String? cancellingItemId;
+  final ValueChanged<CartItem>? onCancelItem;
 
   const _OrderDetailsContent({
     required this.order,
     required this.compact,
+    required this.canCancelItems,
+    required this.cancellingItemId,
+    required this.onCancelItem,
   });
 
   @override
@@ -258,7 +435,13 @@ class _OrderDetailsContent extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 14),
-        _ItemsSection(order: order, compact: compact),
+        _ItemsSection(
+          order: order,
+          compact: compact,
+          canCancelItems: canCancelItems,
+          cancellingItemId: cancellingItemId,
+          onCancelItem: onCancelItem,
+        ),
       ],
     );
   }
@@ -386,15 +569,29 @@ class _CustomerPanel extends StatelessWidget {
 class _ItemsSection extends StatelessWidget {
   final Order order;
   final bool compact;
+  final bool canCancelItems;
+  final String? cancellingItemId;
+  final ValueChanged<CartItem>? onCancelItem;
 
   const _ItemsSection({
     required this.order,
     required this.compact,
+    required this.canCancelItems,
+    required this.cancellingItemId,
+    required this.onCancelItem,
   });
 
   @override
   Widget build(BuildContext context) {
     final itemGroups = groupCartItemsForDisplay(order.items);
+    final showActions = canCancelItems && itemGroups.length > 1;
+    final columnWidths = <int, TableColumnWidth>{
+      0: const FixedColumnWidth(70),
+      1: const FlexColumnWidth(1),
+      2: const FixedColumnWidth(120),
+      if (showActions) 3: FixedColumnWidth(compact ? 104 : 122),
+    };
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.panelFor(context),
@@ -450,11 +647,7 @@ class _ItemsSection extends StatelessWidget {
             )
           else
             Table(
-              columnWidths: const {
-                0: FixedColumnWidth(70),
-                1: FlexColumnWidth(1),
-                2: FixedColumnWidth(120),
-              },
+              columnWidths: columnWidths,
               border: TableBorder(
                 horizontalInside:
                     BorderSide(color: AppColors.borderFor(context)),
@@ -482,6 +675,12 @@ class _ItemsSection extends StatelessWidget {
                           horizontal: 14, vertical: 12),
                       child: _ItemsHeader('Total', align: TextAlign.right),
                     ),
+                    if (showActions)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        child: _ItemsHeader('Action', align: TextAlign.center),
+                      ),
                   ],
                 ),
                 for (final group in itemGroups)
@@ -610,11 +809,79 @@ class _ItemsSection extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (showActions)
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: compact ? 8 : 10,
+                              vertical: compact ? 8 : 12),
+                          child: _CancelItemButton(
+                            item: group.item,
+                            rootLineCount: itemGroups.length,
+                            cancellingItemId: cancellingItemId,
+                            onCancelItem: onCancelItem,
+                          ),
+                        ),
                     ],
                   ),
               ],
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _CancelItemButton extends StatelessWidget {
+  final CartItem item;
+  final int rootLineCount;
+  final String? cancellingItemId;
+  final ValueChanged<CartItem>? onCancelItem;
+
+  const _CancelItemButton({
+    required this.item,
+    required this.rootLineCount,
+    required this.cancellingItemId,
+    required this.onCancelItem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final itemId = item.lineId;
+    final isDealLine = item.product.categoryId == 'deals' ||
+        item.product.id.startsWith('deal-');
+    final canCancel = onCancelItem != null &&
+        rootLineCount > 1 &&
+        itemId != null &&
+        itemId.isNotEmpty &&
+        !item.isDealComponent &&
+        !isDealLine;
+
+    if (!canCancel) return const SizedBox.shrink();
+
+    final isBusy = cancellingItemId == itemId;
+    final isDisabled = cancellingItemId != null;
+    return Align(
+      alignment: Alignment.center,
+      child: OutlinedButton.icon(
+        onPressed: isDisabled ? null : () => onCancelItem!(item),
+        icon: isBusy
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.remove_circle_outline_rounded, size: 16),
+        label: Text(isBusy ? 'Cancelling' : 'Cancel'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.error,
+          side: const BorderSide(color: AppColors.error),
+          minimumSize: const Size(0, 38),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          textStyle: AppTextStyles.labelSm.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
     );
   }

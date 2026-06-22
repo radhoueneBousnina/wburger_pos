@@ -2,17 +2,14 @@ part of '../screens/sales_screen.dart';
 
 class _SuccessOverlay extends StatelessWidget {
   final String ticketNumber;
-  final CustomerDisplayBackendResult? customerDisplayResult;
 
   const _SuccessOverlay({
     required this.ticketNumber,
-    this.customerDisplayResult,
   });
 
   @override
   Widget build(BuildContext context) {
     final displayTicketNumber = displayTicketNumberFrom(ticketNumber);
-    final displayMessage = _customerDisplayMessage(customerDisplayResult);
     return Container(
       color: Colors.black.withValues(alpha: 0.6),
       child: Center(
@@ -49,32 +46,10 @@ class _SuccessOverlay extends StatelessWidget {
               Text('Order sent to kitchen • Printing ticket...',
                   style: AppTextStyles.body
                       .copyWith(color: AppColors.textSecondary)),
-              if (displayMessage != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  displayMessage,
-                  style: AppTextStyles.bodySm.copyWith(
-                    color: customerDisplayResult?.success == true
-                        ? AppColors.success
-                        : AppColors.warning,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
             ],
           ),
         ),
       ),
     );
-  }
-
-  String? _customerDisplayMessage(CustomerDisplayBackendResult? result) {
-    if (result == null) return 'Customer display: detecting...';
-    if (!result.configured) return null;
-    if (result.success) {
-      return 'Customer display: updated';
-    }
-    return 'Customer display: not detected';
   }
 }

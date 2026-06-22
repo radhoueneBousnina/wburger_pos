@@ -545,6 +545,110 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     }
   }
 
+  Future<Order> cancelOrderItem({
+    required String orderId,
+    required String itemId,
+    required String reason,
+  }) async {
+    if (ref.read(testModeProvider).isActive) {
+      return _cancelOrderItemLocally(
+        orderId: orderId,
+        itemId: itemId,
+        reason: reason,
+      );
+    }
+
+    try {
+      final response = await apiClient.dio.post(
+        '${ApiConstants.orders}$orderId${ApiConstants.cancelItem}',
+        data: {
+          'order_item_id': itemId,
+          'cancellation_reason': reason,
+        },
+      );
+      final responseData = _asMap(response.data);
+      final orderData = _asMap(responseData?['order']);
+      if (orderData == null) {
+        throw 'The server did not return the updated order.';
+      }
+
+      final updatedOrder = Order.fromJson(orderData);
+      _upsertLocalOrder(updatedOrder);
+      unawaited(fetchTodayOrders(showLoading: false, force: true));
+
+      final auth = ref.read(authProvider);
+      if (auth.permissions['can_access_stock'] == true ||
+          auth.permissions['can_close_session'] == true) {
+        unawaited(ref.read(stockProvider.notifier).fetchStock(
+              silent: true,
+              force: true,
+            ));
+      }
+      return updatedOrder;
+    } on DioException catch (e) {
+      apiClient.logError('Cancel order item error', e);
+      throw apiClient.describeError(
+        e,
+        fallback: 'Unable to cancel this item right now.',
+      );
+    } catch (e) {
+      apiClient.logError('Cancel order item error', e);
+      throw apiClient.describeError(
+        e,
+        fallback: 'Unable to cancel this item right now.',
+      );
+    }
+  }
+
+  Order _cancelOrderItemLocally({
+    required String orderId,
+    required String itemId,
+    required String reason,
+  }) {
+    final current = state.asData?.value ?? const <Order>[];
+    final existingIndex = current.indexWhere((order) => order.id == orderId);
+    if (existingIndex == -1) {
+      throw 'Order not found.';
+    }
+
+    final existing = current[existingIndex];
+    final itemIndex =
+        existing.items.indexWhere((item) => item.lineId == itemId);
+    if (itemIndex == -1) {
+      throw 'Order item not found.';
+    }
+
+    final item = existing.items[itemIndex];
+    final remainingItems = existing.items
+        .where(
+            (entry) => entry.lineId != itemId && entry.parentLineId != itemId)
+        .map((entry) => entry.copyWith())
+        .toList();
+    if (remainingItems.where((entry) => !entry.isDealComponent).isEmpty) {
+      throw 'Use Cancel Order when removing the last item.';
+    }
+
+    final nextTotal = existing.total - item.total;
+    final updatedOrder = existing.copyWith(
+      items: remainingItems,
+      totalAmount: nextTotal > 0 ? nextTotal : 0,
+      cancellationReason: [
+        existing.cancellationReason?.trim(),
+        'Item cancelled: ${item.quantity} x ${item.displayName} - $reason',
+      ].where((part) => part != null && part.isNotEmpty).join('\n'),
+    );
+
+    _upsertLocalOrder(updatedOrder);
+    ref.read(stockProvider.notifier).restoreSaleCart(
+          CartState(
+            items: [item.copyWith()],
+            orderType: existing.orderType,
+            paymentType: existing.paymentType,
+          ),
+        );
+    return updatedOrder;
+  }
+
   void _upsertLocalOrder(Order order) {
     final current = state.asData?.value ?? const <Order>[];
     final next = [
