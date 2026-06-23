@@ -140,6 +140,50 @@ void main() {
     expect(find.text('Discount 40.00%: -8.000 DT'), findsOneWidget);
   });
 
+  testWidgets('cash validation is shown inside the payment modal',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 760));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    var confirmed = false;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: PaymentModal(
+              total: 20,
+              initialPaymentType: PaymentType.cash,
+              onConfirm: (
+                _,
+                __, {
+                amountGiven,
+                changeReturned,
+                staffId,
+                glovoOrderId,
+                giftRecipient,
+                payableTotal,
+                discountAmount,
+                staffDiscountPercent,
+              }) {
+                confirmed = true;
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Confirm Payment'));
+    await tester.pumpAndSettle();
+
+    expect(confirmed, isFalse);
+    expect(find.text('Enter enough cash before confirming.'), findsOneWidget);
+    expect(find.text('Amount received must cover the total.'), findsOneWidget);
+  });
+
   testWidgets('gift payment requires a recipient and reports zero total',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 760));

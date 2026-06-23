@@ -12,19 +12,24 @@ class ApiClient {
   late final Dio dio;
   SharedPreferences? _prefs;
   Future<void>? _initFuture;
+  final StreamController<void> _authInvalidatedController =
+      StreamController<void>.broadcast();
+  Future<String?>? _refreshFuture;
 
   static const String tokenKey = 'wburger_auth_token';
   static const String refreshTokenKey = 'wburger_refresh_token';
+  static const String _skipAuthHeaderKey = 'skipAuthHeader';
+  static const String _retriedAfterRefreshKey = 'retriedAfterRefresh';
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
     iOptions: IOSOptions(
       accessibility: KeychainAccessibility.first_unlock_this_device,
     ),
   );
-  bool _isRefreshing = false;
-
   factory ApiClient() {
     return _instance;
   }
+
+  Stream<void> get authInvalidated => _authInvalidatedController.stream;
 
   ApiClient._internal() {
     dio = Dio(BaseOptions(
@@ -41,8 +46,9 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final token = await getAccessToken();
-          if (token != null && token.isNotEmpty) {
+          final skipAuth = options.extra[_skipAuthHeaderKey] == true;
+          final token = skipAuth ? null : await getAccessToken();
+          if (!skipAuth && token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           handler.next(options);
@@ -58,57 +64,116 @@ class ApiClient {
               e.type == DioExceptionType.sendTimeout) {
             PosMonitoringService.instance.noteBackendFailure(describeError(e));
           }
-          // Handle 401 Unauthorized by attempting a token refresh
-          if (e.response?.statusCode == 401 && !_isRefreshing) {
-            final refreshToken = await getRefreshToken();
+          if (e.response?.statusCode == 401 && _canRefreshRequest(e)) {
+            final newAccessToken = await _refreshAccessToken();
+            if (newAccessToken != null && newAccessToken.isNotEmpty) {
+              final options = e.requestOptions;
+              options.extra[_retriedAfterRefreshKey] = true;
+              options.headers['Authorization'] = 'Bearer $newAccessToken';
 
-            if (refreshToken != null && refreshToken.isNotEmpty) {
-              _isRefreshing = true;
-              try {
-                // Attempt to refresh the access token
-                final refreshRes = await Dio().post(
-                  '${ApiConstants.baseUrl}${ApiConstants.apiPrefix}/auth/token/refresh/',
-                  data: {'refresh': refreshToken},
-                );
-
-                final newAccessToken = refreshRes.data['access'];
-                if (newAccessToken != null) {
-                  await _secureStorage.write(
-                    key: tokenKey,
-                    value: newAccessToken.toString(),
-                  );
-                  final newRefreshToken = refreshRes.data['refresh'];
-                  if (newRefreshToken != null) {
-                    await _secureStorage.write(
-                      key: refreshTokenKey,
-                      value: newRefreshToken.toString(),
-                    );
-                  }
-                  await _clearLegacyTokens();
-
-                  // Update the request with the new token and retry
-                  final options = e.requestOptions;
-                  options.headers['Authorization'] = 'Bearer $newAccessToken';
-
-                  final response = await dio.fetch(options);
-                  _isRefreshing = false;
-                  return handler.resolve(response);
-                }
-              } catch (refreshError) {
-                // If refresh fails, log out user.
-                if (kDebugMode) debugPrint('Refresh token failed.');
-                await clearAllTokens();
-              } finally {
-                _isRefreshing = false;
-              }
-            } else {
-              await clearAllTokens();
+              final response = await dio.fetch(options);
+              return handler.resolve(response);
             }
           }
           handler.next(e);
         },
       ),
     );
+  }
+
+  bool _canRefreshRequest(DioException error) {
+    final options = error.requestOptions;
+    if (options.extra[_retriedAfterRefreshKey] == true) return false;
+    if (options.extra[_skipAuthHeaderKey] == true) return false;
+
+    final path = options.uri.path;
+    return !path.endsWith('/auth/login/') &&
+        !path.endsWith('/auth/logout/') &&
+        !path.endsWith('/auth/token/refresh/');
+  }
+
+  Future<String?> _refreshAccessToken() {
+    final existingRefresh = _refreshFuture;
+    if (existingRefresh != null) return existingRefresh;
+
+    final refresh = _performRefresh();
+    _refreshFuture = refresh;
+    return refresh.whenComplete(() {
+      _refreshFuture = null;
+    });
+  }
+
+  Future<String?> _performRefresh() async {
+    final refreshToken = await getRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      await _invalidateAuth();
+      return null;
+    }
+
+    try {
+      final refreshRes = await Dio(
+        BaseOptions(
+          baseUrl: ApiConstants.baseUrl,
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+          headers: const {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
+      ).post(
+        '${ApiConstants.apiPrefix}/auth/token/refresh/',
+        data: {'refresh': refreshToken},
+        options: Options(extra: const {_skipAuthHeaderKey: true}),
+      );
+
+      final newAccessToken = _tokenFromResponse(refreshRes.data, const [
+        'access',
+        'access_token',
+        'key',
+        'token',
+      ]);
+      if (newAccessToken == null || newAccessToken.isEmpty) {
+        await _invalidateAuth();
+        return null;
+      }
+
+      await _secureStorage.write(key: tokenKey, value: newAccessToken);
+      final newRefreshToken = _tokenFromResponse(refreshRes.data, const [
+        'refresh',
+        'refresh_token',
+      ]);
+      if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+        await _secureStorage.write(
+          key: refreshTokenKey,
+          value: newRefreshToken,
+        );
+      }
+      await _clearLegacyTokens();
+      return newAccessToken;
+    } catch (refreshError) {
+      if (kDebugMode) debugPrint('Refresh token failed.');
+      await _invalidateAuth();
+      return null;
+    }
+  }
+
+  Future<void> _invalidateAuth() async {
+    await clearAllTokens();
+    if (!_authInvalidatedController.isClosed) {
+      _authInvalidatedController.add(null);
+    }
+  }
+
+  static String? _tokenFromResponse(Object? data, List<String> keys) {
+    if (data is! Map) return null;
+
+    for (final key in keys) {
+      final value = data[key];
+      final token = value?.toString().trim();
+      if (token != null && token.isNotEmpty) return token;
+    }
+    return null;
   }
 
   Future<void> init() {

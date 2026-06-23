@@ -9,6 +9,9 @@ class _CartPanel extends ConsumerWidget {
     final layout = context.posLayout;
     final cart = ref.watch(cartProvider);
     final isTraining = AppColors.isTraining(context);
+    final canApplyDiscount =
+        ref.watch(authProvider).permissions['can_apply_discount'] == true;
+    final hasDiscount = cart.discountAmount > 0.001;
 
     return Container(
       decoration: BoxDecoration(
@@ -52,6 +55,19 @@ class _CartPanel extends ConsumerWidget {
                       ),
                     ),
                     const Spacer(),
+                    if (canApplyDiscount &&
+                        !cart.isLockedForQr &&
+                        cart.items.isNotEmpty) ...[
+                      _OrderDiscountHeaderButton(
+                        percent: cart.orderDiscountPercent,
+                        onPressed: () => _showOrderDiscountDialog(
+                          context,
+                          ref,
+                          cart.orderDiscountPercent,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     if (cart.items.isNotEmpty)
                       Container(
                         padding: EdgeInsets.symmetric(
@@ -199,17 +215,46 @@ class _CartPanel extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(cart.isQrOrder ? 'Total' : 'Subtotal',
+                      Text(hasDiscount ? 'Subtotal' : 'Total',
                           style: AppTextStyles.body.copyWith(
                             color: AppColors.textSecondaryFor(context),
                           )),
-                      Text('${cart.subtotal.toStringAsFixed(3)} DT',
+                      Text(
+                          '${(hasDiscount ? cart.originalSubtotal : cart.subtotal).toStringAsFixed(3)} DT',
                           style: AppTextStyles.title.copyWith(
                             color: AppColors.accentFor(context),
                             fontSize: 18,
                           )),
                     ],
                   ),
+                  if (cart.itemDiscountAmount > 0.001) ...[
+                    const SizedBox(height: 6),
+                    _CartSummaryLine(
+                      label: 'Item discounts',
+                      value:
+                          '-${cart.itemDiscountAmount.toStringAsFixed(3)} DT',
+                      color: AppColors.success,
+                    ),
+                  ],
+                  if (cart.orderDiscountAmount > 0.001) ...[
+                    const SizedBox(height: 6),
+                    _CartSummaryLine(
+                      label:
+                          'Order discount ${cart.orderDiscountPercent!.toStringAsFixed(0)}%',
+                      value:
+                          '-${cart.orderDiscountAmount.toStringAsFixed(3)} DT',
+                      color: AppColors.success,
+                    ),
+                  ],
+                  if (hasDiscount) ...[
+                    const SizedBox(height: 8),
+                    _CartSummaryLine(
+                      label: 'Total',
+                      value: '${cart.subtotal.toStringAsFixed(3)} DT',
+                      color: AppColors.accentFor(context),
+                      isStrong: true,
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   // Clear
                   SizedBox(
@@ -269,6 +314,180 @@ class _CartPanel extends ConsumerWidget {
             ),
         ],
       ),
+    );
+  }
+
+  void _showOrderDiscountDialog(
+    BuildContext context,
+    WidgetRef ref,
+    double? current,
+  ) {
+    double value = current ?? 0;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('Apply Order Discount'),
+          content: SizedBox(
+            width: context.posLayout.dialogWidth,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('${value.toStringAsFixed(0)}%',
+                    style: AppTextStyles.priceLg),
+                Slider(
+                  value: value,
+                  min: 0,
+                  max: 30,
+                  divisions: 30,
+                  activeColor: AppColors.yellow,
+                  onChanged: (v) => setState(() => value = v),
+                ),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [5, 10, 15, 20, 25, 30]
+                      .map(
+                        (p) => ActionChip(
+                          label: Text('$p%'),
+                          onPressed: () => setState(() => value = p.toDouble()),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            if (current != null)
+              TextButton(
+                onPressed: () {
+                  ref.read(cartProvider.notifier).updateOrderDiscount(null);
+                  Navigator.pop(ctx);
+                },
+                child: const Text(
+                  'Remove',
+                  style: TextStyle(color: AppColors.error),
+                ),
+              ),
+            ElevatedButton(
+              onPressed: () {
+                ref.read(cartProvider.notifier).updateOrderDiscount(
+                      value > 0 ? value : null,
+                    );
+                Navigator.pop(ctx);
+              },
+              child: const Text('Apply'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderDiscountHeaderButton extends StatelessWidget {
+  final double? percent;
+  final VoidCallback onPressed;
+
+  const _OrderDiscountHeaderButton({
+    required this.percent,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final layout = context.posLayout;
+    final active = percent != null && percent! > 0;
+    final showText = active || !layout.isCompact;
+    final color = active ? AppColors.success : AppColors.accentFor(context);
+    final radius = BorderRadius.circular(14);
+
+    return Tooltip(
+      message: active
+          ? 'Order discount ${percent!.toStringAsFixed(0)}%'
+          : 'Apply order discount',
+      child: Material(
+        color: (active ? AppColors.success : AppColors.accentFor(context))
+            .withValues(alpha: active ? 0.12 : 0.08),
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(
+            color: color.withValues(alpha: active ? 0.55 : 0.25),
+          ),
+        ),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: radius,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: layout.isCompact ? 38 : 40,
+              minWidth: layout.isCompact ? 40 : 44,
+            ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: showText ? 10 : 0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.local_offer_rounded, size: 18, color: color),
+                  if (showText) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      active ? '${percent!.toStringAsFixed(0)}%' : 'Discount',
+                      style: AppTextStyles.label.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CartSummaryLine extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  final bool isStrong;
+
+  const _CartSummaryLine({
+    required this.label,
+    required this.value,
+    required this.color,
+    this.isStrong = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = isStrong ? AppTextStyles.title : AppTextStyles.bodySm;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: textStyle.copyWith(
+            color: isStrong ? AppColors.textPrimaryFor(context) : color,
+          ),
+        ),
+        Text(
+          value,
+          style: textStyle.copyWith(
+            color: color,
+            fontWeight: isStrong ? FontWeight.w900 : FontWeight.w800,
+          ),
+        ),
+      ],
     );
   }
 }

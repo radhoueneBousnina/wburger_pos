@@ -115,6 +115,15 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       TextEditingController();
   final TextEditingController _staffSearchController = TextEditingController();
   final FocusNode _cashFocusNode = FocusNode();
+  final FocusNode _giftRecipientFocusNode = FocusNode();
+  final GlobalKey _modalErrorKey = GlobalKey();
+  final GlobalKey _cashSectionKey = GlobalKey();
+  final GlobalKey _staffSectionKey = GlobalKey();
+  final GlobalKey _giftSectionKey = GlobalKey();
+  String? _formError;
+  String? _cashAmountError;
+  bool _staffMemberHasError = false;
+  String? _giftRecipientError;
   String? _selectedStaffId;
   String? _lastCustomerDisplayAmountText;
 
@@ -140,6 +149,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
     _giftRecipientController.dispose();
     _staffSearchController.dispose();
     _cashFocusNode.dispose();
+    _giftRecipientFocusNode.dispose();
     super.dispose();
   }
 
@@ -199,36 +209,84 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
     return options;
   }
 
+  void _scrollToKey(GlobalKey key, {double alignment = 0.12}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final targetContext = key.currentContext;
+      if (targetContext == null) return;
+      Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+        alignment: alignment,
+      );
+    });
+  }
+
+  void _showFormError(
+    String message, {
+    GlobalKey? targetKey,
+    FocusNode? focusNode,
+    String? cashAmountError,
+    bool staffMemberHasError = false,
+    String? giftRecipientError,
+  }) {
+    setState(() {
+      _formError = message;
+      _cashAmountError = cashAmountError;
+      _staffMemberHasError = staffMemberHasError;
+      _giftRecipientError = giftRecipientError;
+    });
+    _scrollToKey(targetKey ?? _modalErrorKey);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      focusNode?.requestFocus();
+    });
+  }
+
   Future<void> _handleConfirm() async {
     final selectedType = _effectivePaymentType;
     if (selectedType == null || _isSubmitting) return;
-    final messenger = ScaffoldMessenger.maybeOf(context);
 
     if (selectedType == PaymentType.cash &&
         (_cashGivenController.text.trim().isEmpty ||
             _cashGiven < _displayTotal)) {
-      messenger?.showSnackBar(
-        const SnackBar(content: Text('Enter enough cash before confirming.')),
+      _showFormError(
+        'Enter enough cash before confirming.',
+        targetKey: _cashSectionKey,
+        focusNode: _cashFocusNode,
+        cashAmountError: 'Amount received must cover the total.',
       );
       return;
     }
 
     if (selectedType == PaymentType.staff && _selectedStaffId == null) {
-      messenger?.showSnackBar(
-        const SnackBar(content: Text('Choose the staff member for this sale.')),
+      _showFormError(
+        'Choose the staff member for this sale.',
+        targetKey: _staffSectionKey,
+        staffMemberHasError: true,
       );
       return;
     }
 
     if (selectedType == PaymentType.gift &&
         _giftRecipientController.text.trim().isEmpty) {
-      messenger?.showSnackBar(
-        const SnackBar(content: Text('Enter who this gift is for.')),
+      _showFormError(
+        'Enter who this gift is for.',
+        targetKey: _giftSectionKey,
+        focusNode: _giftRecipientFocusNode,
+        giftRecipientError: 'Gift recipient is required.',
       );
       return;
     }
 
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _isSubmitting = true;
+      _formError = null;
+      _cashAmountError = null;
+      _staffMemberHasError = false;
+      _giftRecipientError = null;
+    });
     try {
       await widget.onConfirm(
         selectedType,
@@ -250,12 +308,8 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       );
       if (mounted) Navigator.pop(context);
     } catch (error) {
-      messenger?.showSnackBar(
-        SnackBar(
-          content: Text(error.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      if (!mounted) return;
+      _showFormError(error.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -266,11 +320,20 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
     _cashGivenController.selection = TextSelection.collapsed(
       offset: _cashGivenController.text.length,
     );
-    setState(() {});
+    setState(() {
+      _formError = null;
+      _cashAmountError = null;
+    });
   }
 
   void _selectPaymentType(PaymentType type) {
-    setState(() => _selectedType = type);
+    setState(() {
+      _selectedType = type;
+      _formError = null;
+      _cashAmountError = null;
+      _staffMemberHasError = false;
+      _giftRecipientError = null;
+    });
     if (type == PaymentType.cash) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _cashFocusNode.requestFocus();
@@ -283,6 +346,10 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   void _selectOrderType(OrderType orderType) {
     setState(() {
       _orderType = orderType;
+      _formError = null;
+      _cashAmountError = null;
+      _staffMemberHasError = false;
+      _giftRecipientError = null;
       if (orderType == OrderType.glovo) {
         _selectedType = PaymentType.glovo;
       } else if (_selectedType == PaymentType.glovo) {
@@ -323,7 +390,10 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       ..text = nextText
       ..selection = TextSelection.collapsed(offset: start + value.length);
     _focusCashFieldAtEndIfNeeded();
-    setState(() {});
+    setState(() {
+      _formError = null;
+      _cashAmountError = null;
+    });
   }
 
   void _deleteCashCharacter() {
@@ -339,13 +409,19 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
         ..selection = TextSelection.collapsed(offset: start - 1);
     }
     _focusCashFieldAtEndIfNeeded();
-    setState(() {});
+    setState(() {
+      _formError = null;
+      _cashAmountError = null;
+    });
   }
 
   void _clearCashAmount() {
     _cashGivenController.clear();
     _focusCashFieldAtEndIfNeeded();
-    setState(() {});
+    setState(() {
+      _formError = null;
+      _cashAmountError = null;
+    });
   }
 
   void _focusCashFieldAtEndIfNeeded() {
@@ -411,6 +487,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
                 ],
               ),
             ),
+            if (_formError != null) _buildErrorBanner(),
             Flexible(
               child: cashWideLayout
                   ? Padding(
@@ -463,6 +540,40 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner() {
+    return Container(
+      key: _modalErrorKey,
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.errorLight,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.38)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.error,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _formError!,
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.error,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -667,19 +778,41 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   }
 
   Widget _buildGiftSection() {
-    return _PaymentSectionCard(
-      title: 'Gift Details',
-      child: TextField(
-        controller: _giftRecipientController,
-        textInputAction: TextInputAction.done,
-        textCapitalization: TextCapitalization.words,
-        decoration: InputDecoration(
-          labelText: 'Gift recipient',
-          prefixIcon: const Icon(Icons.card_giftcard_rounded),
-          filled: true,
-          fillColor: AppColors.inputFillFor(context),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+    return KeyedSubtree(
+      key: _giftSectionKey,
+      child: _PaymentSectionCard(
+        title: 'Gift Details',
+        hasError: _giftRecipientError != null,
+        child: TextField(
+          controller: _giftRecipientController,
+          focusNode: _giftRecipientFocusNode,
+          textInputAction: TextInputAction.done,
+          textCapitalization: TextCapitalization.words,
+          onChanged: (_) {
+            if (_giftRecipientError != null || _formError != null) {
+              setState(() {
+                _giftRecipientError = null;
+                _formError = null;
+              });
+            }
+          },
+          decoration: InputDecoration(
+            labelText: 'Gift recipient',
+            errorText: _giftRecipientError,
+            prefixIcon: const Icon(Icons.card_giftcard_rounded),
+            filled: true,
+            fillColor: AppColors.inputFillFor(context),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: AppColors.error, width: 2),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: AppColors.error, width: 2.5),
+            ),
           ),
         ),
       ),
@@ -691,97 +824,124 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
     bool forceStackedKeypad = true,
     double keypadWidth = 240,
   }) {
-    return _PaymentSectionCard(
-      title: 'Cash Details',
-      dense: dense,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = !forceStackedKeypad && constraints.maxWidth >= 430;
-          final form = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: _cashGivenController,
-                focusNode: _cashFocusNode,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                  TextInputFormatter.withFunction(
-                    (oldValue, newValue) {
-                      final valid =
-                          RegExp(r'^\d*\.?\d{0,3}$').hasMatch(newValue.text);
-                      return valid ? newValue : oldValue;
-                    },
-                  ),
-                ],
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: 'Amount received',
-                  suffixText: 'DT',
-                  prefixIcon: const Icon(Icons.payments_rounded),
-                  filled: true,
-                  fillColor: AppColors.inputFillFor(context),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
+    return KeyedSubtree(
+      key: _cashSectionKey,
+      child: _PaymentSectionCard(
+        title: 'Cash Details',
+        dense: dense,
+        hasError: _cashAmountError != null,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = !forceStackedKeypad && constraints.maxWidth >= 430;
+            final form = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _cashGivenController,
+                  focusNode: _cashFocusNode,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                    TextInputFormatter.withFunction(
+                      (oldValue, newValue) {
+                        final valid =
+                            RegExp(r'^\d*\.?\d{0,3}$').hasMatch(newValue.text);
+                        return valid ? newValue : oldValue;
+                      },
+                    ),
+                  ],
+                  onChanged: (_) => setState(() {
+                    _formError = null;
+                    _cashAmountError = null;
+                  }),
+                  decoration: InputDecoration(
+                    labelText: 'Amount received',
+                    errorText: _cashAmountError,
+                    suffixText: 'DT',
+                    prefixIcon: const Icon(Icons.payments_rounded),
+                    filled: true,
+                    fillColor: AppColors.inputFillFor(context),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide:
+                          const BorderSide(color: AppColors.error, width: 2),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide:
+                          const BorderSide(color: AppColors.error, width: 2.5),
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(height: dense ? 10 : 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: _fillExactAmount,
-                    icon: const Icon(Icons.check_rounded),
-                    label: const Text('Exact Amount'),
-                  ),
-                  _PaymentInfoPill(
-                    icon: Icons.keyboard_return_rounded,
-                    text: 'Change: ${_changeReturned.toStringAsFixed(3)} DT',
-                    color: AppColors.success,
-                  ),
-                ],
-              ),
-            ],
-          );
-          final keypad = _CashNumberPad(
-            dense: dense,
-            onDigit: _insertCashCharacter,
-            onDelete: _deleteCashCharacter,
-            onClear: _clearCashAmount,
-          );
-          if (!wide) {
-            return Column(
-              children: [
-                form,
-                SizedBox(height: dense ? 10 : 14),
-                keypad,
+                SizedBox(height: dense ? 10 : 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _fillExactAmount,
+                      icon: const Icon(Icons.check_rounded),
+                      label: const Text('Exact Amount'),
+                    ),
+                    _PaymentInfoPill(
+                      icon: Icons.keyboard_return_rounded,
+                      text: 'Change: ${_changeReturned.toStringAsFixed(3)} DT',
+                      color: AppColors.success,
+                    ),
+                  ],
+                ),
               ],
             );
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: form),
-              const SizedBox(width: 14),
-              SizedBox(width: keypadWidth, child: keypad),
-            ],
-          );
-        },
+            final keypad = _CashNumberPad(
+              dense: dense,
+              onDigit: _insertCashCharacter,
+              onDelete: _deleteCashCharacter,
+              onClear: _clearCashAmount,
+            );
+            if (!wide) {
+              return Column(
+                children: [
+                  form,
+                  SizedBox(height: dense ? 10 : 14),
+                  keypad,
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: form),
+                const SizedBox(width: 14),
+                SizedBox(width: keypadWidth, child: keypad),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 
   Widget _buildStaffSection() {
-    return _PaymentSectionCard(
-      title: 'Staff Member',
-      child: _StaffPicker(
-        selectedStaffId: _selectedStaffId,
-        searchController: _staffSearchController,
-        onChanged: (id) => setState(() => _selectedStaffId = id),
+    return KeyedSubtree(
+      key: _staffSectionKey,
+      child: _PaymentSectionCard(
+        title: 'Staff Member',
+        hasError: _staffMemberHasError,
+        errorText: _staffMemberHasError ? 'Select a staff member.' : null,
+        child: _StaffPicker(
+          selectedStaffId: _selectedStaffId,
+          searchController: _staffSearchController,
+          onChanged: (id) => setState(() {
+            _selectedStaffId = id;
+            _staffMemberHasError = false;
+            _formError = null;
+          }),
+        ),
       ),
     );
   }

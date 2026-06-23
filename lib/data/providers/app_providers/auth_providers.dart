@@ -91,10 +91,16 @@ String? _firstLoginTokenValue(Object? data, List<String> keys) {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
+  late final StreamSubscription<void> _authInvalidatedSubscription;
+
   AuthNotifier(bool initialIsAuthenticated)
       : super(AuthState(
           isAuthenticated: initialIsAuthenticated,
-        ));
+        )) {
+    _authInvalidatedSubscription = apiClient.authInvalidated.listen((_) {
+      state = const AuthState();
+    });
+  }
 
   Future<bool> login(String username, String password) async {
     try {
@@ -199,6 +205,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   bool hasPermission(String key) {
     return state.permissions[key] ?? false;
+  }
+
+  @override
+  void dispose() {
+    _authInvalidatedSubscription.cancel();
+    super.dispose();
   }
 }
 

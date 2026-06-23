@@ -4,10 +4,30 @@ part of '../screens/login_screen.dart';
 
 extension _LoginScreenActions on _LoginScreenState {
   Future<void> _handleLogin() async {
-    if (_usernameCtrl.text.trim().isEmpty ||
-        _passwordCtrl.text.trim().isEmpty) {
+    final usernameEmpty = _usernameCtrl.text.trim().isEmpty;
+    final passwordEmpty = _passwordCtrl.text.trim().isEmpty;
+    if (usernameEmpty || passwordEmpty) {
       setState(() {
-        _errorMessage = 'Please enter your username and password.';
+        _usernameError = usernameEmpty ? 'Username is required.' : null;
+        _passwordError = passwordEmpty ? 'Password is required.' : null;
+        _errorMessage = 'Please complete the highlighted fields.';
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final targetKey = usernameEmpty ? _usernameFieldKey : _passwordFieldKey;
+        final targetContext = targetKey.currentContext;
+        if (targetContext == null) return;
+        Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          alignment: 0.2,
+        );
+        if (usernameEmpty) {
+          _usernameFocusNode.requestFocus();
+        } else {
+          _passwordFocusNode.requestFocus();
+        }
       });
       return;
     }
@@ -15,6 +35,8 @@ extension _LoginScreenActions on _LoginScreenState {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _usernameError = null;
+      _passwordError = null;
     });
 
     try {
@@ -47,12 +69,30 @@ extension _LoginScreenActions on _LoginScreenState {
           _isLoading = false;
           _errorMessage = 'Invalid username or password.';
         });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _errorMessageKey.currentContext == null) return;
+          Scrollable.ensureVisible(
+            _errorMessageKey.currentContext!,
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            alignment: 0.1,
+          );
+        });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _errorMessageKey.currentContext == null) return;
+        Scrollable.ensureVisible(
+          _errorMessageKey.currentContext!,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          alignment: 0.1,
+        );
       });
     }
   }

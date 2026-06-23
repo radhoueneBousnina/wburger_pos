@@ -4,30 +4,51 @@ class _PaymentSectionCard extends StatelessWidget {
   final String title;
   final Widget child;
   final bool dense;
+  final bool hasError;
+  final String? errorText;
 
   const _PaymentSectionCard({
     required this.title,
     required this.child,
     this.dense = false,
+    this.hasError = false,
+    this.errorText,
   });
 
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accentFor(context);
+    final borderColor =
+        hasError ? AppColors.error : AppColors.borderFor(context);
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(dense ? 12 : 16),
       decoration: BoxDecoration(
         color: AppColors.elevatedSurfaceFor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderFor(context)),
+        border: Border.all(color: borderColor, width: hasError ? 2 : 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTextStyles.label.copyWith(color: accent)),
+          Text(
+            title,
+            style: AppTextStyles.label.copyWith(
+              color: hasError ? AppColors.error : accent,
+            ),
+          ),
           SizedBox(height: dense ? 8 : 12),
           child,
+          if (errorText != null) ...[
+            SizedBox(height: dense ? 8 : 10),
+            Text(
+              errorText!,
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.error,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ],
       ),
     );

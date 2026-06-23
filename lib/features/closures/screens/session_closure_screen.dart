@@ -251,10 +251,7 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
     }
   }
 
-  Future<void> _showStockDocumentQrUploadFlow(List<StockItem> stocks) async {
-    setState(() => _submittedStock = true);
-    if (!_allStockItemsEntered) return;
-
+  Future<void> _showStockDocumentQrUploadFlow() async {
     final sessionService = ref.read(posSessionServiceProvider);
     final existingUploadSession = _stockDocumentUploadSession;
     if (existingUploadSession != null) {
@@ -280,12 +277,8 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
       if (sessionId == null || sessionId.isEmpty) {
         throw 'No active session is currently open.';
       }
-      final uploadSession =
-          await sessionService.createStockDocumentUploadSession(
-        sessionId: sessionId,
-        items: _stockVerificationItems(stocks),
-        note: _stockNoteCtrl.text.trim(),
-      );
+      final uploadSession = await sessionService
+          .createStockDocumentUploadSession(sessionId: sessionId);
       if (!mounted) return;
       setState(() => _stockDocumentUploadSession = uploadSession);
       await showDialog<void>(

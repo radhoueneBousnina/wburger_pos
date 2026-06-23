@@ -87,6 +87,7 @@ final filteredProductsProvider = Provider<AsyncValue<List<Product>>>((ref) {
   final query = ref.watch(searchQueryProvider).toLowerCase();
   final selectedCat = ref.watch(selectedCategoryProvider);
   final productsAsync = ref.watch(productsProvider);
+  final categoriesAsync = ref.watch(categoriesProvider);
 
   return productsAsync.whenData((products) {
     List<Product> result = products.where((p) => p.isActive).toList();
@@ -101,6 +102,39 @@ final filteredProductsProvider = Provider<AsyncValue<List<Product>>>((ref) {
       result = result.where((p) => p.categoryId == selectedCat).toList();
     }
 
+    if (selectedCat == null) {
+      final categories = categoriesAsync.valueOrNull;
+      if (categories != null && categories.isNotEmpty) {
+        result = orderProductsByCategorySequence(result, categories);
+      }
+    }
+
     return result;
   });
 });
+
+List<Product> orderProductsByCategorySequence(
+  List<Product> products,
+  List<Category> categories,
+) {
+  final categoryOrder = <String, int>{};
+  for (final category in categories) {
+    categoryOrder.putIfAbsent(category.id, () => categoryOrder.length);
+  }
+
+  final indexedProducts = products.indexed.toList();
+  indexedProducts.sort((left, right) {
+    final leftCategoryOrder =
+        categoryOrder[left.$2.categoryId] ?? categoryOrder.length;
+    final rightCategoryOrder =
+        categoryOrder[right.$2.categoryId] ?? categoryOrder.length;
+    if (leftCategoryOrder != rightCategoryOrder) {
+      return leftCategoryOrder.compareTo(rightCategoryOrder);
+    }
+    return left.$1.compareTo(right.$1);
+  });
+
+  return [
+    for (final indexedProduct in indexedProducts) indexedProduct.$2,
+  ];
+}

@@ -97,12 +97,23 @@ extension _LoginForm on _LoginScreenState {
               Text('Username', style: AppTextStyles.label),
               const SizedBox(height: 8),
               TextField(
+                key: _usernameFieldKey,
                 controller: _usernameCtrl,
+                focusNode: _usernameFocusNode,
                 autofocus: true,
                 textInputAction: TextInputAction.next,
                 style: AppTextStyles.title,
+                onChanged: (_) {
+                  if (_usernameError != null || _errorMessage != null) {
+                    setState(() {
+                      _usernameError = null;
+                      if (_passwordError == null) _errorMessage = null;
+                    });
+                  }
+                },
                 decoration: InputDecoration(
                   hintText: 'Enter your username',
+                  errorText: _usernameError,
                   prefixIcon: const Padding(
                     padding: EdgeInsets.all(14),
                     child: Icon(
@@ -128,6 +139,16 @@ extension _LoginForm on _LoginScreenState {
                     borderSide:
                         const BorderSide(color: AppColors.blue, width: 2),
                   ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        const BorderSide(color: AppColors.error, width: 2),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        const BorderSide(color: AppColors.error, width: 2.5),
+                  ),
                 ),
                 onSubmitted: (_) => FocusScope.of(context).nextFocus(),
               ),
@@ -135,12 +156,23 @@ extension _LoginForm on _LoginScreenState {
               Text('Password', style: AppTextStyles.label),
               const SizedBox(height: 8),
               TextField(
+                key: _passwordFieldKey,
                 controller: _passwordCtrl,
+                focusNode: _passwordFocusNode,
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.done,
                 style: AppTextStyles.title,
+                onChanged: (_) {
+                  if (_passwordError != null || _errorMessage != null) {
+                    setState(() {
+                      _passwordError = null;
+                      if (_usernameError == null) _errorMessage = null;
+                    });
+                  }
+                },
                 decoration: InputDecoration(
                   hintText: '••••••••',
+                  errorText: _passwordError,
                   prefixIcon: const Padding(
                     padding: EdgeInsets.all(14),
                     child: Icon(
@@ -177,12 +209,23 @@ extension _LoginForm on _LoginScreenState {
                     borderSide:
                         const BorderSide(color: AppColors.blue, width: 2),
                   ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        const BorderSide(color: AppColors.error, width: 2),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        const BorderSide(color: AppColors.error, width: 2.5),
+                  ),
                 ),
                 onSubmitted: (_) => _handleLogin(),
               ),
               if (_errorMessage != null) ...[
                 const SizedBox(height: 14),
                 Container(
+                  key: _errorMessageKey,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(

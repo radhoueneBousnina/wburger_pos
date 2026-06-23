@@ -9,6 +9,7 @@ class CartState {
   final String? customerName;
   final String? customerNote;
   final String? ticketNumber;
+  final double? orderDiscountPercent;
 
   const CartState({
     this.items = const [],
@@ -19,13 +20,26 @@ class CartState {
     this.customerName,
     this.customerNote,
     this.ticketNumber,
+    this.orderDiscountPercent,
   });
 
   double get originalSubtotal =>
       items.fold(0, (sum, i) => sum + i.originalTotal);
-  double get discountAmount =>
+  double get itemDiscountAmount =>
       items.fold(0, (sum, i) => sum + i.discountAmount);
-  double get subtotal => items.fold(0, (sum, i) => sum + i.total);
+  double get itemSubtotal => items.fold(0, (sum, i) => sum + i.total);
+  double get orderDiscountAmount {
+    final percent = orderDiscountPercent?.clamp(0, 100).toDouble() ?? 0;
+    final discount = itemSubtotal * percent / 100;
+    return discount > itemSubtotal ? itemSubtotal : discount;
+  }
+
+  double get discountAmount => itemDiscountAmount + orderDiscountAmount;
+  double get subtotal {
+    final total = itemSubtotal - orderDiscountAmount;
+    return total > 0 ? total : 0;
+  }
+
   double staffDiscountAmount(double staffDiscountPercent) {
     final percent = staffDiscountPercent.clamp(0, 100).toDouble();
     final discount = originalSubtotal * percent / 100;
@@ -72,6 +86,8 @@ class CartState {
     String? customerName,
     String? customerNote,
     String? ticketNumber,
+    double? orderDiscountPercent,
+    bool clearOrderDiscount = false,
   }) {
     return CartState(
       items: items ?? this.items,
@@ -82,6 +98,9 @@ class CartState {
       customerName: customerName ?? this.customerName,
       customerNote: customerNote ?? this.customerNote,
       ticketNumber: ticketNumber ?? this.ticketNumber,
+      orderDiscountPercent: clearOrderDiscount
+          ? null
+          : orderDiscountPercent ?? this.orderDiscountPercent,
     );
   }
 }
@@ -110,7 +129,10 @@ class CartNotifier extends StateNotifier<CartState> {
   void removeItem(int index) {
     final items = [...state.items];
     items.removeAt(index);
-    state = state.copyWith(items: items);
+    state = state.copyWith(
+      items: items,
+      clearOrderDiscount: items.isEmpty,
+    );
   }
 
   void updateQuantity(int index, int qty) {
@@ -159,6 +181,14 @@ class CartNotifier extends StateNotifier<CartState> {
       mealSodaProduct: items[index].mealSodaProduct,
     );
     state = state.copyWith(items: items);
+  }
+
+  void updateOrderDiscount(double? percent) {
+    final value = percent?.clamp(0, 100).toDouble();
+    state = state.copyWith(
+      orderDiscountPercent: value,
+      clearOrderDiscount: value == null || value <= 0,
+    );
   }
 
   void setOrderType(OrderType type) {

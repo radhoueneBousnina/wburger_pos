@@ -28,11 +28,11 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final auth = ref.watch(authProvider);
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: AppRoutes.login,
     redirect: (context, state) {
-      final auth = ref.read(authProvider);
       final isAuth = auth.isAuthenticated;
       final onLogin = state.uri.path == AppRoutes.login;
 

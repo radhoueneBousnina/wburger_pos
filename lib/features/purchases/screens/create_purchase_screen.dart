@@ -75,8 +75,17 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
     context.go(AppRoutes.purchases);
   }
 
+  @override
+  void dispose() {
+    for (final line in _lines) {
+      line.dispose();
+    }
+    super.dispose();
+  }
+
   void _removeLine(int i) => setState(() {
-        _lines.removeAt(i);
+        final line = _lines.removeAt(i);
+        line.dispose();
         _clearInvoiceUploadSession();
       });
 
@@ -89,6 +98,45 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
   bool get _invoiceReady =>
       ref.read(testModeProvider).isActive ||
       _invoiceUploadSession?.isUploaded == true;
+
+  void _scrollToPurchaseLine(_PurchaseLineEntry line) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final targetContext = line.rowKey.currentContext;
+      if (targetContext == null) return;
+      Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+        alignment: 0.15,
+      );
+      if (line.quantityError != null) {
+        line.quantityFocusNode.requestFocus();
+      } else if (line.priceError != null) {
+        line.priceFocusNode.requestFocus();
+      }
+    });
+  }
+
+  bool _validatePurchaseLines() {
+    _PurchaseLineEntry? firstInvalid;
+    for (final line in _lines) {
+      final quantity = double.tryParse(line.quantityCtrl.text.trim());
+      final price = double.tryParse(line.priceCtrl.text.trim());
+      line.quantityError =
+          quantity == null || quantity <= 0 ? 'Required' : null;
+      line.priceError = price == null || price <= 0 ? 'Required' : null;
+      if (firstInvalid == null &&
+          (line.quantityError != null || line.priceError != null)) {
+        firstInvalid = line;
+      }
+    }
+    if (firstInvalid != null) {
+      _scrollToPurchaseLine(firstInvalid);
+      return false;
+    }
+    return true;
+  }
 
   List<Map<String, dynamic>> _purchaseLinesPayload() {
     return _lines
@@ -111,6 +159,17 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please add at least one stock item.'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    if (!_validatePurchaseLines()) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fix the highlighted purchase fields.'),
           backgroundColor: AppColors.warning,
         ),
       );
@@ -180,6 +239,17 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please add purchase items before creating the QR.'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    if (!_validatePurchaseLines()) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fix the highlighted purchase fields first.'),
           backgroundColor: AppColors.warning,
         ),
       );

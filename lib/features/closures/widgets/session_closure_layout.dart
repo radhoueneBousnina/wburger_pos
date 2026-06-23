@@ -296,9 +296,7 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
                                 ? 'Required'
                                 : null,
                           ),
-                          onChanged: (_) => setState(
-                            () => _stockDocumentUploadSession = null,
-                          ),
+                          onChanged: (_) => setState(() {}),
                         ),
                       ),
                     ],
@@ -317,7 +315,7 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
           uploadedLabel: 'Signed stock document uploaded',
           onTap: _isCreatingStockDocumentUpload
               ? null
-              : () => _showStockDocumentQrUploadFlow(stocks),
+              : _showStockDocumentQrUploadFlow,
         ),
         if (_submittedStock && !_stockDocumentReady)
           Padding(

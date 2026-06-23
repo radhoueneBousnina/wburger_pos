@@ -59,6 +59,7 @@ class _PurchaseLineRow extends StatelessWidget {
     final textColor = AppColors.textPrimaryFor(context);
 
     return Container(
+      key: entry.rowKey,
       margin: const EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(layout.isCompact ? 12 : 16),
       decoration: BoxDecoration(
@@ -108,22 +109,59 @@ class _PurchaseLineRow extends StatelessWidget {
                 const SizedBox(height: 4),
                 TextField(
                   controller: entry.quantityCtrl,
+                  focusNode: entry.quantityFocusNode,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                     _purchaseDecimalInputFormatter,
                   ],
-                  onChanged: (_) => onChanged(),
+                  onChanged: (_) {
+                    entry.quantityError = null;
+                    onChanged();
+                  },
                   style: AppTextStyles.titleSm.copyWith(color: textColor),
                   decoration: InputDecoration(
+                    errorText: entry.quantityError,
                     fillColor: AppColors.elevatedSurfaceFor(context),
                     filled: true,
                     suffixText: entry.stockItem.unit,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(
+                        color: entry.quantityError == null
+                            ? AppColors.borderFor(context)
+                            : AppColors.error,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: entry.quantityError == null
+                            ? AppColors.borderFor(context)
+                            : AppColors.error,
+                        width: entry.quantityError == null ? 1 : 2,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: entry.quantityError == null
+                            ? AppColors.accentFor(context)
+                            : AppColors.error,
+                        width: 2,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide:
+                          const BorderSide(color: AppColors.error, width: 2),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide:
+                          const BorderSide(color: AppColors.error, width: 2.5),
                     ),
                   ),
                 ),
@@ -144,22 +182,59 @@ class _PurchaseLineRow extends StatelessWidget {
                 const SizedBox(height: 4),
                 TextField(
                   controller: entry.priceCtrl,
+                  focusNode: entry.priceFocusNode,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                     _purchaseDecimalInputFormatter,
                   ],
-                  onChanged: (_) => onChanged(),
+                  onChanged: (_) {
+                    entry.priceError = null;
+                    onChanged();
+                  },
                   style: AppTextStyles.titleSm.copyWith(color: textColor),
                   decoration: InputDecoration(
+                    errorText: entry.priceError,
                     fillColor: AppColors.elevatedSurfaceFor(context),
                     filled: true,
                     suffixText: 'DT',
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(
+                        color: entry.priceError == null
+                            ? AppColors.borderFor(context)
+                            : AppColors.error,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: entry.priceError == null
+                            ? AppColors.borderFor(context)
+                            : AppColors.error,
+                        width: entry.priceError == null ? 1 : 2,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: entry.priceError == null
+                            ? AppColors.accentFor(context)
+                            : AppColors.error,
+                        width: 2,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide:
+                          const BorderSide(color: AppColors.error, width: 2),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide:
+                          const BorderSide(color: AppColors.error, width: 2.5),
                     ),
                   ),
                 ),
@@ -548,10 +623,22 @@ class _PurchaseLineEntry {
   StockItem stockItem;
   TextEditingController quantityCtrl;
   TextEditingController priceCtrl;
+  final GlobalKey rowKey = GlobalKey();
+  final FocusNode quantityFocusNode = FocusNode();
+  final FocusNode priceFocusNode = FocusNode();
+  String? quantityError;
+  String? priceError;
 
   _PurchaseLineEntry({
     required this.stockItem,
     required this.quantityCtrl,
     required this.priceCtrl,
   });
+
+  void dispose() {
+    quantityCtrl.dispose();
+    priceCtrl.dispose();
+    quantityFocusNode.dispose();
+    priceFocusNode.dispose();
+  }
 }

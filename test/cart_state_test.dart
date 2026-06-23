@@ -60,6 +60,32 @@ void main() {
     expect(cart.discountAmountFor(PaymentType.other), 10);
   });
 
+  test('order discount applies to the whole item-discounted cart', () {
+    final product = Product(
+      id: '1',
+      categoryId: 'burgers',
+      name: 'Classic',
+      description: '',
+      price: 10,
+    );
+    final cart = CartState(
+      orderDiscountPercent: 10,
+      items: [
+        CartItem(product: product, quantity: 2),
+        CartItem(product: product, quantity: 1, discountPercent: 50),
+      ],
+    );
+
+    expect(cart.originalSubtotal, 30);
+    expect(cart.itemDiscountAmount, 5);
+    expect(cart.itemSubtotal, 25);
+    expect(cart.orderDiscountAmount, 2.5);
+    expect(cart.discountAmount, 7.5);
+    expect(cart.subtotal, 22.5);
+    expect(cart.payableTotalFor(PaymentType.other), 22.5);
+    expect(cart.discountAmountFor(PaymentType.other), 7.5);
+  });
+
   test('product taps always create separate cart lines', () {
     final product = Product(
       id: '1',

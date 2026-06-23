@@ -25,14 +25,23 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _usernameFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+  final _usernameFieldKey = GlobalKey();
+  final _passwordFieldKey = GlobalKey();
+  final _errorMessageKey = GlobalKey();
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _usernameError;
+  String? _passwordError;
 
   @override
   void dispose() {
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
+    _usernameFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 

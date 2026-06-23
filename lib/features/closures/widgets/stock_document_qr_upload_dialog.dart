@@ -189,28 +189,6 @@ class _StockDocumentQrUploadDialogState
                     final detailsPanel = Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _StockDocumentMetricTile(
-                                label: 'Stock Lines',
-                                value: _session.itemCount.toString(),
-                                color: AppColors.accentFor(context),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _StockDocumentMetricTile(
-                                label: 'Differences',
-                                value: _session.discrepancyCount.toString(),
-                                color: _session.discrepancyCount > 0
-                                    ? AppColors.warning
-                                    : AppColors.success,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
                         _StockDocumentStatusBanner(
                           icon: _session.isUploaded
                               ? Icons.check_circle_rounded
@@ -289,51 +267,6 @@ class _StockDocumentQrUploadDialogState
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _StockDocumentMetricTile extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _StockDocumentMetricTile({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 88),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: AppTextStyles.labelSm.copyWith(
-              color: AppColors.textSecondaryFor(context),
-            ),
-          ),
-          const SizedBox(height: 7),
-          Text(
-            value,
-            style: AppTextStyles.title.copyWith(
-              color: color,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
       ),
     );
   }

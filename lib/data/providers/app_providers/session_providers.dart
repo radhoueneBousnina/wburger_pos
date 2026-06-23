@@ -108,8 +108,6 @@ class StockDocumentUploadSession {
   final String sessionId;
   final String sessionDate;
   final String uploadUrl;
-  final int itemCount;
-  final int discrepancyCount;
   final DateTime? expiresAt;
   final bool isExpired;
   final bool isUploaded;
@@ -121,8 +119,6 @@ class StockDocumentUploadSession {
     required this.sessionId,
     required this.sessionDate,
     required this.uploadUrl,
-    required this.itemCount,
-    required this.discrepancyCount,
     required this.expiresAt,
     required this.isExpired,
     required this.isUploaded,
@@ -131,7 +127,6 @@ class StockDocumentUploadSession {
   });
 
   factory StockDocumentUploadSession.fromJson(Map<String, dynamic> json) {
-    int count(String key) => int.tryParse(json[key]?.toString() ?? '') ?? 0;
     DateTime? dateTime(String key) {
       final raw = json[key]?.toString();
       if (raw == null || raw.isEmpty) return null;
@@ -143,8 +138,6 @@ class StockDocumentUploadSession {
       sessionId: json['session']?.toString() ?? '',
       sessionDate: json['session_date']?.toString() ?? '',
       uploadUrl: json['upload_url']?.toString() ?? '',
-      itemCount: count('item_count'),
-      discrepancyCount: count('discrepancy_count'),
       expiresAt: dateTime('expires_at'),
       isExpired: json['is_expired'] == true,
       isUploaded: json['is_uploaded'] == true,
@@ -305,8 +298,6 @@ class PosSessionService {
 
   Future<StockDocumentUploadSession> createStockDocumentUploadSession({
     required String sessionId,
-    required List<Map<String, dynamic>> items,
-    String? note,
   }) async {
     if (_testModeActive) {
       return StockDocumentUploadSession(
@@ -314,8 +305,6 @@ class PosSessionService {
         sessionId: sessionId,
         sessionDate: _trainingStatus().activeSessionDate ?? '',
         uploadUrl: '',
-        itemCount: items.length,
-        discrepancyCount: 0,
         expiresAt: DateTime.now().add(const Duration(minutes: 10)),
         isExpired: false,
         isUploaded: true,
@@ -325,10 +314,6 @@ class PosSessionService {
     }
     final response = await apiClient.dio.post(
       '${ApiConstants.dailySessions}$sessionId${ApiConstants.sessionStockDocumentUpload}',
-      data: {
-        'items': items,
-        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
-      },
     );
     return StockDocumentUploadSession.fromJson(
       Map<String, dynamic>.from(response.data as Map),
@@ -345,8 +330,6 @@ class PosSessionService {
         sessionId: sessionId,
         sessionDate: _trainingStatus().activeSessionDate ?? '',
         uploadUrl: '',
-        itemCount: 0,
-        discrepancyCount: 0,
         expiresAt: DateTime.now().add(const Duration(minutes: 10)),
         isExpired: false,
         isUploaded: true,
