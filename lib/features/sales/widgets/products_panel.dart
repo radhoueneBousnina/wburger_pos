@@ -432,24 +432,33 @@ class _ProductCard extends ConsumerWidget {
       return;
     }
 
+    final needsSauceChoices = _productHasSauceChoices(product);
+    final sodaProduct = _mealSodaProduct(
+      ref.read(productsProvider).valueOrNull ?? const <Product>[],
+    );
+    final canMealUpgrade =
+        product.canBeMeal && !product.isSoda && sodaProduct != null;
+    if (!needsSauceChoices && !canMealUpgrade) {
+      ref.read(cartProvider.notifier).addProduct(product);
+      return;
+    }
+
     final stockNotifier = ref.read(stockProvider.notifier);
     await Future.wait([
-      stockNotifier.fetchRecipes(),
-      stockNotifier.refreshIfStale(maxAge: const Duration(minutes: 5)),
-      ref
-          .read(posSettingsProvider.notifier)
-          .refreshIfStale(maxAge: const Duration(minutes: 5)),
+      if (needsSauceChoices) ...[
+        stockNotifier.fetchRecipes(),
+        stockNotifier.refreshIfStale(maxAge: const Duration(minutes: 5)),
+      ],
+      if (canMealUpgrade)
+        ref
+            .read(posSettingsProvider.notifier)
+            .refreshIfStale(maxAge: const Duration(minutes: 5)),
     ]);
     if (!context.mounted) return;
 
     final sauceGroups = _sauceGroupsForProduct(stockNotifier, product);
     final mealAddOnPrice =
         ref.read(posSettingsProvider).valueOrNull?.mealAddOnPrice ?? 0;
-    final sodaProduct = _mealSodaProduct(
-      ref.read(productsProvider).valueOrNull ?? const <Product>[],
-    );
-    final canMealUpgrade =
-        product.canBeMeal && !product.isSoda && sodaProduct != null;
     if (sauceGroups.isEmpty && !canMealUpgrade) {
       ref.read(cartProvider.notifier).addProduct(product);
       return;
@@ -472,6 +481,13 @@ class _ProductCard extends ConsumerWidget {
           mealAddOnPrice: options.isMealUpgrade ? mealAddOnPrice : 0,
           mealSodaProduct: options.isMealUpgrade ? sodaProduct : null,
         );
+  }
+
+  bool _productHasSauceChoices(Product product) {
+    if (product.isMeal) {
+      return product.mealComponents.any((component) => component.hasSauces);
+    }
+    return product.hasSauces;
   }
 
   Product? _mealSodaProduct(List<Product> products) {

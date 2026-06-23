@@ -7,7 +7,7 @@ import 'package:wburger_pos/data/providers/app_providers.dart';
 import 'package:wburger_pos/shared/widgets/payment_modal.dart';
 
 class _StaticPosSettingsNotifier extends PosSettingsNotifier {
-  _StaticPosSettingsNotifier() : super() {
+  _StaticPosSettingsNotifier() : super(autoFetch: false) {
     state = const AsyncValue.data(PosSettings(staffDiscountPercent: 40));
   }
 

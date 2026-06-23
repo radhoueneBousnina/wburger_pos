@@ -180,4 +180,42 @@ void main() {
       'W-220626-151',
     );
   });
+
+  test('offline order queue preserves fifo order when replacing entries',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final store = OfflineOrderQueueStore();
+
+    OfflineQueuedOrder entry(String id, {int attempts = 0}) {
+      final localOrder = Order(
+        id: 'offline-$id',
+        ticketNumber: 'W-220626-${id == 'first' ? '101' : '102'}',
+        createdAt: DateTime(2026, 6, 22, id == 'first' ? 10 : 11),
+        items: const [],
+        orderType: OrderType.dineIn,
+        paymentType: PaymentType.cash,
+        status: OrderStatus.validated,
+      );
+      return OfflineQueuedOrder(
+        clientOrderId: id,
+        localOrderId: localOrder.id,
+        serverOrderId: null,
+        queuedAt: localOrder.createdAt,
+        createPayload: {'client_order_id': id},
+        itemPayloads: const [],
+        discountPayload: null,
+        confirmPayload: const {'payment_type': 'cash'},
+        localOrderJson: localOrder.toLocalJson(),
+        attempts: attempts,
+      );
+    }
+
+    await store.enqueue(entry('first'));
+    await store.enqueue(entry('second'));
+    await store.enqueue(entry('first', attempts: 1));
+
+    final queued = await store.load();
+    expect(queued.map((entry) => entry.clientOrderId), ['first', 'second']);
+    expect(queued.first.attempts, 1);
+  });
 }

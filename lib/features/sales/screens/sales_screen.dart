@@ -641,8 +641,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   Future<void> _checkout() async {
     final cart = ref.read(cartProvider);
     if (cart.items.isEmpty) return;
-    await ref.read(posSettingsProvider.notifier).refreshIfStale();
-    if (!mounted) return;
+    unawaited(ref.read(posSettingsProvider.notifier).refreshIfStale());
     final settingsState = ref.read(posSettingsProvider);
     if (settingsState.hasError || settingsState.valueOrNull == null) {
       final message = settingsState.error?.toString() ??
@@ -720,6 +719,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 amountGiven: amountGiven,
                 changeReturned: changeReturned,
                 staffId: staffId,
+                staffDiscountPercent: effectiveStaffDiscountPercent,
                 glovoOrderId: glovoOrderId,
                 giftRecipient: giftRecipient,
               );

@@ -48,6 +48,13 @@ class PosSettings {
       mealAddOnPrice: mealAddOn < 0 ? 0 : mealAddOn,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'staff_discount_percent': staffDiscountPercent,
+      'meal_add_on_price': mealAddOnPrice,
+    };
+  }
 }
 
 class Category {

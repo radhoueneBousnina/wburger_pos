@@ -196,10 +196,17 @@ class OfflineOrderQueueStore {
 
   Future<void> enqueue(OfflineQueuedOrder entry) async {
     final queue = await load();
-    final withoutExisting = queue
-        .where((queued) => queued.clientOrderId != entry.clientOrderId)
-        .toList();
-    await save([...withoutExisting, entry]);
+    final existingIndex = queue.indexWhere(
+      (queued) => queued.clientOrderId == entry.clientOrderId,
+    );
+    if (existingIndex == -1) {
+      await save([...queue, entry]);
+      return;
+    }
+
+    final next = [...queue];
+    next[existingIndex] = entry;
+    await save(next);
   }
 
   Future<void> rememberTicketNumbers(Iterable<String> ticketNumbers) async {
@@ -433,6 +440,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? amountGiven,
     double? changeReturned,
     String? staffId,
+    double? staffDiscountPercent,
     String? glovoOrderId,
     String? giftRecipient,
     DateTime? clientConfirmedAt,
@@ -451,6 +459,8 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       if (amountGiven != null) 'amount_given': amountGiven,
       if (changeReturned != null) 'change_returned': changeReturned,
       if (staffId != null) 'staff_member': staffId,
+      if (staffDiscountPercent != null)
+        'staff_discount_percent': staffDiscountPercent,
       if (giftRecipient != null && giftRecipient.trim().isNotEmpty)
         'gift_recipient': giftRecipient.trim(),
       if (clientConfirmedAt != null)
@@ -609,6 +619,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? amountGiven,
     double? changeReturned,
     String? staffId,
+    double? staffDiscountPercent,
     String? glovoOrderId,
     String? giftRecipient,
   }) async {
@@ -625,6 +636,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
           amountGiven: amountGiven,
           changeReturned: changeReturned,
           staffId: staffId,
+          staffDiscountPercent: staffDiscountPercent,
           glovoOrderId: glovoOrderId,
           giftRecipient: giftRecipient,
         ),
@@ -677,6 +689,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? amountGiven,
     double? changeReturned,
     String? staffId,
+    double? staffDiscountPercent,
     String? glovoOrderId,
     String? giftRecipient,
   }) async {
@@ -757,6 +770,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         amountGiven: amountGiven,
         changeReturned: changeReturned,
         staffId: staffId,
+        staffDiscountPercent: staffDiscountPercent,
         glovoOrderId: glovoOrderId,
         giftRecipient: giftRecipient,
       );
@@ -771,6 +785,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
           amountGiven: amountGiven,
           changeReturned: changeReturned,
           staffId: staffId,
+          staffDiscountPercent: staffDiscountPercent,
           glovoOrderId: glovoOrderId,
           giftRecipient: giftRecipient,
           cause: apiClient.describeError(
@@ -895,6 +910,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? amountGiven,
     double? changeReturned,
     String? staffId,
+    double? staffDiscountPercent,
     String? glovoOrderId,
     String? giftRecipient,
   }) {
@@ -927,6 +943,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       amountGiven: amountGiven,
       changeReturned: changeReturned,
       staffId: staffId,
+      staffDiscountPercent: staffDiscountPercent,
       glovoOrderId: glovoOrderId,
       giftRecipient: giftRecipient,
     );
@@ -1133,6 +1150,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? amountGiven,
     double? changeReturned,
     String? staffId,
+    double? staffDiscountPercent,
     String? glovoOrderId,
     String? giftRecipient,
     required String cause,
@@ -1178,10 +1196,10 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         paymentType: effectivePaymentType,
         orderType: cart.orderType,
         allowNegativeStock: true,
-        skipKds: true,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
         staffId: staffId,
+        staffDiscountPercent: staffDiscountPercent,
         glovoOrderId: glovoOrderId,
         giftRecipient: giftRecipient,
         clientConfirmedAt: now,
@@ -1264,10 +1282,8 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
             ),
           );
           remaining.add(updated);
-          if (_isNetworkFailure(error)) {
-            remaining.addAll(queue.skip(index + 1));
-            break;
-          }
+          remaining.addAll(queue.skip(index + 1));
+          break;
         } catch (error) {
           remaining.add(queued.copyWith(
             attempts: queued.attempts + 1,
@@ -1276,6 +1292,8 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
               fallback: 'Offline order sync failed.',
             ),
           ));
+          remaining.addAll(queue.skip(index + 1));
+          break;
         }
       }
 
