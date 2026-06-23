@@ -286,8 +286,8 @@ class ReceiptPrinterService {
 
   Uint8List buildCashDrawerPulseBytes({
     int pin = 0,
-    int onTime = 40,
-    int offTime = 200,
+    int onTime = 100,
+    int offTime = 250,
   }) {
     return ReceiptTicketBuilder.buildCashDrawerPulseBytes(
       pin: pin,

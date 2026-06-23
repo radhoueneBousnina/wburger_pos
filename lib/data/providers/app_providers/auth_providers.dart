@@ -63,6 +63,33 @@ class AuthState {
   }
 }
 
+String? loginAccessTokenFromResponse(Object? data) {
+  return _firstLoginTokenValue(data, const [
+    'access',
+    'access_token',
+    'key',
+    'token',
+  ]);
+}
+
+String? loginRefreshTokenFromResponse(Object? data) {
+  return _firstLoginTokenValue(data, const [
+    'refresh',
+    'refresh_token',
+  ]);
+}
+
+String? _firstLoginTokenValue(Object? data, List<String> keys) {
+  if (data is! Map) return null;
+
+  for (final key in keys) {
+    final value = data[key];
+    final token = value?.toString().trim();
+    if (token != null && token.isNotEmpty) return token;
+  }
+  return null;
+}
+
 class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier(bool initialIsAuthenticated)
       : super(AuthState(
@@ -71,6 +98,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> login(String username, String password) async {
     try {
+      await apiClient.clearAllTokens();
       final loginUrl = Uri.parse(
         apiClient.dio.options.baseUrl,
       ).resolve(ApiConstants.login);
@@ -87,44 +115,50 @@ class AuthNotifier extends StateNotifier<AuthState> {
         data: {'username': username, 'password': password},
       );
 
-      final access = res.data['access'] ?? res.data['key'] ?? res.data['token'];
-      final refresh = res.data['refresh'];
+      final access = loginAccessTokenFromResponse(res.data);
+      final refresh = loginRefreshTokenFromResponse(res.data);
 
-      if (access != null) {
-        await apiClient.saveTokens(
-          access: access.toString(),
-          refresh: refresh?.toString(),
-        );
-
-        // Fetch user info to verify role
-        final userRes = await apiClient.dio.get('/api/v1/auth/user/');
-        final role = userRes.data['role']?.toString().toLowerCase();
-        final permissions = AuthState.permissionsFromUserDetails(
-          role,
-          userRes.data['feature_permissions'],
-        );
-
-        if (role != 'admin' && role != 'staff') {
-          // Unauthorized role for POS
-          await apiClient.clearAllTokens();
-          state = const AuthState();
-          throw 'Access Denied: Only Staff and Admins can access the POS system.';
-        }
-
-        if (role != 'admin' && permissions['can_access_pos'] != true) {
-          await apiClient.clearAllTokens();
-          state = const AuthState();
-          throw 'Access Denied: Your account does not have POS access.';
-        }
-
-        state = AuthState(
-          isAuthenticated: true,
-          username: userRes.data['username']?.toString() ?? username,
-          role: role,
-          permissions: permissions,
-        );
-        return true;
+      if (access == null) {
+        throw 'Login succeeded but the server did not return an access token.';
       }
+
+      await apiClient.saveTokens(
+        access: access,
+        refresh: refresh,
+      );
+      final storedAccess = await apiClient.getAccessToken();
+      if (storedAccess == null || storedAccess.isEmpty) {
+        throw 'Unable to save the login session on this POS device.';
+      }
+
+      // Fetch user info to verify role and confirm the saved token is usable.
+      final userRes = await apiClient.dio.get('/api/v1/auth/user/');
+      final role = userRes.data['role']?.toString().toLowerCase();
+      final permissions = AuthState.permissionsFromUserDetails(
+        role,
+        userRes.data['feature_permissions'],
+      );
+
+      if (role != 'admin' && role != 'staff') {
+        // Unauthorized role for POS
+        await apiClient.clearAllTokens();
+        state = const AuthState();
+        throw 'Access Denied: Only Staff and Admins can access the POS system.';
+      }
+
+      if (role != 'admin' && permissions['can_access_pos'] != true) {
+        await apiClient.clearAllTokens();
+        state = const AuthState();
+        throw 'Access Denied: Your account does not have POS access.';
+      }
+
+      state = AuthState(
+        isAuthenticated: true,
+        username: userRes.data['username']?.toString() ?? username,
+        role: role,
+        permissions: permissions,
+      );
+      return true;
     } on DioException catch (e) {
       debugPrint('W Burger POS login failed');
       debugPrint('  request URL: ${e.requestOptions.uri}');
@@ -146,10 +180,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       apiClient.logError('Login error', e);
       throw errorMessage;
     } catch (e) {
+      await apiClient.clearAllTokens();
+      state = const AuthState();
       apiClient.logError('Login generic error', e);
       throw e.toString().replaceFirst('Exception: ', '');
     }
-    return false;
   }
 
   Future<void> logout() async {

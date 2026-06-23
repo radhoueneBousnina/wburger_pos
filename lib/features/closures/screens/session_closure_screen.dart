@@ -16,6 +16,7 @@ import '../../../data/providers/app_providers.dart';
 
 part '../widgets/session_closure_layout.dart';
 part '../widgets/session_closure_summary_widgets.dart';
+part '../widgets/stock_document_qr_upload_dialog.dart';
 part '../widgets/tpe_qr_upload_dialog.dart';
 
 class SessionClosureScreen extends ConsumerStatefulWidget {
@@ -42,6 +43,7 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
   bool _submittedStock = false;
   bool _isClosingSession = false;
   bool _isCreatingTpeUpload = false;
+  bool _isCreatingStockDocumentUpload = false;
 
   final _actualCashCtrl = TextEditingController();
   final _actualCardCtrl = TextEditingController();
@@ -51,6 +53,7 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
   final _stockNoteCtrl = TextEditingController();
   final Map<String, TextEditingController> _stockActualControllers = {};
   TpeReceiptUploadSession? _tpeUploadSession;
+  StockDocumentUploadSession? _stockDocumentUploadSession;
 
   bool get _isForcedClosure =>
       GoRouterState.of(context).uri.queryParameters['forced'] == '1';
@@ -115,6 +118,9 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
 
   bool get _tpeReceiptReady => _tpeUploadSession?.isUploaded == true;
 
+  bool get _stockDocumentReady =>
+      _stockDocumentUploadSession?.isUploaded == true;
+
   bool get _hasStockDiscrepancy {
     final stocks = ref.read(stockProvider).value ?? [];
     for (final stock in stocks) {
@@ -133,6 +139,17 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
       final value = _stockActualControllers[stock.id]?.text.trim() ?? '';
       return value.isNotEmpty && double.tryParse(value) != null;
     });
+  }
+
+  List<Map<String, dynamic>> _stockVerificationItems(List<StockItem> stocks) {
+    return stocks
+        .map((stock) => {
+              'stock_item': stock.id,
+              'actual_quantity':
+                  double.parse(_stockActualControllers[stock.id]!.text.trim())
+                      .toStringAsFixed(3),
+            })
+        .toList();
   }
 
   void _submitFinancialStep() {
@@ -234,9 +251,73 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
     }
   }
 
+  Future<void> _showStockDocumentQrUploadFlow(List<StockItem> stocks) async {
+    setState(() => _submittedStock = true);
+    if (!_allStockItemsEntered) return;
+
+    final sessionService = ref.read(posSessionServiceProvider);
+    final existingUploadSession = _stockDocumentUploadSession;
+    if (existingUploadSession != null) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: existingUploadSession.isUploaded,
+        builder: (_) => _StockDocumentQrUploadDialog(
+          initialSession: existingUploadSession,
+          sessionService: sessionService,
+          onUploaded: (latest) {
+            if (!mounted) return;
+            setState(() => _stockDocumentUploadSession = latest);
+          },
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isCreatingStockDocumentUpload = true);
+    try {
+      final status = await sessionService.fetchStatus();
+      final sessionId = status.activeSessionId;
+      if (sessionId == null || sessionId.isEmpty) {
+        throw 'No active session is currently open.';
+      }
+      final uploadSession =
+          await sessionService.createStockDocumentUploadSession(
+        sessionId: sessionId,
+        items: _stockVerificationItems(stocks),
+        note: _stockNoteCtrl.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() => _stockDocumentUploadSession = uploadSession);
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: uploadSession.isUploaded,
+        builder: (_) => _StockDocumentQrUploadDialog(
+          initialSession: uploadSession,
+          sessionService: sessionService,
+          onUploaded: (latest) {
+            if (!mounted) return;
+            setState(() => _stockDocumentUploadSession = latest);
+          },
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(sessionService.describeApiError(error,
+              fallback: error.toString())),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isCreatingStockDocumentUpload = false);
+    }
+  }
+
   Future<void> _submitStockStep() async {
     setState(() => _submittedStock = true);
     if (!_allStockItemsEntered) return;
+    if (!_stockDocumentReady) return;
     if (_hasStockDiscrepancy && _stockNoteCtrl.text.trim().isEmpty) return;
 
     final sessionService = ref.read(posSessionServiceProvider);
@@ -260,14 +341,8 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
       await sessionService.submitStockVerification(
         sessionId: sessionId,
         note: _stockNoteCtrl.text.trim(),
-        items: stocks
-            .map((stock) => {
-                  'stock_item': stock.id,
-                  'actual_quantity': double.parse(
-                          _stockActualControllers[stock.id]!.text.trim())
-                      .toStringAsFixed(3),
-                })
-            .toList(),
+        stockDocumentUploadToken: _stockDocumentUploadSession?.token,
+        items: _stockVerificationItems(stocks),
       );
       await sessionService.createCashClosure(
         sessionId: sessionId,

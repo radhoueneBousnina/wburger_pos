@@ -23,21 +23,20 @@ class ReceiptTicketBuilder {
 
   static Uint8List buildCashDrawerPulseBytes({
     int pin = 0,
-    int onTime = 25,
+    int onTime = 100,
     int offTime = 250,
   }) {
-    // Shotgun approach: Send both Pin 2 and Pin 5 pulses, and try both numeric and ASCII modes.
-    // We use 100ms (0x32) as it proved more reliable in recent hardware tests.
-    // We also include BEL and FS g commands for maximum compatibility with Chinese printers.
+    final primaryPin = pin == 1 ? 1 : 0;
+    final secondaryPin = primaryPin == 0 ? 1 : 0;
+    final pulseOn = onTime.clamp(0, 255).toInt();
+    final pulseOff = offTime.clamp(0, 255).toInt();
+
+    // SPRT/80mm drawer kick verified on the cashier hardware:
+    // initialize, then pulse both drawer pins before any print/cut commands.
     return Uint8List.fromList([
       0x1b, 0x40, // Initialize
-      0x1b, 0x70, 0x00, 0x32, 0xfa, // Pin 2 (0) - 100ms on, 500ms off
-      0x1b, 0x70, 0x01, 0x32, 0xfa, // Pin 5 (1)
-      0x1b, 0x70, 0x30, 0x32, 0xfa, // Pin 2 ('0')
-      0x1b, 0x70, 0x31, 0x32, 0xfa, // Pin 5 ('1')
-      0x07, // BEL command (works on some SPRT/Xprinter models)
-      0x1c, 0x67, 0x00, // FS g command (Chinese printers variant)
-      0x10, 0x14, 0x01, 0x00, 0x05, // DLE DC4 real-time pulse
+      0x1b, 0x70, primaryPin, pulseOn, pulseOff,
+      0x1b, 0x70, secondaryPin, pulseOn, pulseOff,
     ]);
   }
 
@@ -178,15 +177,15 @@ class ReceiptTicketBuilder {
     Uint8List? ticketNumberImageBytes,
     bool openDrawer = false,
   }) {
+    if (openDrawer) {
+      builder.openCashDrawer();
+    }
     _buildLogoSection(builder, data, config, logoBytes);
     _buildOrderInfoSection(builder, data, ticketNumberImageBytes);
     _buildItemsSection(builder, data.lines);
     _buildTotalsSection(builder, data, config);
     _buildNotesSection(builder, data);
     _buildFooterSection(builder);
-    if (openDrawer) {
-      builder.openCashDrawer();
-    }
   }
 
   void _buildLogoSection(

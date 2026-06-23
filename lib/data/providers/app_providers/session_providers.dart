@@ -103,6 +103,57 @@ class TpeReceiptUploadSession {
   }
 }
 
+class StockDocumentUploadSession {
+  final String token;
+  final String sessionId;
+  final String sessionDate;
+  final String uploadUrl;
+  final int itemCount;
+  final int discrepancyCount;
+  final DateTime? expiresAt;
+  final bool isExpired;
+  final bool isUploaded;
+  final DateTime? uploadedAt;
+  final String? originalFilename;
+
+  const StockDocumentUploadSession({
+    required this.token,
+    required this.sessionId,
+    required this.sessionDate,
+    required this.uploadUrl,
+    required this.itemCount,
+    required this.discrepancyCount,
+    required this.expiresAt,
+    required this.isExpired,
+    required this.isUploaded,
+    required this.uploadedAt,
+    required this.originalFilename,
+  });
+
+  factory StockDocumentUploadSession.fromJson(Map<String, dynamic> json) {
+    int count(String key) => int.tryParse(json[key]?.toString() ?? '') ?? 0;
+    DateTime? dateTime(String key) {
+      final raw = json[key]?.toString();
+      if (raw == null || raw.isEmpty) return null;
+      return DateTime.tryParse(raw);
+    }
+
+    return StockDocumentUploadSession(
+      token: json['token']?.toString() ?? '',
+      sessionId: json['session']?.toString() ?? '',
+      sessionDate: json['session_date']?.toString() ?? '',
+      uploadUrl: json['upload_url']?.toString() ?? '',
+      itemCount: count('item_count'),
+      discrepancyCount: count('discrepancy_count'),
+      expiresAt: dateTime('expires_at'),
+      isExpired: json['is_expired'] == true,
+      isUploaded: json['is_uploaded'] == true,
+      uploadedAt: dateTime('uploaded_at'),
+      originalFilename: json['original_filename']?.toString(),
+    );
+  }
+}
+
 class PosSessionService {
   final bool Function()? isTestMode;
 
@@ -174,6 +225,7 @@ class PosSessionService {
     required String sessionId,
     required List<Map<String, dynamic>> items,
     String? note,
+    String? stockDocumentUploadToken,
   }) async {
     if (_testModeActive) return;
     await apiClient.dio.post(
@@ -182,6 +234,9 @@ class PosSessionService {
         'session': sessionId,
         'items': items,
         if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        if (stockDocumentUploadToken != null &&
+            stockDocumentUploadToken.trim().isNotEmpty)
+          'stock_document_upload_token': stockDocumentUploadToken.trim(),
       },
     );
   }
@@ -244,6 +299,66 @@ class PosSessionService {
       queryParameters: {'token': token},
     );
     return TpeReceiptUploadSession.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  Future<StockDocumentUploadSession> createStockDocumentUploadSession({
+    required String sessionId,
+    required List<Map<String, dynamic>> items,
+    String? note,
+  }) async {
+    if (_testModeActive) {
+      return StockDocumentUploadSession(
+        token: 'test-mode-stock-document-token',
+        sessionId: sessionId,
+        sessionDate: _trainingStatus().activeSessionDate ?? '',
+        uploadUrl: '',
+        itemCount: items.length,
+        discrepancyCount: 0,
+        expiresAt: DateTime.now().add(const Duration(minutes: 10)),
+        isExpired: false,
+        isUploaded: true,
+        uploadedAt: DateTime.now(),
+        originalFilename: 'training-stock-verification.jpg',
+      );
+    }
+    final response = await apiClient.dio.post(
+      '${ApiConstants.dailySessions}$sessionId${ApiConstants.sessionStockDocumentUpload}',
+      data: {
+        'items': items,
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      },
+    );
+    return StockDocumentUploadSession.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  Future<StockDocumentUploadSession> fetchStockDocumentUploadSession({
+    required String sessionId,
+    required String token,
+  }) async {
+    if (_testModeActive) {
+      return StockDocumentUploadSession(
+        token: token,
+        sessionId: sessionId,
+        sessionDate: _trainingStatus().activeSessionDate ?? '',
+        uploadUrl: '',
+        itemCount: 0,
+        discrepancyCount: 0,
+        expiresAt: DateTime.now().add(const Duration(minutes: 10)),
+        isExpired: false,
+        isUploaded: true,
+        uploadedAt: DateTime.now(),
+        originalFilename: 'training-stock-verification.jpg',
+      );
+    }
+    final response = await apiClient.dio.get(
+      '${ApiConstants.dailySessions}$sessionId${ApiConstants.sessionStockDocumentUpload}',
+      queryParameters: {'token': token},
+    );
+    return StockDocumentUploadSession.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );
   }

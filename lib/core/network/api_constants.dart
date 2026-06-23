@@ -47,6 +47,8 @@ class ApiConstants {
   static const String sessionReopenToday = '${dailySessions}reopen_today/';
   static const String sessionClose = '/close/';
   static const String sessionTpeUpload = '/tpe-upload-session/';
+  static const String sessionStockDocumentUpload =
+      '/stock-document-upload-session/';
 
   static const String closures = '$apiPrefix/sales/closures/';
   static const String stockVerificationSubmit =

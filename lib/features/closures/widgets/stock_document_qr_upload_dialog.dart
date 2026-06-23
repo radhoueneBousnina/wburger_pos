@@ -1,26 +1,26 @@
-// ignore_for_file: unused_element
-
 part of '../screens/session_closure_screen.dart';
 
-class _TpeQrUploadDialog extends StatefulWidget {
-  final TpeReceiptUploadSession initialSession;
+class _StockDocumentQrUploadDialog extends StatefulWidget {
+  final StockDocumentUploadSession initialSession;
   final PosSessionService sessionService;
-  final ValueChanged<TpeReceiptUploadSession> onUploaded;
+  final ValueChanged<StockDocumentUploadSession> onUploaded;
 
-  const _TpeQrUploadDialog({
+  const _StockDocumentQrUploadDialog({
     required this.initialSession,
     required this.sessionService,
     required this.onUploaded,
   });
 
   @override
-  State<_TpeQrUploadDialog> createState() => _TpeQrUploadDialogState();
+  State<_StockDocumentQrUploadDialog> createState() =>
+      _StockDocumentQrUploadDialogState();
 }
 
-class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
+class _StockDocumentQrUploadDialogState
+    extends State<_StockDocumentQrUploadDialog> {
   static const Duration _pollInterval = Duration(milliseconds: 500);
 
-  late TpeReceiptUploadSession _session;
+  late StockDocumentUploadSession _session;
   Timer? _pollTimer;
   bool _isRefreshing = false;
   bool _notifiedUploaded = false;
@@ -51,7 +51,8 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
     if (_isRefreshing || _session.isUploaded) return;
     _isRefreshing = true;
     try {
-      final latest = await widget.sessionService.fetchTpeReceiptUploadSession(
+      final latest =
+          await widget.sessionService.fetchStockDocumentUploadSession(
         sessionId: _session.sessionId,
         token: _session.token,
       );
@@ -76,14 +77,9 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
     await Clipboard.setData(ClipboardData(text: _session.uploadUrl));
   }
 
-  String _money(double value) => '${value.toStringAsFixed(3)} DT';
-
   @override
   Widget build(BuildContext context) {
     final layout = context.posLayout;
-    final differenceColor = _session.differenceAmount.abs() > 0.001
-        ? AppColors.error
-        : AppColors.success;
 
     return Dialog(
       insetPadding: EdgeInsets.symmetric(
@@ -114,7 +110,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Icon(
-                        Icons.qr_code_2_rounded,
+                        Icons.fact_check_rounded,
                         color: AppColors.blue,
                       ),
                     ),
@@ -124,7 +120,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'TPE Receipt QR',
+                            'Signed Stock Document QR',
                             style: AppTextStyles.h4
                                 .copyWith(color: AppColors.white),
                           ),
@@ -178,7 +174,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                           const SizedBox(height: 12),
                           Text(
                             _session.isUploaded
-                                ? 'Receipt received'
+                                ? 'Document received'
                                 : 'Scan with phone',
                             style: AppTextStyles.titleSm.copyWith(
                               color: _session.isUploaded
@@ -196,24 +192,26 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                         Row(
                           children: [
                             Expanded(
-                              child: _TpeAmountTile(
-                                label: 'System Card',
-                                value: _money(_session.systemCardAmount),
+                              child: _StockDocumentMetricTile(
+                                label: 'Stock Lines',
+                                value: _session.itemCount.toString(),
                                 color: AppColors.accentFor(context),
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: _TpeAmountTile(
-                                label: 'Actual Card',
-                                value: _money(_session.actualCardAmount),
-                                color: AppColors.success,
+                              child: _StockDocumentMetricTile(
+                                label: 'Differences',
+                                value: _session.discrepancyCount.toString(),
+                                color: _session.discrepancyCount > 0
+                                    ? AppColors.warning
+                                    : AppColors.success,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 10),
-                        _TpeStatusBanner(
+                        _StockDocumentStatusBanner(
                           icon: _session.isUploaded
                               ? Icons.check_circle_rounded
                               : (_session.isExpired
@@ -227,7 +225,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                           message: _session.isUploaded
                               ? (_session.originalFilename == null ||
                                       _session.originalFilename!.isEmpty
-                                  ? 'The receipt is attached to this session.'
+                                  ? 'The signed document is attached to this stock verification.'
                                   : _session.originalFilename!)
                               : (_session.isExpired
                                   ? 'Generate a new QR code from the POS.'
@@ -237,35 +235,6 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                               : (_session.isExpired
                                   ? AppColors.error
                                   : AppColors.accentFor(context)),
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: differenceColor.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: differenceColor.withValues(alpha: 0.28),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Difference',
-                                style: AppTextStyles.label.copyWith(
-                                  color: AppColors.textSecondaryFor(context),
-                                ),
-                              ),
-                              Text(
-                                _money(_session.differenceAmount),
-                                style: AppTextStyles.title.copyWith(
-                                  color: differenceColor,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                         const SizedBox(height: 16),
                         Row(
@@ -325,12 +294,12 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
   }
 }
 
-class _TpeAmountTile extends StatelessWidget {
+class _StockDocumentMetricTile extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
 
-  const _TpeAmountTile({
+  const _StockDocumentMetricTile({
     required this.label,
     required this.value,
     required this.color,
@@ -370,13 +339,13 @@ class _TpeAmountTile extends StatelessWidget {
   }
 }
 
-class _TpeStatusBanner extends StatelessWidget {
+class _StockDocumentStatusBanner extends StatelessWidget {
   final IconData icon;
   final String title;
   final String message;
   final Color color;
 
-  const _TpeStatusBanner({
+  const _StockDocumentStatusBanner({
     required this.icon,
     required this.title,
     required this.message,
@@ -417,95 +386,6 @@ class _TpeStatusBanner extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _UploadBox extends StatelessWidget {
-  final bool isUploaded;
-  final bool isLoading;
-  final String? fileName;
-  final bool hasError;
-  final String label;
-  final String uploadedLabel;
-  final VoidCallback? onTap;
-
-  const _UploadBox(
-      {required this.isUploaded,
-      required this.isLoading,
-      required this.fileName,
-      required this.hasError,
-      required this.label,
-      this.uploadedLabel = 'TPE receipt uploaded',
-      required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final layout = context.posLayout;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          height: layout.touchTarget + 16,
-          decoration: BoxDecoration(
-            color: isUploaded
-                ? AppColors.success.withValues(alpha: 0.12)
-                : (hasError
-                    ? AppColors.error.withValues(alpha: 0.1)
-                    : AppColors.elevatedSurfaceFor(context)),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isUploaded
-                  ? AppColors.success
-                  : (hasError ? AppColors.error : AppColors.borderFor(context)),
-              width: hasError || isUploaded ? 2 : 1,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (isLoading)
-                const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2.4),
-                )
-              else if (isUploaded)
-                const Icon(
-                  Icons.check_circle_rounded,
-                  color: AppColors.success,
-                )
-              else
-                Icon(
-                  Icons.qr_code_2_rounded,
-                  color:
-                      hasError ? AppColors.error : AppColors.accentFor(context),
-                ),
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  isUploaded
-                      ? (fileName == null || fileName!.isEmpty
-                          ? uploadedLabel
-                          : fileName!)
-                      : (isLoading ? 'Creating QR code...' : label),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.titleSm.copyWith(
-                    color: isUploaded
-                        ? AppColors.success
-                        : (hasError
-                            ? AppColors.error
-                            : AppColors.accentFor(context)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

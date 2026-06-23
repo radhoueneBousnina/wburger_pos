@@ -296,7 +296,9 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
                                 ? 'Required'
                                 : null,
                           ),
-                          onChanged: (_) => setState(() {}),
+                          onChanged: (_) => setState(
+                            () => _stockDocumentUploadSession = null,
+                          ),
                         ),
                       ),
                     ],
@@ -305,6 +307,24 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
             ],
           ),
         ),
+        const SizedBox(height: 16),
+        _UploadBox(
+          isUploaded: _stockDocumentReady,
+          isLoading: _isCreatingStockDocumentUpload,
+          fileName: _stockDocumentUploadSession?.originalFilename,
+          hasError: _submittedStock && !_stockDocumentReady,
+          label: 'Scan QR to upload signed stock document',
+          uploadedLabel: 'Signed stock document uploaded',
+          onTap: _isCreatingStockDocumentUpload
+              ? null
+              : () => _showStockDocumentQrUploadFlow(stocks),
+        ),
+        if (_submittedStock && !_stockDocumentReady)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text('Signed stock document upload is required.',
+                style: AppTextStyles.bodySm.copyWith(color: AppColors.error)),
+          ),
         const SizedBox(height: 16),
         TextField(
           controller: _stockNoteCtrl,

@@ -1617,11 +1617,15 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
 
     final cleanTicket = ticketNumber.trim();
     final cleanOrderId = orderId?.trim();
-    final reason = cleanTicket.isNotEmpty
-        ? 'Cash payment drawer opening for ticket $cleanTicket.'
-        : cleanOrderId != null && cleanOrderId.isNotEmpty
-            ? 'Cash payment drawer opening for order $cleanOrderId.'
-            : 'Cash payment drawer opening.';
+    final hasTicket = cleanTicket.isNotEmpty;
+    final hasOrderId = cleanOrderId != null && cleanOrderId.isNotEmpty;
+    final reason = hasTicket && hasOrderId
+        ? 'Cash payment drawer opening for ticket $cleanTicket (order $cleanOrderId).'
+        : hasTicket
+            ? 'Cash payment drawer opening for ticket $cleanTicket.'
+            : hasOrderId
+                ? 'Cash payment drawer opening for order $cleanOrderId.'
+                : 'Cash payment drawer opening.';
 
     try {
       await apiClient.dio.post(

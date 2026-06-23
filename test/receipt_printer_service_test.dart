@@ -440,11 +440,23 @@ void main() {
   test('builds a bounded cash drawer pulse without feed or cut bytes', () {
     final bytes = ReceiptPrinterService.instance.buildCashDrawerPulseBytes();
 
-    expect(bytes.take(2).toList(), [0x1b, 0x40]);
-    expect(_containsBytes(bytes, const [0x1b, 0x70, 0x00]), isTrue);
-    expect(_containsBytes(bytes, const [0x1b, 0x70, 0x01]), isTrue);
-    expect(_containsBytes(bytes, const [0x07]), isTrue);
-    expect(bytes.length, lessThanOrEqualTo(32));
+    expect(
+      bytes,
+      [
+        0x1b,
+        0x40,
+        0x1b,
+        0x70,
+        0x00,
+        0x64,
+        0xfa,
+        0x1b,
+        0x70,
+        0x01,
+        0x64,
+        0xfa,
+      ],
+    );
     expect(_containsBytes(bytes, const [0x0a]), isFalse);
     expect(_containsBytes(bytes, const [0x0d]), isFalse);
     expect(_containsBytes(bytes, const [0x1d, 0x56]), isFalse);
@@ -462,8 +474,8 @@ void main() {
     expect(_containsBytes(bytes, const [0x1b, 0x70, 0x00]), isTrue);
     expect(_containsBytes(bytes, const [0x1b, 0x70, 0x01]), isTrue);
     expect(
-      _indexOfBytes(bytes, 'Double Cheeseburger'.codeUnits),
-      lessThan(_indexOfBytes(bytes, const [0x1b, 0x70, 0x00])),
+      _indexOfBytes(bytes, const [0x1b, 0x70, 0x00]),
+      lessThan(_indexOfBytes(bytes, 'Double Cheeseburger'.codeUnits)),
     );
     expect(printableText, contains('Double Cheeseburger'));
     expect(printableText, contains('Total:'));
