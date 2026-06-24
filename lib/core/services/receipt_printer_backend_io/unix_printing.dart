@@ -282,11 +282,7 @@ Future<String?> _printTicketOnSingleWindowsPrinter(
   Uint8List bytes,
 ) async {
   String? networkError;
-  final shouldTryNetworkRaw =
-      _isCashDrawerJob(jobName) || _containsCashDrawerPulse(bytes);
-  final networkEndpoint = shouldTryNetworkRaw
-      ? _networkPrinterEndpointFromWindowsPort(portName)
-      : null;
+  final networkEndpoint = _networkPrinterEndpointFromWindowsPort(portName);
 
   if (networkEndpoint != null) {
     try {
@@ -314,18 +310,6 @@ Future<String?> _printTicketOnSingleWindowsPrinter(
 
 bool _isCashDrawerJob(String jobName) {
   return jobName.toLowerCase().contains('cash drawer');
-}
-
-bool _containsCashDrawerPulse(Uint8List bytes) {
-  for (var i = 0; i < bytes.length - 1; i++) {
-    if (bytes[i] == 0x1b && bytes[i + 1] == 0x70) return true;
-  }
-  for (var i = 0; i < bytes.length - 2; i++) {
-    if (bytes[i] == 0x10 && bytes[i + 1] == 0x14 && bytes[i + 2] == 0x01) {
-      return true;
-    }
-  }
-  return false;
 }
 
 List<_NetworkPrinterEndpoint> _configuredCashDrawerNetworkEndpoints() {

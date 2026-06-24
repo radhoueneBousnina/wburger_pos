@@ -286,8 +286,11 @@ class _WindowsPrinterSpooler {
             .toList();
       }
 
-      final ticketPrinters = printers.where(_isTicketPrinter).toList();
-      if (ticketPrinters.isNotEmpty) return ticketPrinters;
+      final receiptPrinters = printers
+          .where((printer) =>
+              _isTicketPrinter(printer) || _isRawNetworkPrinter(printer))
+          .toList();
+      if (receiptPrinters.isNotEmpty) return receiptPrinters;
 
       // Some receipt printers are installed with very generic Windows names
       // and drivers. If the machine has real non-virtual printers connected,
@@ -423,6 +426,28 @@ class _WindowsPrinterSpooler {
 
     if (keywords.any(value.contains)) return true;
     return RegExp(r'(^|[\s_\-/])pos([0-9\s_\-/]|$)').hasMatch(value);
+  }
+
+  bool _isRawNetworkPrinter(_WindowsPrinter printer) {
+    final port = printer.portName.trim();
+    if (port.isEmpty) return false;
+    if (port.contains(r'\') || port.contains('/')) return false;
+    if (RegExp(r'^(COM|LPT|USB|WSD|FILE|PORTPROMPT)', caseSensitive: false)
+        .hasMatch(port)) {
+      return false;
+    }
+
+    var value = port;
+    if (value.toUpperCase().startsWith('IP_')) {
+      value = value.substring(3);
+    }
+
+    if (RegExp(r'^(?:\d{1,3}\.){3}\d{1,3}(?::\d{2,5})?$').hasMatch(value)) {
+      return true;
+    }
+
+    return RegExp(r'^[A-Za-z0-9.-]+(?::\d{2,5})?$').hasMatch(value) &&
+        (value.contains('.') || value.contains('-'));
   }
 
   bool _isVirtualPrinter(String name, String driverName, String portName) {
