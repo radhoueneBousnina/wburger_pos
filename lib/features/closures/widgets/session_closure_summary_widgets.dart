@@ -20,20 +20,20 @@ class _StepTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = context.posLayout;
+    final successColor = AppColors.semanticTextFor(context, AppColors.success);
     final isInteractive = enabled || selected || done;
     final Color color = !isInteractive
         ? AppColors.textSecondaryFor(context)
         : selected
             ? AppColors.accentFor(context)
-            : (done ? AppColors.success : AppColors.textSecondaryFor(context));
+            : (done ? successColor : AppColors.textSecondaryFor(context));
     final Color bgColor = !isInteractive
         ? AppColors.elevatedSurfaceFor(context)
         : selected
             ? AppColors.accentSurfaceFor(context)
                 .withValues(alpha: AppColors.isTraining(context) ? 0.72 : 1)
             : (done
-                ? AppColors.successLight
-                    .withValues(alpha: AppColors.isTraining(context) ? 0.18 : 1)
+                ? AppColors.successSurfaceFor(context)
                 : AppColors.elevatedSurfaceFor(context));
 
     return Material(
@@ -211,7 +211,10 @@ class _ComparisonRow extends StatelessWidget {
               SizedBox(
                 width: 90,
                 child: Text('${theoryAmount.toStringAsFixed(3)} DT',
-                    style: AppTextStyles.priceSm, textAlign: TextAlign.right),
+                    style: AppTextStyles.priceSm.copyWith(
+                      color: AppColors.accentFor(context),
+                    ),
+                    textAlign: TextAlign.right),
               ),
             ],
           ),

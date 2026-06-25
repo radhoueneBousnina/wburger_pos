@@ -167,6 +167,10 @@ class AppTheme {
 
   static ThemeData get trainingTheme {
     final base = lightTheme;
+    final textTheme = base.textTheme.apply(
+      bodyColor: AppColors.white,
+      displayColor: AppColors.white,
+    );
     return base.copyWith(
       brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(
@@ -178,7 +182,12 @@ class AppTheme {
         onPrimary: AppColors.blueDark,
         onSecondary: AppColors.white,
         onSurface: AppColors.white,
-        error: AppColors.errorLight,
+        error: AppColors.semanticTextForDark(AppColors.error),
+      ),
+      textTheme: textTheme,
+      primaryTextTheme: base.primaryTextTheme.apply(
+        bodyColor: AppColors.white,
+        displayColor: AppColors.white,
       ),
       scaffoldBackgroundColor: AppColors.trainingBackground,
       appBarTheme: const AppBarTheme(
@@ -209,6 +218,13 @@ class AppTheme {
         suffixIconColor: AppColors.trainingTextSecondary,
         labelStyle: AppTextStyles.body.copyWith(color: AppColors.neutral300),
         hintStyle: AppTextStyles.body.copyWith(color: AppColors.neutral500),
+        helperStyle: AppTextStyles.bodySm.copyWith(color: AppColors.neutral400),
+        errorStyle: AppTextStyles.bodySm.copyWith(
+          color: AppColors.semanticTextForDark(AppColors.error),
+          fontWeight: FontWeight.w700,
+        ),
+        prefixStyle: AppTextStyles.body.copyWith(color: AppColors.white),
+        suffixStyle: AppTextStyles.body.copyWith(color: AppColors.neutral300),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.trainingBorder),
@@ -221,6 +237,11 @@ class AppTheme {
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.yellow, width: 2),
         ),
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: AppColors.yellow,
+        selectionColor: AppColors.yellow.withValues(alpha: 0.28),
+        selectionHandleColor: AppColors.yellow,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

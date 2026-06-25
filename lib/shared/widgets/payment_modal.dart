@@ -545,22 +545,23 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   }
 
   Widget _buildErrorBanner() {
+    final errorColor = AppColors.semanticTextFor(context, AppColors.error);
     return Container(
       key: _modalErrorKey,
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.errorLight,
+        color: AppColors.errorSurfaceFor(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.38)),
+        border: Border.all(color: errorColor.withValues(alpha: 0.38)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
-            color: AppColors.error,
+            color: errorColor,
             size: 20,
           ),
           const SizedBox(width: 10),
@@ -568,7 +569,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
             child: Text(
               _formError!,
               style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.error,
+                color: errorColor,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -651,6 +652,8 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       widget.referenceLabel?.isNotEmpty == true;
 
   Widget _buildCustomerOrderSection({bool dense = false}) {
+    final primaryText = AppColors.textPrimaryFor(context);
+    final secondaryText = AppColors.textSecondaryFor(context);
     return _PaymentSectionCard(
       title: 'Customer Order',
       dense: dense,
@@ -660,19 +663,19 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
           if (widget.customerName?.isNotEmpty == true)
             Text(
               widget.customerName!,
-              style: AppTextStyles.title,
+              style: AppTextStyles.title.copyWith(color: primaryText),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           if (widget.referenceLabel?.isNotEmpty == true)
             Text(
               'Ticket ${displayTicketNumberFrom(widget.referenceLabel!)}',
-              style: AppTextStyles.bodySm,
+              style: AppTextStyles.bodySm.copyWith(color: secondaryText),
             ),
           if (widget.customerNote?.isNotEmpty == true)
             Text(
               widget.customerNote!,
-              style: AppTextStyles.bodySm,
+              style: AppTextStyles.bodySm.copyWith(color: secondaryText),
               maxLines: dense ? 1 : 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -763,6 +766,10 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
       title: 'Glovo Details',
       child: TextField(
         controller: _glovoOrderIdController,
+        cursorColor: AppColors.accentFor(context),
+        style: AppTextStyles.title.copyWith(
+          color: AppColors.textPrimaryFor(context),
+        ),
         textInputAction: TextInputAction.done,
         decoration: InputDecoration(
           labelText: 'Glovo order ID (optional)',
@@ -786,6 +793,10 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
         child: TextField(
           controller: _giftRecipientController,
           focusNode: _giftRecipientFocusNode,
+          cursorColor: AppColors.accentFor(context),
+          style: AppTextStyles.title.copyWith(
+            color: AppColors.textPrimaryFor(context),
+          ),
           textInputAction: TextInputAction.done,
           textCapitalization: TextCapitalization.words,
           onChanged: (_) {
@@ -839,6 +850,11 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
                 TextField(
                   controller: _cashGivenController,
                   focusNode: _cashFocusNode,
+                  cursorColor: AppColors.accentFor(context),
+                  style: AppTextStyles.titleLg.copyWith(
+                    color: AppColors.textPrimaryFor(context),
+                    fontWeight: FontWeight.w800,
+                  ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
@@ -859,6 +875,10 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
                     labelText: 'Amount received',
                     errorText: _cashAmountError,
                     suffixText: 'DT',
+                    suffixStyle: AppTextStyles.titleSm.copyWith(
+                      color: AppColors.textSecondaryFor(context),
+                      fontWeight: FontWeight.w800,
+                    ),
                     prefixIcon: const Icon(Icons.payments_rounded),
                     filled: true,
                     fillColor: AppColors.inputFillFor(context),

@@ -87,20 +87,19 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
   }
 
   Widget _buildForcedClosureNotice(BuildContext context) {
+    final warningColor = AppColors.semanticTextFor(context, AppColors.warning);
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.isTraining(context)
-            ? AppColors.warning.withValues(alpha: 0.14)
-            : AppColors.warningLight,
+        color: AppColors.warningSurfaceFor(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.warning),
+        border: Border.all(color: warningColor),
       ),
       child: Text(
         'Previous session must be closed before continuing.${_previousSessionDate == null || _previousSessionDate!.isEmpty ? '' : ' Session date: $_previousSessionDate.'}',
-        style: AppTextStyles.body.copyWith(color: AppColors.warning),
+        style: AppTextStyles.body.copyWith(color: warningColor),
       ),
     );
   }

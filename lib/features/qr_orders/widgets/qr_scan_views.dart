@@ -299,6 +299,8 @@ class _ReviewingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = context.posLayout;
+    final accent = AppColors.accentFor(context);
+    final successColor = AppColors.semanticTextFor(context, AppColors.success);
     final total = items.fold<double>(
         0, (s, i) => s + (i['qty'] as int) * (i['price'] as double));
 
@@ -311,18 +313,22 @@ class _ReviewingView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                  color: AppColors.successLight,
+                  color: AppColors.successSurfaceFor(context),
                   borderRadius: BorderRadius.circular(8)),
-              child:
-                  const Icon(Icons.qr_code_rounded, color: AppColors.success),
+              child: Icon(Icons.qr_code_rounded, color: successColor),
             ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('QR Order Imported',
-                    style: AppTextStyles.h4.copyWith(color: AppColors.success)),
-                Text('Code: $qrCode', style: AppTextStyles.bodySm),
+                    style: AppTextStyles.h4.copyWith(color: successColor)),
+                Text(
+                  'Code: $qrCode',
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.textSecondaryFor(context),
+                  ),
+                ),
               ],
             ),
           ],
@@ -333,40 +339,42 @@ class _ReviewingView extends StatelessWidget {
           child: Container(
             padding: EdgeInsets.all(layout.pagePadding),
             decoration: BoxDecoration(
-              color: AppColors.white,
+              color: AppColors.panelFor(context),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.borderFor(context)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.person_rounded,
-                        color: AppColors.blue, size: 18),
+                    Icon(Icons.person_rounded, color: accent, size: 18),
                     const SizedBox(width: 8),
                     Text('Customer: $customer',
-                        style: AppTextStyles.title
-                            .copyWith(color: AppColors.blue)),
+                        style: AppTextStyles.title.copyWith(color: accent)),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.yellowSurface,
+                        color: AppColors.accentSurfaceFor(context),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.yellow),
+                        border: Border.all(color: accent),
                       ),
                       child: Text('QR Order',
-                          style: AppTextStyles.labelSm
-                              .copyWith(color: AppColors.yellowDark)),
+                          style: AppTextStyles.labelSm.copyWith(color: accent)),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 12),
-                Text('Order Items', style: AppTextStyles.label),
+                Text(
+                  'Order Items',
+                  style: AppTextStyles.label.copyWith(
+                    color: AppColors.textSecondaryFor(context),
+                  ),
+                ),
                 const SizedBox(height: 10),
                 ...items.map((item) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -376,20 +384,23 @@ class _ReviewingView extends StatelessWidget {
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                                color: AppColors.blueSurface,
+                                color: AppColors.accentSurfaceFor(context),
                                 borderRadius: BorderRadius.circular(6)),
                             alignment: Alignment.center,
                             child: Text('${item['qty']}x',
                                 style: AppTextStyles.labelSm
-                                    .copyWith(color: AppColors.blue)),
+                                    .copyWith(color: accent)),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                               child: Text(item['name'] as String,
-                                  style: AppTextStyles.body)),
+                                  style: AppTextStyles.body.copyWith(
+                                    color: AppColors.textPrimaryFor(context),
+                                  ))),
                           Text(
                               '${((item['qty'] as int) * (item['price'] as double)).toStringAsFixed(3)} DT',
-                              style: AppTextStyles.priceSm),
+                              style: AppTextStyles.priceSm
+                                  .copyWith(color: accent)),
                         ],
                       ),
                     )),
@@ -398,9 +409,14 @@ class _ReviewingView extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Total', style: AppTextStyles.h4),
+                    Text(
+                      'Total',
+                      style: AppTextStyles.h4.copyWith(
+                        color: AppColors.textPrimaryFor(context),
+                      ),
+                    ),
                     Text('${total.toStringAsFixed(3)} DT',
-                        style: AppTextStyles.priceLg),
+                        style: AppTextStyles.priceLg.copyWith(color: accent)),
                   ],
                 ),
               ],
@@ -470,12 +486,16 @@ class _StatusView extends StatelessWidget {
         constraints: BoxConstraints(maxWidth: layout.dialogWidth),
         padding: EdgeInsets.all(layout.isCompact ? 28 : 40),
         decoration: BoxDecoration(
-          color: AppColors.white,
+          color: AppColors.panelFor(context),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: AppColors.borderFor(context)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05), blurRadius: 20)
+              color: Colors.black.withValues(
+                alpha: AppColors.isTraining(context) ? 0.22 : 0.05,
+              ),
+              blurRadius: 20,
+            )
           ],
         ),
         child: Column(
@@ -493,8 +513,9 @@ class _StatusView extends StatelessWidget {
                 textAlign: TextAlign.center),
             const SizedBox(height: 10),
             Text(message,
-                style:
-                    AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.textSecondaryFor(context),
+                ),
                 textAlign: TextAlign.center),
             const SizedBox(height: 32),
             SizedBox(

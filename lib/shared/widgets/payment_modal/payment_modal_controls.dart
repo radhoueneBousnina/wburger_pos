@@ -18,8 +18,8 @@ class _PaymentSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accentFor(context);
-    final borderColor =
-        hasError ? AppColors.error : AppColors.borderFor(context);
+    final errorColor = AppColors.semanticTextFor(context, AppColors.error);
+    final borderColor = hasError ? errorColor : AppColors.borderFor(context);
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(dense ? 12 : 16),
@@ -34,7 +34,7 @@ class _PaymentSectionCard extends StatelessWidget {
           Text(
             title,
             style: AppTextStyles.label.copyWith(
-              color: hasError ? AppColors.error : accent,
+              color: hasError ? errorColor : accent,
             ),
           ),
           SizedBox(height: dense ? 8 : 12),
@@ -44,7 +44,7 @@ class _PaymentSectionCard extends StatelessWidget {
             Text(
               errorText!,
               style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.error,
+                color: errorColor,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -145,9 +145,16 @@ class _StaffPicker extends ConsumerWidget {
         children: [
           TextField(
             controller: searchController,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search_rounded),
+            cursorColor: AppColors.accentFor(context),
+            style: AppTextStyles.title.copyWith(
+              color: AppColors.textPrimaryFor(context),
+            ),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search_rounded),
               hintText: 'Search staff...',
+              hintStyle: AppTextStyles.body.copyWith(
+                color: AppColors.textSecondaryFor(context),
+              ),
             ),
             onChanged: (_) => (context as Element).markNeedsBuild(),
           ),
@@ -213,23 +220,26 @@ class _PaymentInfoPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final readableColor = AppColors.semanticTextFor(context, color);
     final bgAlpha = AppColors.isTraining(context) ? 0.16 : 0.1;
     final borderAlpha = AppColors.isTraining(context) ? 0.34 : 0.22;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: bgAlpha),
+        color: readableColor.withValues(alpha: bgAlpha),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: borderAlpha)),
+        border: Border.all(
+          color: readableColor.withValues(alpha: borderAlpha),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: color),
+          Icon(icon, size: 18, color: readableColor),
           const SizedBox(width: 8),
           Text(
             text,
-            style: AppTextStyles.titleSm.copyWith(color: color),
+            style: AppTextStyles.titleSm.copyWith(color: readableColor),
           ),
         ],
       ),
@@ -363,9 +373,9 @@ class _CashPadKey extends StatelessWidget {
         background = AppColors.accentFor(context).withValues(alpha: 0.16);
         border = AppColors.accentFor(context).withValues(alpha: 0.38);
       case _CashPadKeyTone.danger:
-        foreground = AppColors.error;
-        background = AppColors.error.withValues(alpha: isTraining ? 0.16 : 0.1);
-        border = AppColors.error.withValues(alpha: isTraining ? 0.32 : 0.18);
+        foreground = AppColors.semanticTextFor(context, AppColors.error);
+        background = foreground.withValues(alpha: isTraining ? 0.16 : 0.1);
+        border = foreground.withValues(alpha: isTraining ? 0.32 : 0.18);
       case _CashPadKeyTone.normal:
         foreground = AppColors.textPrimaryFor(context);
         background = AppColors.elevatedSurfaceFor(context);

@@ -228,7 +228,9 @@ class _PurchaseRow extends StatelessWidget {
                   Text(
                     '${purchase.total.toStringAsFixed(3)} DT',
                     textAlign: TextAlign.right,
-                    style: AppTextStyles.price.copyWith(color: AppColors.blue),
+                    style: AppTextStyles.price.copyWith(
+                      color: AppColors.accentFor(context),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(

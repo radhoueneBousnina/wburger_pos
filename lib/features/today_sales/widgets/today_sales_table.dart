@@ -190,8 +190,9 @@ class _OrderRow extends ConsumerWidget {
                     '${order.total.toStringAsFixed(3)} DT',
                     textAlign: TextAlign.right,
                     style: AppTextStyles.price.copyWith(
-                      color:
-                          isCancelled ? AppColors.textDisabled : AppColors.blue,
+                      color: isCancelled
+                          ? AppColors.textDisabled
+                          : AppColors.accentFor(context),
                       decoration:
                           isCancelled ? TextDecoration.lineThrough : null,
                       decorationColor: AppColors.error,

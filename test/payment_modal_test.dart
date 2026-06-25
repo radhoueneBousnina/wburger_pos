@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wburger_pos/core/theme/app_colors.dart';
 import 'package:wburger_pos/core/theme/app_theme.dart';
 import 'package:wburger_pos/data/models/order_models.dart';
 import 'package:wburger_pos/data/providers/app_providers.dart';
@@ -182,6 +183,46 @@ void main() {
     expect(confirmed, isFalse);
     expect(find.text('Enter enough cash before confirming.'), findsOneWidget);
     expect(find.text('Amount received must cover the total.'), findsOneWidget);
+  });
+
+  testWidgets('cash amount field stays readable in training theme',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.trainingTheme,
+          home: Scaffold(
+            body: PaymentModal(
+              total: 20,
+              initialPaymentType: PaymentType.cash,
+              onConfirm: (
+                _,
+                __, {
+                amountGiven,
+                changeReturned,
+                staffId,
+                glovoOrderId,
+                giftRecipient,
+                payableTotal,
+                discountAmount,
+                staffDiscountPercent,
+              }) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final cashField = tester.widget<TextField>(find.byType(TextField).first);
+
+    expect(cashField.style?.color, AppColors.white);
+    expect(cashField.cursorColor, AppColors.yellow);
+    expect(cashField.decoration?.suffixStyle?.color,
+        AppColors.trainingTextSecondary);
   });
 
   testWidgets('gift payment requires a recipient and reports zero total',

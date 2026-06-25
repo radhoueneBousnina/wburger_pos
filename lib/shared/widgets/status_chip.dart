@@ -19,18 +19,18 @@ class StatusChip extends StatelessWidget {
 
     switch (status) {
       case OrderStatus.validated:
-        bg = AppColors.successLight;
-        text = AppColors.success;
+        bg = AppColors.successSurfaceFor(context);
+        text = AppColors.semanticTextFor(context, AppColors.success);
         label = 'Validated';
         icon = Icons.check_circle_rounded;
       case OrderStatus.cancelled:
-        bg = AppColors.errorLight;
-        text = AppColors.error;
+        bg = AppColors.errorSurfaceFor(context);
+        text = AppColors.semanticTextFor(context, AppColors.error);
         label = 'Cancelled';
         icon = Icons.cancel_rounded;
       case OrderStatus.pending:
-        bg = AppColors.warningLight;
-        text = AppColors.warning;
+        bg = AppColors.warningSurfaceFor(context);
+        text = AppColors.semanticTextFor(context, AppColors.warning);
         label = 'Pending';
         icon = Icons.pending_rounded;
     }
@@ -92,6 +92,13 @@ class PaymentTypeChip extends StatelessWidget {
           AppColors.success
         ),
     };
+    final chipColor = AppColors.isTraining(context)
+        ? color == AppColors.blue
+            ? AppColors.yellow
+            : color == AppColors.neutral600
+                ? AppColors.neutral300
+                : AppColors.semanticTextFor(context, color)
+        : color;
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -99,16 +106,17 @@ class PaymentTypeChip extends StatelessWidget {
         vertical: layout.isCompact ? 5 : 7,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: chipColor.withValues(
+            alpha: AppColors.isTraining(context) ? 0.16 : 0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: chipColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: layout.isCompact ? 12 : 13, color: color),
+          Icon(icon, size: layout.isCompact ? 12 : 13, color: chipColor),
           const SizedBox(width: 4),
-          Text(label, style: AppTextStyles.labelSm.copyWith(color: color)),
+          Text(label, style: AppTextStyles.labelSm.copyWith(color: chipColor)),
         ],
       ),
     );

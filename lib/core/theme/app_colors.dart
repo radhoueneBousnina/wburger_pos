@@ -120,6 +120,31 @@ class AppColors {
   static Color textSecondaryFor(BuildContext context) =>
       isTraining(context) ? trainingTextSecondary : textSecondary;
 
+  static Color semanticTextFor(BuildContext context, Color color) {
+    if (!isTraining(context)) return color;
+    return semanticTextForDark(color);
+  }
+
+  static Color semanticTextForDark(Color color) {
+    if (color == success) return const Color(0xFF7FE6A2);
+    if (color == error) return const Color(0xFFFF8FA0);
+    if (color == warning) return const Color(0xFFFFC766);
+    if (color == info) return const Color(0xFF7DD8E8);
+    return color;
+  }
+
+  static Color errorSurfaceFor(BuildContext context) =>
+      isTraining(context) ? const Color(0xFF3A1D29) : errorLight;
+
+  static Color warningSurfaceFor(BuildContext context) =>
+      isTraining(context) ? const Color(0xFF3A2D14) : warningLight;
+
+  static Color successSurfaceFor(BuildContext context) =>
+      isTraining(context) ? const Color(0xFF173322) : successLight;
+
+  static Color infoSurfaceFor(BuildContext context) =>
+      isTraining(context) ? const Color(0xFF15313A) : infoLight;
+
   static Color subtlePatternFor(BuildContext context, Color color) =>
       isTraining(context)
           ? color.withValues(alpha: 0.05)

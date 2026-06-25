@@ -105,8 +105,10 @@ class _CartItemTile extends ConsumerWidget {
               ),
               Text(
                 item.total.toStringAsFixed(1),
-                style: AppTextStyles.priceSm
-                    .copyWith(fontSize: layout.isCompact ? 16 : 18),
+                style: AppTextStyles.priceSm.copyWith(
+                  color: AppColors.accentFor(context),
+                  fontSize: layout.isCompact ? 16 : 18,
+                ),
               ),
               if (!readonly) ...[
                 const SizedBox(width: 4),
@@ -229,7 +231,9 @@ class _CartItemTile extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('${value.toStringAsFixed(0)}%',
-                    style: AppTextStyles.priceLg),
+                    style: AppTextStyles.priceLg.copyWith(
+                      color: AppColors.accentFor(ctx),
+                    )),
                 Slider(
                   value: value,
                   min: 0,

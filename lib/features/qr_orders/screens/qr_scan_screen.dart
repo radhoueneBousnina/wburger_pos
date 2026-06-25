@@ -75,8 +75,8 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
           ),
         QrState.invalid => _StatusView(
             icon: Icons.qr_code_2_rounded,
-            iconColor: AppColors.error,
-            bgColor: AppColors.errorLight,
+            iconColor: AppColors.semanticTextFor(context, AppColors.error),
+            bgColor: AppColors.errorSurfaceFor(context),
             title: 'Invalid QR Code',
             message:
                 'This QR code is not recognized by the system. Please ask the customer to try again.',
@@ -84,8 +84,8 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
           ),
         QrState.expired => _StatusView(
             icon: Icons.timer_off_rounded,
-            iconColor: AppColors.warning,
-            bgColor: AppColors.warningLight,
+            iconColor: AppColors.semanticTextFor(context, AppColors.warning),
+            bgColor: AppColors.warningSurfaceFor(context),
             title: 'QR Code Expired',
             message:
                 'This QR code has expired (validity: 5 minutes). The order was not validated. Ask the customer to generate a new QR.',
@@ -93,8 +93,8 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
           ),
         QrState.success => _StatusView(
             icon: Icons.check_circle_rounded,
-            iconColor: AppColors.success,
-            bgColor: AppColors.successLight,
+            iconColor: AppColors.semanticTextFor(context, AppColors.success),
+            bgColor: AppColors.successSurfaceFor(context),
             title: 'Order Confirmed!',
             message:
                 'QR order validated and sent to kitchen. Payment recorded successfully.',

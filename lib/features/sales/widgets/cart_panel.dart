@@ -334,7 +334,9 @@ class _CartPanel extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('${value.toStringAsFixed(0)}%',
-                    style: AppTextStyles.priceLg),
+                    style: AppTextStyles.priceLg.copyWith(
+                      color: AppColors.accentFor(ctx),
+                    )),
                 Slider(
                   value: value,
                   min: 0,
