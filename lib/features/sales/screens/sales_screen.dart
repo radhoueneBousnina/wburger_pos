@@ -710,6 +710,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 amountGiven: amountGiven,
                 changeReturned: changeReturned,
                 staffId: staffId,
+                staffDiscountPercent: effectiveStaffDiscountPercent,
                 glovoOrderId: glovoOrderId,
                 giftRecipient: giftRecipient,
               )
@@ -735,6 +736,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                     amountGiven: amountGiven,
                     changeReturned: changeReturned,
                     staffId: staffId,
+                    staffDiscountPercent: effectiveStaffDiscountPercent,
                     glovoOrderId: glovoOrderId,
                     giftRecipient: giftRecipient,
                   )
@@ -747,6 +749,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                     amountGiven: amountGiven,
                     changeReturned: changeReturned,
                     staffId: staffId,
+                    staffDiscountPercent: effectiveStaffDiscountPercent,
                     glovoOrderId: glovoOrderId,
                     giftRecipient: giftRecipient,
                   );

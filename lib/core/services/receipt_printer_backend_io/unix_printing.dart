@@ -209,7 +209,20 @@ Future<RawTicketPrinterBackendResult> _printTicketOnWindows(
 
     final spooler = _WindowsPrinterSpooler();
     final printers = spooler.listTicketPrinters();
-    if (printers.isEmpty) {
+    final configuredEndpoints = _configuredTicketNetworkEndpoints();
+    final printerEndpointLabels = printers
+        .map((printer) =>
+            _networkPrinterEndpointFromWindowsPort(printer.portName)
+                ?.label
+                .toLowerCase())
+        .whereType<String>()
+        .toSet();
+    final extraEndpoints = configuredEndpoints
+        .where((endpoint) =>
+            !printerEndpointLabels.contains(endpoint.label.toLowerCase()))
+        .toList();
+
+    if (printers.isEmpty && extraEndpoints.isEmpty) {
       return const RawTicketPrinterBackendResult(
         printerCount: 0,
         printedCount: 0,
@@ -217,23 +230,37 @@ Future<RawTicketPrinterBackendResult> _printTicketOnWindows(
     }
 
     final printResults = await Future.wait(
-      printers.map((printer) => Isolate.run(
-            () => _printTicketOnSingleWindowsPrinter(
-              printer.name,
-              printer.portName,
-              jobName,
-              bytes,
-            ),
-          )),
+      [
+        ...printers.map((printer) => Isolate.run(
+              () => _printTicketOnSingleWindowsPrinter(
+                printer.name,
+                printer.portName,
+                jobName,
+                bytes,
+              ),
+            )),
+        ...extraEndpoints.map((endpoint) async {
+          try {
+            await _writeRawBytesToNetworkPrinter(endpoint, bytes);
+            return null;
+          } catch (error) {
+            return '${endpoint.label} (${error.toString()})';
+          }
+        }),
+      ],
     );
     final failedPrinters = printResults.whereType<String>().toList();
+    final targetNames = [
+      ...printers.map((printer) => printer.name),
+      ...extraEndpoints.map((endpoint) => endpoint.label),
+    ];
 
     return RawTicketPrinterBackendResult(
-      printerCount: printers.length,
-      printedCount: printers.length - failedPrinters.length,
+      printerCount: targetNames.length,
+      printedCount: targetNames.length - failedPrinters.length,
       failedPrinters: failedPrinters,
       successMessage: failedPrinters.isEmpty
-          ? 'Ticket queued on ${printers.map((printer) => printer.name).join(', ')} (${bytes.length} bytes).'
+          ? 'Ticket queued on ${targetNames.join(', ')} (${bytes.length} bytes).'
           : null,
     );
   } catch (error) {
@@ -312,6 +339,29 @@ bool _isCashDrawerJob(String jobName) {
   return jobName.toLowerCase().contains('cash drawer');
 }
 
+List<_NetworkPrinterEndpoint> _configuredTicketNetworkEndpoints() {
+  const compiledHost = String.fromEnvironment('POS_PRINTER_HOST');
+  const compiledHosts = String.fromEnvironment('POS_PRINTER_HOSTS');
+  const compiledRawHost = String.fromEnvironment('RAW_PRINTER_HOST');
+  const compiledRawHosts = String.fromEnvironment('RAW_PRINTER_HOSTS');
+  const compiledRawPrintHosts =
+      String.fromEnvironment('RAW_PRINT_PRINTER_HOSTS');
+  final rawValues = <String>[
+    compiledHost,
+    compiledHosts,
+    compiledRawHost,
+    compiledRawHosts,
+    compiledRawPrintHosts,
+    Platform.environment['POS_PRINTER_HOST'] ?? '',
+    Platform.environment['POS_PRINTER_HOSTS'] ?? '',
+    Platform.environment['RAW_PRINTER_HOST'] ?? '',
+    Platform.environment['RAW_PRINTER_HOSTS'] ?? '',
+    Platform.environment['RAW_PRINT_PRINTER_HOSTS'] ?? '',
+  ];
+
+  return _configuredNetworkEndpoints(rawValues);
+}
+
 List<_NetworkPrinterEndpoint> _configuredCashDrawerNetworkEndpoints() {
   const compiledHost = String.fromEnvironment('CASH_DRAWER_PRINTER_HOST');
   const compiledHosts = String.fromEnvironment('CASH_DRAWER_PRINTER_HOSTS');
@@ -322,10 +372,16 @@ List<_NetworkPrinterEndpoint> _configuredCashDrawerNetworkEndpoints() {
     Platform.environment['CASH_DRAWER_PRINTER_HOSTS'] ?? '',
   ];
 
+  return _configuredNetworkEndpoints(rawValues);
+}
+
+List<_NetworkPrinterEndpoint> _configuredNetworkEndpoints(
+  Iterable<String> rawValues,
+) {
   final endpoints = <_NetworkPrinterEndpoint>[];
   final seen = <String>{};
   for (final rawValue in rawValues) {
-    for (final part in rawValue.split(',')) {
+    for (final part in rawValue.split(RegExp(r'[,;]'))) {
       final endpoint = _networkPrinterEndpointFromHost(part);
       if (endpoint == null) continue;
       final key = endpoint.label.toLowerCase();

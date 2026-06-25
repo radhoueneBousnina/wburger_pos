@@ -95,8 +95,9 @@ class _CartItemTile extends ConsumerWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    if (item.discountPercent != null)
-                      Text('🏷 -${item.discountPercent!.toStringAsFixed(0)}%',
+                    if (item.effectiveDiscountPercent != null)
+                      Text(
+                          '🏷 -${item.effectiveDiscountPercent!.toStringAsFixed(0)}%',
                           style: AppTextStyles.bodySm
                               .copyWith(color: AppColors.success)),
                   ],
@@ -128,8 +129,8 @@ class _CartItemTile extends ConsumerWidget {
                       }
                       if (val == 'discount') {
                         if (canApplyDiscount) {
-                          _showDiscountDialog(
-                              context, ref, index, item.discountPercent);
+                          _showDiscountDialog(context, ref, index,
+                              item.effectiveDiscountPercent);
                         }
                       }
                       if (val == 'remove') cart.removeItem(index);

@@ -568,22 +568,25 @@ class CartItem {
     required this.product,
     this.quantity = 1,
     this.note,
-    this.discountPercent,
+    double? discountPercent,
     this.isDealComponent = false,
     this.parentDealName,
     this.sauces = const [],
     this.isMealUpgrade = false,
     this.mealAddOnPrice = 0,
     this.mealSodaProduct,
-  });
+  }) : discountPercent = _normalizeDiscountPercent(discountPercent);
 
   double get configuredUnitPrice =>
       product.price + (isMealUpgrade ? mealAddOnPrice : 0);
 
+  double? get effectiveDiscountPercent =>
+      _normalizeDiscountPercent(discountPercent);
+
   double get unitPrice => isDealComponent
       ? 0
-      : discountPercent != null
-          ? configuredUnitPrice * (1 - discountPercent! / 100)
+      : effectiveDiscountPercent != null
+          ? configuredUnitPrice * (1 - effectiveDiscountPercent! / 100)
           : configuredUnitPrice;
 
   double get total => unitPrice * quantity;
@@ -659,13 +662,15 @@ class CartItem {
   }
 
   Map<String, dynamic> toLocalJson() {
+    final localDiscountPercent = effectiveDiscountPercent;
     return {
       if (lineId != null) 'line_id': lineId,
       if (parentLineId != null) 'parent_line_id': parentLineId,
       'product': product.toLocalJson(),
       'quantity': quantity,
       if (note != null) 'note': note,
-      if (discountPercent != null) 'discount_percent': discountPercent,
+      if (localDiscountPercent != null)
+        'discount_percent': localDiscountPercent,
       'is_deal_component': isDealComponent,
       if (parentDealName != null) 'parent_deal_name': parentDealName,
       'sauces': sauces.map((sauce) => sauce.toJson()).toList(),
@@ -703,6 +708,12 @@ class CartItem {
           mealSodaMap == null ? null : Product.fromLocalJson(mealSodaMap),
     );
   }
+}
+
+double? _normalizeDiscountPercent(double? percent) {
+  if (percent == null) return null;
+  final normalized = percent.clamp(0, 100).toDouble();
+  return normalized > 0 ? normalized : null;
 }
 
 class CartItemGroup {
@@ -955,7 +966,8 @@ class Order {
       discountAmount: _parseNullableDouble(json['discount_amount']) ?? 0,
       amountGiven: _parseNullableDouble(json['amount_given']) ?? 0,
       changeReturned: _parseNullableDouble(json['change_returned']) ?? 0,
-      hasBackendTotal: json['has_backend_total'] == true,
+      hasBackendTotal:
+          json['has_backend_total'] == true || json.containsKey('total_amount'),
     );
   }
 

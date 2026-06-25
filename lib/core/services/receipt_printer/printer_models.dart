@@ -167,7 +167,7 @@ class ReceiptLine {
     List<CartItem> components = const [],
   }) {
     final discountAmount = item.discountAmount;
-    final discountPercent = item.discountPercent;
+    final discountPercent = item.effectiveDiscountPercent;
     return ReceiptLine(
       name: item.displayName,
       quantity: item.quantity,

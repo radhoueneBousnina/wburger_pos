@@ -265,6 +265,13 @@ class _ParsedTicketNumber {
     required this.dateStr,
     required this.sequence,
   });
+
+  int get chronologicalDate {
+    final day = int.tryParse(dateStr.substring(0, 2)) ?? 1;
+    final month = int.tryParse(dateStr.substring(2, 4)) ?? 1;
+    final year = int.tryParse(dateStr.substring(4, 6)) ?? 0;
+    return (2000 + year) * 10000 + month * 100 + day;
+  }
 }
 
 _ParsedTicketNumber? _parseTicketNumber(String ticketNumber) {
@@ -310,6 +317,38 @@ String? _offlineFirstNonEmptyString(Iterable<Object?> values) {
 int _offlineParseInt(Object? value, {required int fallback}) {
   if (value is int) return value;
   return int.tryParse(value?.toString() ?? '') ?? fallback;
+}
+
+List<OfflineQueuedOrder> orderOfflineQueueForSync(
+  List<OfflineQueuedOrder> queue,
+) {
+  final indexedQueue = queue.indexed.toList();
+  indexedQueue.sort((left, right) {
+    final leftTicket = _parseTicketNumber(left.$2.localOrder.ticketNumber);
+    final rightTicket = _parseTicketNumber(right.$2.localOrder.ticketNumber);
+
+    if (leftTicket != null && rightTicket != null) {
+      final dateComparison =
+          leftTicket.chronologicalDate.compareTo(rightTicket.chronologicalDate);
+      if (dateComparison != 0) return dateComparison;
+
+      final sequenceComparison =
+          leftTicket.sequence.compareTo(rightTicket.sequence);
+      if (sequenceComparison != 0) return sequenceComparison;
+    } else if (leftTicket != null) {
+      return -1;
+    } else if (rightTicket != null) {
+      return 1;
+    }
+
+    final queuedAtComparison = left.$2.queuedAt.compareTo(right.$2.queuedAt);
+    if (queuedAtComparison != 0) return queuedAtComparison;
+    return left.$1.compareTo(right.$1);
+  });
+
+  return [
+    for (final indexedEntry in indexedQueue) indexedEntry.$2,
+  ];
 }
 
 // ============================================================
@@ -653,6 +692,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         paymentType: effectivePaymentType,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
+        staffDiscountPercent: staffDiscountPercent,
         giftRecipient: giftRecipient,
       );
       final ticketNumber =
@@ -668,6 +708,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         confirmedOrder: confirmedOrder,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
+        staffDiscountPercent: staffDiscountPercent,
         giftRecipient: giftRecipient,
       );
       return CheckoutResult(
@@ -707,6 +748,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         ticketNumber: ticketNumber,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
+        staffDiscountPercent: staffDiscountPercent,
         giftRecipient: giftRecipient,
       );
       return CheckoutResult(orderId: orderId, ticketNumber: ticketNumber);
@@ -833,6 +875,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     double? amountGiven,
     double? changeReturned,
     String? staffId,
+    double? staffDiscountPercent,
     String? glovoOrderId,
     String? giftRecipient,
   }) async {
@@ -850,6 +893,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         ticketNumber: ticketNumber,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
+        staffDiscountPercent: staffDiscountPercent,
         giftRecipient: giftRecipient,
       );
       return CheckoutResult(orderId: orderId, ticketNumber: ticketNumber);
@@ -869,6 +913,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         amountGiven: amountGiven,
         changeReturned: changeReturned,
         staffId: staffId,
+        staffDiscountPercent: staffDiscountPercent,
         glovoOrderId: glovoOrderId,
         giftRecipient: giftRecipient,
       );
@@ -928,6 +973,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         ticketNumber: ticketNumber,
         amountGiven: amountGiven,
         changeReturned: changeReturned,
+        staffDiscountPercent: staffDiscountPercent,
         giftRecipient: giftRecipient,
       );
       return Future.value(
@@ -1168,6 +1214,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       ticketNumber: ticketNumber,
       amountGiven: amountGiven,
       changeReturned: changeReturned,
+      staffDiscountPercent: staffDiscountPercent,
       giftRecipient: giftRecipient,
     );
 
@@ -1218,6 +1265,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       confirmedOrder: localOrder,
       amountGiven: amountGiven,
       changeReturned: changeReturned,
+      staffDiscountPercent: staffDiscountPercent,
       giftRecipient: giftRecipient,
       applyLocalStock: true,
       refreshRemote: false,
@@ -1246,7 +1294,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     if (_isSyncingOfflineOrders || ref.read(testModeProvider).isActive) return;
     _isSyncingOfflineOrders = true;
     try {
-      final queue = await _offlineQueueStore.load();
+      final queue = orderOfflineQueueForSync(await _offlineQueueStore.load());
       if (queue.isEmpty) {
         PosMonitoringService.instance.setUnsyncedOrdersCount(0);
         return;
@@ -1412,8 +1460,11 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     required String? ticketNumber,
     double? amountGiven,
     double? changeReturned,
+    double? staffDiscountPercent,
     String? giftRecipient,
   }) {
+    final effectiveStaffDiscountPercent =
+        staffDiscountPercent ?? _staffDiscountPercent();
     return Order(
       id: orderId,
       ticketNumber: ticketNumber?.isNotEmpty == true
@@ -1434,14 +1485,15 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       redemptionToken: cart.redemptionToken,
       totalAmount: cart.payableTotalFor(
         paymentType,
-        staffDiscountPercent: _staffDiscountPercent(),
+        staffDiscountPercent: effectiveStaffDiscountPercent,
       ),
       discountAmount: cart.discountAmountFor(
         paymentType,
-        staffDiscountPercent: _staffDiscountPercent(),
+        staffDiscountPercent: effectiveStaffDiscountPercent,
       ),
       amountGiven: amountGiven ?? 0,
       changeReturned: changeReturned ?? 0,
+      hasBackendTotal: true,
     );
   }
 
@@ -1451,6 +1503,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     required PaymentType paymentType,
     double? amountGiven,
     double? changeReturned,
+    double? staffDiscountPercent,
     String? giftRecipient,
   }) {
     if (order == null || cart == null) return order;
@@ -1458,16 +1511,17 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         paymentType == PaymentType.staff || paymentType == PaymentType.gift;
     if (!shouldUsePosDiscountPricing) return order;
 
-    final staffDiscountPercent = _staffDiscountPercent();
+    final effectiveStaffDiscountPercent =
+        staffDiscountPercent ?? _staffDiscountPercent();
     return order.copyWith(
       paymentType: paymentType,
       totalAmount: cart.payableTotalFor(
         paymentType,
-        staffDiscountPercent: staffDiscountPercent,
+        staffDiscountPercent: effectiveStaffDiscountPercent,
       ),
       discountAmount: cart.discountAmountFor(
         paymentType,
-        staffDiscountPercent: staffDiscountPercent,
+        staffDiscountPercent: effectiveStaffDiscountPercent,
       ),
       amountGiven: amountGiven ?? order.amountGiven,
       changeReturned: changeReturned ?? order.changeReturned,
@@ -1484,6 +1538,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     Order? confirmedOrder,
     double? amountGiven,
     double? changeReturned,
+    double? staffDiscountPercent,
     String? giftRecipient,
     bool applyLocalStock = false,
     bool refreshRemote = true,
@@ -1500,6 +1555,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
           ticketNumber: ticketNumber,
           amountGiven: amountGiven,
           changeReturned: changeReturned,
+          staffDiscountPercent: staffDiscountPercent,
           giftRecipient: giftRecipient,
         ),
       );
