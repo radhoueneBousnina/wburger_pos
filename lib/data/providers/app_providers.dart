@@ -25,6 +25,7 @@ part 'app_providers/purchase_providers.dart';
 part 'app_providers/warmup_providers.dart';
 part 'app_providers/drawer_monitor_providers.dart';
 part 'app_providers/test_mode_providers.dart';
+part 'app_providers/connectivity_providers.dart';
 
 // ============================================================
 // AUTH PROVIDER

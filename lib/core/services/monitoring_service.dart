@@ -71,9 +71,9 @@ class PosMonitoringService {
   final Dio _dio = Dio(
     BaseOptions(
       baseUrl: ApiConstants.baseUrl,
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 5),
-      sendTimeout: const Duration(seconds: 5),
+      connectTimeout: const Duration(seconds: 2),
+      receiveTimeout: const Duration(seconds: 2),
+      sendTimeout: const Duration(seconds: 2),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -88,6 +88,8 @@ class PosMonitoringService {
   bool _heartbeatInFlight = false;
   bool _backendOnline = true;
   bool _internetOnline = true;
+  final StreamController<void> _connectionChangedController =
+      StreamController<void>.broadcast();
   final Map<String, DateTime> _lastMonitoringEventAt = {};
 
   DateTime? _lastSyncAt;
@@ -95,6 +97,8 @@ class PosMonitoringService {
   String _printerStatus = 'unknown';
   String _localDbStatus = 'ok';
   String _lastError = '';
+
+  Stream<void> get connectionChanged => _connectionChangedController.stream;
 
   Future<void> init() async {
     if (_initialized) return;
@@ -267,6 +271,7 @@ class PosMonitoringService {
     _internetOnline = true;
     _lastSyncAt = DateTime.now();
     if (wasOffline) {
+      _emitConnectionChanged();
       unawaited(recordEvent(
         level: 'info',
         eventType: 'internet_restored',
@@ -282,11 +287,18 @@ class PosMonitoringService {
     _internetOnline = false;
     _lastError = _cleanText(message);
     if (firstFailure) {
+      _emitConnectionChanged();
       unawaited(recordEvent(
         level: 'warning',
         eventType: 'internet_lost',
         message: message,
       ));
+    }
+  }
+
+  void _emitConnectionChanged() {
+    if (!_connectionChangedController.isClosed) {
+      _connectionChangedController.add(null);
     }
   }
 
@@ -422,9 +434,11 @@ class PosMonitoringService {
           response.statusCode! >= 200 &&
           response.statusCode! < 300;
       if (ok) {
+        final changed = !_backendOnline || !_internetOnline;
         _backendOnline = true;
         _internetOnline = true;
         _lastSyncAt = DateTime.now();
+        if (changed) _emitConnectionChanged();
       }
       return ok;
     } on DioException catch (error) {
@@ -432,8 +446,10 @@ class PosMonitoringService {
           error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.receiveTimeout ||
           error.type == DioExceptionType.sendTimeout) {
+        final changed = _backendOnline || _internetOnline;
         _backendOnline = false;
         _internetOnline = false;
+        if (changed) _emitConnectionChanged();
       }
       return false;
     } catch (_) {

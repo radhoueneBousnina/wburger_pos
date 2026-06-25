@@ -32,11 +32,29 @@ class _AppShellState extends ConsumerState<AppShell> {
     final showSidebar = !widget.lockNavigation && layout.width >= 1700;
     final sessionStatus = ref.watch(activeSessionStatusProvider);
     final testMode = ref.watch(testModeProvider);
+    final connectionState = ref.watch(posConnectionProvider);
     ref.watch(cashDrawerKeyMonitorProvider);
     final path = GoRouterState.of(context).uri.path;
     final isSalesPage = path == AppRoutes.sales;
     final canCloseSession =
         ref.watch(authProvider).permissions['can_close_session'] == true;
+
+    ref.listen<PosConnectionState>(posConnectionProvider, (previous, next) {
+      final wasOffline = previous?.isOffline ?? false;
+      if (next.isOffline && !wasOffline) {
+        _showConnectionSnack(
+          message: 'Internet connection lost. POS is offline.',
+          backgroundColor: AppColors.error,
+          icon: Icons.wifi_off_rounded,
+        );
+      } else if (!next.isOffline && wasOffline) {
+        _showConnectionSnack(
+          message: 'Internet connection restored.',
+          backgroundColor: AppColors.success,
+          icon: Icons.wifi_rounded,
+        );
+      }
+    });
 
     sessionStatus.whenData((status) {
       if (status != null &&
@@ -101,6 +119,12 @@ class _AppShellState extends ConsumerState<AppShell> {
                                 showMenuButton:
                                     !showSidebar && !widget.lockNavigation),
                           if (testMode.isActive) const _TrainingModeBanner(),
+                          if (connectionState.isOffline)
+                            _ConnectionLostBanner(
+                              onRetry: () => ref
+                                  .read(posConnectionProvider.notifier)
+                                  .checkNow(),
+                            ),
                           Expanded(child: widget.child),
                         ],
                       ),
@@ -119,6 +143,39 @@ class _AppShellState extends ConsumerState<AppShell> {
       data: AppTheme.trainingTheme,
       child: body,
     );
+  }
+
+  void _showConnectionSnack({
+    required String message,
+    required Color backgroundColor,
+    required IconData icon,
+  }) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: backgroundColor,
+          duration: const Duration(seconds: 4),
+          content: Row(
+            children: [
+              Icon(icon, color: AppColors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  message,
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 }
 
@@ -161,6 +218,61 @@ class _TrainingModeBanner extends ConsumerWidget {
               foregroundColor: AppColors.yellow,
               minimumSize: Size(112, layout.touchTarget - 8),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConnectionLostBanner extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _ConnectionLostBanner({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final layout = context.posLayout;
+    final errorColor = AppColors.semanticTextFor(context, AppColors.error);
+    final compact = layout.isCompact;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 12 : 18,
+        vertical: compact ? 8 : 10,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.errorSurfaceFor(context),
+        border: Border(
+          bottom: BorderSide(color: errorColor.withValues(alpha: 0.45)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.wifi_off_rounded, color: errorColor, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Internet connection lost - POS is offline. Some actions may fail until the connection returns.',
+              maxLines: compact ? 2 : 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.titleSm.copyWith(
+                color: errorColor,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Retry'),
+            style: TextButton.styleFrom(
+              foregroundColor: errorColor,
+              minimumSize: Size(104, layout.touchTarget - 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
           ),
         ],
