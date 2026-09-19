@@ -7,6 +7,8 @@ class PosSessionStatus {
   final bool todaySessionExists;
   final bool yesterdaySessionOpen;
   final String? yesterdaySessionId;
+  final bool isLocal;
+  final bool pendingSync;
 
   const PosSessionStatus({
     this.activeSessionId,
@@ -15,6 +17,8 @@ class PosSessionStatus {
     this.todaySessionExists = false,
     this.yesterdaySessionOpen = false,
     this.yesterdaySessionId,
+    this.isLocal = false,
+    this.pendingSync = false,
   });
 
   bool get hasActiveSession =>
@@ -44,6 +48,54 @@ class PosSessionStatus {
       todaySessionExists: json['today_session_exists'] == true,
       yesterdaySessionOpen: json['yesterday_session_open'] == true,
       yesterdaySessionId: json['yesterday_session_id']?.toString(),
+    );
+  }
+}
+
+class _StoredPosSession {
+  final String id;
+  final String date;
+  final DateTime openedAt;
+  final double openingFund;
+  final bool pendingSync;
+
+  const _StoredPosSession({
+    required this.id,
+    required this.date,
+    required this.openedAt,
+    required this.openingFund,
+    required this.pendingSync,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'date': date,
+        'opened_at': openedAt.toUtc().toIso8601String(),
+        'opening_fund': openingFund,
+        'pending_sync': pendingSync,
+      };
+
+  factory _StoredPosSession.fromJson(Map<String, dynamic> json) {
+    return _StoredPosSession(
+      id: json['id']?.toString() ?? '',
+      date: json['date']?.toString() ?? '',
+      openedAt: DateTime.parse(json['opened_at'].toString()),
+      openingFund:
+          double.tryParse(json['opening_fund']?.toString() ?? '0') ?? 0,
+      pendingSync: json['pending_sync'] == true,
+    );
+  }
+
+  _StoredPosSession copyWith({
+    String? id,
+    bool? pendingSync,
+  }) {
+    return _StoredPosSession(
+      id: id ?? this.id,
+      date: date,
+      openedAt: openedAt,
+      openingFund: openingFund,
+      pendingSync: pendingSync ?? this.pendingSync,
     );
   }
 }
@@ -148,6 +200,7 @@ class StockDocumentUploadSession {
 }
 
 class PosSessionService {
+  static const _storedSessionKey = 'wburger_pos_active_session_v1';
   final bool Function()? isTestMode;
 
   const PosSessionService({this.isTestMode});
@@ -165,25 +218,147 @@ class PosSessionService {
     );
   }
 
+  String _localDate(DateTime value) {
+    final local = value.toLocal();
+    return '${local.year.toString().padLeft(4, '0')}-'
+        '${local.month.toString().padLeft(2, '0')}-'
+        '${local.day.toString().padLeft(2, '0')}';
+  }
+
+  bool isNetworkFailure(Object error) {
+    if (error is! DioException || error.response != null) return false;
+    return error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.unknown;
+  }
+
+  Future<_StoredPosSession?> _loadStoredSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_storedSessionKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return null;
+      final session = _StoredPosSession.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+      if (session.id.isEmpty || session.date.isEmpty) return null;
+      return session;
+    } catch (_) {
+      await prefs.remove(_storedSessionKey);
+      return null;
+    }
+  }
+
+  Future<void> _saveStoredSession(_StoredPosSession session) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_storedSessionKey, jsonEncode(session.toJson()));
+  }
+
+  Future<void> clearStoredSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storedSessionKey);
+  }
+
+  PosSessionStatus _statusFromStored(_StoredPosSession session) {
+    return PosSessionStatus(
+      activeSessionId: session.id,
+      activeSessionDate: session.date,
+      activeSessionOpeningFund: session.openingFund,
+      todaySessionExists: session.date == _localDate(DateTime.now()),
+      isLocal: true,
+      pendingSync: session.pendingSync,
+    );
+  }
+
+  Future<void> _cacheServerStatus(PosSessionStatus status) async {
+    if (!status.hasActiveSession || status.activeSessionDate == null) {
+      await clearStoredSession();
+      return;
+    }
+    final previous = await _loadStoredSession();
+    await _saveStoredSession(_StoredPosSession(
+      id: status.activeSessionId!,
+      date: status.activeSessionDate!,
+      openedAt: previous?.date == status.activeSessionDate
+          ? previous!.openedAt
+          : DateTime.now(),
+      openingFund: status.activeSessionOpeningFund,
+      pendingSync: false,
+    ));
+  }
+
+  Future<void> syncPendingSession() async {
+    if (_testModeActive) return;
+    final stored = await _loadStoredSession();
+    if (stored == null || !stored.pendingSync) return;
+    final response = await apiClient.dio.post(
+      ApiConstants.sessionSyncOffline,
+      data: {
+        'session_date': stored.date,
+        'opened_at': stored.openedAt.toUtc().toIso8601String(),
+        'opening_fund': stored.openingFund.toStringAsFixed(3),
+      },
+    );
+    final serverId = response.data is Map
+        ? (response.data['id']?.toString() ?? stored.id)
+        : stored.id;
+    await _saveStoredSession(stored.copyWith(
+      id: serverId,
+      pendingSync: false,
+    ));
+  }
+
+  Future<String?> effectiveSessionDate() async {
+    if (_testModeActive) return _trainingStatus().activeSessionDate;
+    return (await _loadStoredSession())?.date;
+  }
+
   Future<PosSessionStatus> fetchStatus() async {
     if (_testModeActive) {
       return _trainingStatus();
     }
-    final response = await apiClient.dio.get(ApiConstants.sessionStatus);
-    return PosSessionStatus.fromJson(
-      Map<String, dynamic>.from(response.data as Map),
-    );
+    try {
+      await syncPendingSession();
+      final response = await apiClient.dio.get(ApiConstants.sessionStatus);
+      final status = PosSessionStatus.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+      );
+      await _cacheServerStatus(status);
+      return status;
+    } catch (error) {
+      if (!isNetworkFailure(error)) rethrow;
+      final stored = await _loadStoredSession();
+      if (stored == null) rethrow;
+      return _statusFromStored(stored);
+    }
   }
 
   Future<PosSessionStatus> openTodaySession({double openingFund = 0}) async {
     if (_testModeActive) {
       return _trainingStatus();
     }
-    await apiClient.dio.post(
-      ApiConstants.sessionOpenToday,
-      data: {'opening_fund': openingFund.toStringAsFixed(3)},
-    );
-    return fetchStatus();
+    try {
+      await apiClient.dio.post(
+        ApiConstants.sessionOpenToday,
+        data: {'opening_fund': openingFund.toStringAsFixed(3)},
+      );
+      return fetchStatus();
+    } catch (error) {
+      if (!isNetworkFailure(error)) rethrow;
+      final openedAt = DateTime.now();
+      final stored = _StoredPosSession(
+        id: 'offline-session-${openedAt.microsecondsSinceEpoch}',
+        date: _localDate(openedAt),
+        openedAt: openedAt,
+        openingFund: openingFund,
+        pendingSync: true,
+      );
+      await _saveStoredSession(stored);
+      return _statusFromStored(stored);
+    }
   }
 
   Future<PosSessionStatus> reopenTodaySession() async {
@@ -369,6 +544,7 @@ class PosSessionService {
       '${ApiConstants.dailySessions}$sessionId${ApiConstants.sessionClose}',
       data: tpeBillBytes == null ? data : FormData.fromMap(data),
     );
+    await clearStoredSession();
   }
 
   String describeApiError(Object error, {String fallback = 'Request failed'}) {

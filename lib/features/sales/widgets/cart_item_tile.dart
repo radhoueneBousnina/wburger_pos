@@ -104,7 +104,7 @@ class _CartItemTile extends ConsumerWidget {
                 ),
               ),
               Text(
-                item.total.toStringAsFixed(1),
+                item.total.toStringAsFixed(3),
                 style: AppTextStyles.priceSm.copyWith(
                   color: AppColors.accentFor(context),
                   fontSize: layout.isCompact ? 16 : 18,

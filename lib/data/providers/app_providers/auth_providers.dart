@@ -2,12 +2,14 @@ part of '../app_providers.dart';
 
 class AuthState {
   final bool isAuthenticated;
+  final bool sessionReady;
   final String? username;
   final String? role;
   final Map<String, bool> permissions;
 
   const AuthState({
     this.isAuthenticated = false,
+    this.sessionReady = false,
     this.username,
     this.role,
     this.permissions = const {},
@@ -50,12 +52,14 @@ class AuthState {
 
   AuthState copyWith({
     bool? isAuthenticated,
+    bool? sessionReady,
     String? username,
     String? role,
     Map<String, bool>? permissions,
   }) {
     return AuthState(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      sessionReady: sessionReady ?? this.sessionReady,
       username: username ?? this.username,
       role: role ?? this.role,
       permissions: permissions ?? this.permissions,
@@ -160,6 +164,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       state = AuthState(
         isAuthenticated: true,
+        sessionReady: false,
         username: userRes.data['username']?.toString() ?? username,
         role: role,
         permissions: permissions,
@@ -201,6 +206,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
     await apiClient.clearAllTokens();
     state = const AuthState();
+  }
+
+  void markSessionReady() {
+    if (!state.isAuthenticated || state.sessionReady) return;
+    state = state.copyWith(sessionReady: true);
+  }
+
+  void markSessionNotReady() {
+    if (!state.sessionReady) return;
+    state = state.copyWith(sessionReady: false);
   }
 
   bool hasPermission(String key) {

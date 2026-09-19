@@ -315,6 +315,11 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
     }
   }
 
+  void _cancelPayment() {
+    unawaited(CustomerDisplayService.instance.showZeroes());
+    Navigator.pop(context);
+  }
+
   void _fillExactAmount() {
     _cashGivenController.text = widget.total.toStringAsFixed(3);
     _cashGivenController.selection = TextSelection.collapsed(
@@ -479,8 +484,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
                     ),
                   ),
                   IconButton(
-                    onPressed:
-                        _isSubmitting ? null : () => Navigator.pop(context),
+                    onPressed: _isSubmitting ? null : _cancelPayment,
                     icon:
                         const Icon(Icons.close_rounded, color: AppColors.white),
                   ),
@@ -506,8 +510,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed:
-                          _isSubmitting ? null : () => Navigator.pop(context),
+                      onPressed: _isSubmitting ? null : _cancelPayment,
                       style: OutlinedButton.styleFrom(
                         minimumSize: Size.fromHeight(layout.touchTarget),
                       ),

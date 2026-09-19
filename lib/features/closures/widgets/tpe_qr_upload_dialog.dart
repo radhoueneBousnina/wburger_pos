@@ -23,6 +23,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
   late TpeReceiptUploadSession _session;
   Timer? _pollTimer;
   bool _isRefreshing = false;
+  bool _isReplacing = false;
   bool _notifiedUploaded = false;
 
   @override
@@ -39,6 +40,7 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
   }
 
   void _startPolling() {
+    _pollTimer?.cancel();
     if (_session.isUploaded || _session.isExpired) return;
     unawaited(_refreshStatus());
     _pollTimer = Timer.periodic(
@@ -76,12 +78,42 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
     await Clipboard.setData(ClipboardData(text: _session.uploadUrl));
   }
 
+  Future<void> _replaceReceipt() async {
+    if (_isReplacing) return;
+    setState(() => _isReplacing = true);
+    try {
+      final replacement =
+          await widget.sessionService.createTpeReceiptUploadSession(
+        sessionId: _session.sessionId,
+        systemCardAmount: _session.systemCardAmount,
+        actualCardAmount: _session.actualCardAmount,
+      );
+      if (!mounted) return;
+      setState(() {
+        _session = replacement;
+        _notifiedUploaded = false;
+      });
+      widget.onUploaded(replacement);
+      _startPolling();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isReplacing = false);
+    }
+  }
+
   String _money(double value) => '${value.toStringAsFixed(3)} DT';
 
   @override
   Widget build(BuildContext context) {
     final layout = context.posLayout;
-    final differenceColor = _session.differenceAmount.abs() > 0.001
+    final differenceColor = (_session.differenceAmount * 1000).round() != 0
         ? AppColors.error
         : AppColors.success;
 
@@ -281,13 +313,25 @@ class _TpeQrUploadDialogState extends State<_TpeQrUploadDialog> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: _session.isUploaded
-                                    ? () => Navigator.pop(context)
+                                    ? (_isReplacing ? null : _replaceReceipt)
                                     : _refreshStatus,
                                 icon: _session.isUploaded
-                                    ? const Icon(Icons.done_rounded)
+                                    ? (_isReplacing
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(Icons.edit_rounded))
                                     : const Icon(Icons.refresh_rounded),
                                 label: Text(
-                                  _session.isUploaded ? 'Done' : 'Refresh',
+                                  _session.isUploaded
+                                      ? (_isReplacing
+                                          ? 'Preparing…'
+                                          : 'Change Receipt')
+                                      : 'Refresh',
                                 ),
                               ),
                             ),

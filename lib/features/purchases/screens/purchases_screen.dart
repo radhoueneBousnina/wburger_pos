@@ -9,6 +9,7 @@ import '../../../core/router/app_router.dart';
 import '../../../data/models/stock_models.dart';
 import '../../../data/providers/app_providers.dart';
 import '../../../shared/widgets/app_image.dart';
+import '../widgets/purchase_invoice_qr_dialog.dart';
 
 part '../widgets/purchases_table.dart';
 part '../widgets/purchase_details_widgets.dart';

@@ -1,27 +1,38 @@
-part of '../screens/create_purchase_screen.dart';
+import 'dart:async';
 
-class _PurchaseInvoiceQrDialog extends StatefulWidget {
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/pos_layout.dart';
+import '../../../data/providers/app_providers.dart';
+
+class PurchaseInvoiceQrDialog extends StatefulWidget {
   final PurchaseInvoiceUploadSession initialSession;
   final PurchasesNotifier purchasesNotifier;
   final ValueChanged<PurchaseInvoiceUploadSession> onUploaded;
 
-  const _PurchaseInvoiceQrDialog({
+  const PurchaseInvoiceQrDialog({
+    super.key,
     required this.initialSession,
     required this.purchasesNotifier,
     required this.onUploaded,
   });
 
   @override
-  State<_PurchaseInvoiceQrDialog> createState() =>
+  State<PurchaseInvoiceQrDialog> createState() =>
       _PurchaseInvoiceQrDialogState();
 }
 
-class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
+class _PurchaseInvoiceQrDialogState extends State<PurchaseInvoiceQrDialog> {
   static const Duration _pollInterval = Duration(milliseconds: 500);
 
   late PurchaseInvoiceUploadSession _session;
   Timer? _pollTimer;
   bool _isRefreshing = false;
+  bool _isReplacing = false;
   bool _notifiedUploaded = false;
 
   @override
@@ -38,6 +49,7 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
   }
 
   void _startPolling() {
+    _pollTimer?.cancel();
     if (_session.isUploaded || _session.isExpired) return;
     unawaited(_refreshStatus());
     _pollTimer = Timer.periodic(
@@ -73,6 +85,34 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
 
   Future<void> _copyLink() async {
     await Clipboard.setData(ClipboardData(text: _session.uploadUrl));
+  }
+
+  Future<void> _replaceInvoice() async {
+    if (_isReplacing) return;
+    setState(() => _isReplacing = true);
+    try {
+      final replacement =
+          await widget.purchasesNotifier.createInvoiceReplacementSession(
+        purchaseId: _session.purchaseId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _session = replacement;
+        _notifiedUploaded = false;
+      });
+      widget.onUploaded(replacement);
+      _startPolling();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isReplacing = false);
+    }
   }
 
   String _money(double value) => '${value.toStringAsFixed(3)} DT';
@@ -259,13 +299,25 @@ class _PurchaseInvoiceQrDialogState extends State<_PurchaseInvoiceQrDialog> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: _session.isUploaded
-                                    ? () => Navigator.pop(context)
+                                    ? (_isReplacing ? null : _replaceInvoice)
                                     : _refreshStatus,
                                 icon: _session.isUploaded
-                                    ? const Icon(Icons.done_rounded)
+                                    ? (_isReplacing
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(Icons.edit_rounded))
                                     : const Icon(Icons.refresh_rounded),
                                 label: Text(
-                                  _session.isUploaded ? 'Done' : 'Refresh',
+                                  _session.isUploaded
+                                      ? (_isReplacing
+                                          ? 'Preparing…'
+                                          : 'Change Invoice')
+                                      : 'Refresh',
                                 ),
                               ),
                             ),
@@ -355,14 +407,15 @@ class _InvoiceStatusBanner extends StatelessWidget {
   }
 }
 
-class _InvoiceUpload extends StatelessWidget {
+class PurchaseInvoiceUpload extends StatelessWidget {
   final bool isUploaded;
   final bool isLoading;
   final String? fileName;
   final bool hasError;
   final VoidCallback? onTap;
 
-  const _InvoiceUpload({
+  const PurchaseInvoiceUpload({
+    super.key,
     required this.isUploaded,
     required this.isLoading,
     required this.fileName,

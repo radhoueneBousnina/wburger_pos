@@ -180,7 +180,7 @@ class _ComparisonRow extends StatelessWidget {
 
     final entered = double.tryParse(actualCtrl.text);
     final diff = entered != null ? entered - theoryAmount : null;
-    final hasDiscrepancy = diff != null && diff.abs() > 0.001;
+    final hasDiscrepancy = diff != null && (diff * 1000).round() != 0;
 
     return Row(
       children: [

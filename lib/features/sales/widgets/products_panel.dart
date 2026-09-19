@@ -381,7 +381,7 @@ class _ProductCard extends ConsumerWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            '${product.price.toStringAsFixed(1)} DT',
+                            '${product.price.toStringAsFixed(3)} DT',
                             style: AppTextStyles.price.copyWith(
                               color: AppColors.accentFor(context),
                               fontSize: layout.isCompact ? 18 : 20,

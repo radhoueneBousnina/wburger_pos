@@ -59,6 +59,17 @@ class _AppShellState extends ConsumerState<AppShell> {
     sessionStatus.whenData((status) {
       if (status != null &&
           !testMode.isActive &&
+          !status.hasActiveSession &&
+          path != AppRoutes.sessionClosure) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          ref.read(authProvider.notifier).markSessionNotReady();
+          context.go(AppRoutes.login);
+        });
+        return;
+      }
+      if (status != null &&
+          !testMode.isActive &&
           canCloseSession &&
           status.activeSessionDateDiffDays >= 2 &&
           path != AppRoutes.sessionClosure) {

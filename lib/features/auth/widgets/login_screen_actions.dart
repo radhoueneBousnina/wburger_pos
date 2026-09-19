@@ -52,6 +52,7 @@ extension _LoginScreenActions on _LoginScreenState {
           final warmup = ref.read(posWarmupProvider);
           await warmup.warmUpSalesBeforeOpen();
           if (!mounted) return;
+          ref.read(authProvider.notifier).markSessionReady();
           context.go(AppRoutes.sales);
           WidgetsBinding.instance.addPostFrameCallback((_) {
             unawaited(
@@ -175,6 +176,16 @@ extension _LoginScreenActions on _LoginScreenState {
         }
       }
 
+      if (!canCloseSession) {
+        await ref.read(authProvider.notifier).logout();
+        if (mounted) {
+          setState(() {
+            _errorMessage =
+                'Access Denied: Your account cannot open daily sessions.';
+          });
+        }
+        return false;
+      }
       final shouldStart = await _showStartSessionDialog(DateTime.now());
       if (shouldStart != true) {
         await ref.read(authProvider.notifier).logout();
@@ -185,8 +196,35 @@ extension _LoginScreenActions on _LoginScreenState {
       ref.invalidate(activeSessionStatusProvider);
       return true;
     } catch (error) {
+      Object effectiveError = error;
+      if (sessionService.isNetworkFailure(error)) {
+        if (!canCloseSession) {
+          await ref.read(authProvider.notifier).logout();
+          if (mounted) {
+            setState(() {
+              _errorMessage =
+                  'Access Denied: Your account cannot open daily sessions.';
+            });
+          }
+          return false;
+        }
+        if (!mounted) return false;
+        final shouldStart = await _showStartSessionDialog(DateTime.now());
+        if (shouldStart == true) {
+          try {
+            await sessionService.openTodaySession();
+            ref.invalidate(activeSessionStatusProvider);
+            return true;
+          } catch (openError) {
+            effectiveError = openError;
+          }
+        } else {
+          await ref.read(authProvider.notifier).logout();
+          return false;
+        }
+      }
       final message = sessionService.describeApiError(
-        error,
+        effectiveError,
         fallback: 'Unable to verify the current POS session.',
       );
       if (!mounted) return false;

@@ -204,12 +204,14 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
                     : const Icon(Icons.qr_code_rounded),
                 label: Text(_tpeReceiptReady
                     ? 'TPE Receipt Uploaded'
-                    : 'Upload TPE Receipt'),
+                    : (_requiresTpeReceipt
+                        ? 'Upload TPE Receipt (Required)'
+                        : 'Upload TPE Receipt (Optional)')),
               ),
             ),
           ],
         ),
-        if (_submittedFinancial && !_tpeReceiptReady)
+        if (_submittedFinancial && _requiresTpeReceipt && !_tpeReceiptReady)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text('TPE receipt upload is required.',

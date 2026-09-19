@@ -843,6 +843,7 @@ class Order {
   final bool isQrOrder;
   final String? redemptionToken;
   final double totalAmount; // Actual total from backend calculation
+  final double? recognizedRevenueAmount;
   final double discountAmount;
   final double amountGiven;
   final double changeReturned;
@@ -865,6 +866,7 @@ class Order {
     this.isQrOrder = false,
     this.redemptionToken,
     this.totalAmount = 0.0,
+    this.recognizedRevenueAmount,
     this.discountAmount = 0.0,
     this.amountGiven = 0.0,
     this.changeReturned = 0.0,
@@ -876,6 +878,14 @@ class Order {
       ? totalAmount
       : items.fold(0, (sum, item) => sum + item.total);
 
+  double get recognizedRevenue =>
+      recognizedRevenueAmount ??
+      (paymentType == PaymentType.cash ||
+              paymentType == PaymentType.card ||
+              paymentType == PaymentType.other
+          ? total
+          : 0);
+
   String get displayTicketNumber => displayTicketNumberFrom(ticketNumber);
 
   Order copyWith({
@@ -883,6 +893,7 @@ class Order {
     String? cancellationReason,
     PaymentType? paymentType,
     double? totalAmount,
+    double? recognizedRevenueAmount,
     double? discountAmount,
     double? amountGiven,
     double? changeReturned,
@@ -906,6 +917,8 @@ class Order {
       isQrOrder: isQrOrder,
       redemptionToken: redemptionToken,
       totalAmount: totalAmount ?? this.totalAmount,
+      recognizedRevenueAmount:
+          recognizedRevenueAmount ?? this.recognizedRevenueAmount,
       discountAmount: discountAmount ?? this.discountAmount,
       amountGiven: amountGiven ?? this.amountGiven,
       changeReturned: changeReturned ?? this.changeReturned,
@@ -931,6 +944,8 @@ class Order {
       'is_qr_order': isQrOrder,
       if (redemptionToken != null) 'redemption_token': redemptionToken,
       'total_amount': totalAmount,
+      if (recognizedRevenueAmount != null)
+        'recognized_revenue_amount': recognizedRevenueAmount,
       'discount_amount': discountAmount,
       'amount_given': amountGiven,
       'change_returned': changeReturned,
@@ -963,6 +978,8 @@ class Order {
       isQrOrder: json['is_qr_order'] == true,
       redemptionToken: _firstNonEmptyString([json['redemption_token']]),
       totalAmount: _parseNullableDouble(json['total_amount']) ?? 0,
+      recognizedRevenueAmount:
+          _parseNullableDouble(json['recognized_revenue_amount']),
       discountAmount: _parseNullableDouble(json['discount_amount']) ?? 0,
       amountGiven: _parseNullableDouble(json['amount_given']) ?? 0,
       changeReturned: _parseNullableDouble(json['change_returned']) ?? 0,
@@ -1112,6 +1129,8 @@ class Order {
       redemptionToken: json['redemption_token'],
       totalAmount:
           double.tryParse(json['total_amount']?.toString() ?? '0') ?? 0.0,
+      recognizedRevenueAmount:
+          _parseNullableDouble(json['recognized_revenue_amount']),
       discountAmount:
           double.tryParse(json['discount_amount']?.toString() ?? '0') ?? 0.0,
       amountGiven:

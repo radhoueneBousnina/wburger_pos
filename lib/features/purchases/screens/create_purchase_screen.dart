@@ -4,16 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/pos_layout.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/stock_models.dart';
 import '../../../data/providers/app_providers.dart';
+import '../widgets/purchase_invoice_qr_dialog.dart';
 
 part '../widgets/purchase_line_widgets.dart';
-part '../widgets/purchase_invoice_qr_dialog.dart';
 
 class CreatePurchaseScreen extends ConsumerStatefulWidget {
   const CreatePurchaseScreen({super.key});
@@ -262,7 +261,7 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
       await showDialog<void>(
         context: context,
         barrierDismissible: existingUploadSession.isUploaded,
-        builder: (_) => _PurchaseInvoiceQrDialog(
+        builder: (_) => PurchaseInvoiceQrDialog(
           initialSession: existingUploadSession,
           purchasesNotifier: purchasesNotifier,
           onUploaded: (latest) {
@@ -290,7 +289,7 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
       await showDialog<void>(
         context: context,
         barrierDismissible: uploadSession.isUploaded,
-        builder: (_) => _PurchaseInvoiceQrDialog(
+        builder: (_) => PurchaseInvoiceQrDialog(
           initialSession: uploadSession,
           purchasesNotifier: purchasesNotifier,
           onUploaded: (latest) {
@@ -517,7 +516,7 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
               : 'Required for confirmation',
         ),
         const SizedBox(height: 16),
-        _InvoiceUpload(
+        PurchaseInvoiceUpload(
           isUploaded: _invoiceReady,
           isLoading: _isCreatingInvoiceUpload,
           fileName: _invoiceUploadSession?.originalFilename,

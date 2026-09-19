@@ -89,7 +89,7 @@ class _PurchaseLinesCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${line.quantity.toStringAsFixed(line.stockItem.unit == 'pcs' ? 0 : 3)} ${line.stockItem.unit} • ${line.purchasePrice.toStringAsFixed(3)} DT / unit',
+                            '${line.quantity.toStringAsFixed(3)} ${line.stockItem.unit} • ${line.purchasePrice.toStringAsFixed(3)} DT / unit',
                             style: AppTextStyles.bodySm.copyWith(
                               color: AppColors.textSecondaryFor(context),
                             ),
@@ -117,8 +117,12 @@ class _PurchaseLinesCard extends StatelessWidget {
 
 class _InvoiceDetailsCard extends StatelessWidget {
   final Purchase purchase;
+  final Future<void> Function() onReplaceInvoice;
 
-  const _InvoiceDetailsCard({required this.purchase});
+  const _InvoiceDetailsCard({
+    required this.purchase,
+    required this.onReplaceInvoice,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -136,6 +140,19 @@ class _InvoiceDetailsCard extends StatelessWidget {
             'Invoice',
             style: AppTextStyles.h4.copyWith(
               color: AppColors.textPrimaryFor(context),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onReplaceInvoice,
+              icon: const Icon(Icons.edit_rounded, size: 18),
+              label: Text(
+                purchase.invoiceImagePath?.isNotEmpty == true
+                    ? 'Change Invoice'
+                    : 'Upload Invoice',
+              ),
             ),
           ),
           const SizedBox(height: 12),

@@ -110,13 +110,21 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
     final cardEntered = double.tryParse(_actualCardCtrl.text) ?? 0;
     final otherEntered = double.tryParse(_actualOtherCtrl.text) ?? 0;
     final floatEntered = double.tryParse(_actualFloatCtrl.text) ?? 0;
-    return (cashEntered - _theoreticalCash).abs() > 0.001 ||
-        (cardEntered - _theoreticalCard).abs() > 0.001 ||
-        (otherEntered - _theoreticalOther).abs() > 0.001 ||
-        (floatEntered - _theoreticalFloat).abs() > 0.001;
+    return _differsAtMillime(cashEntered, _theoreticalCash) ||
+        _differsAtMillime(cardEntered, _theoreticalCard) ||
+        _differsAtMillime(otherEntered, _theoreticalOther) ||
+        _differsAtMillime(floatEntered, _theoreticalFloat);
   }
 
+  bool _differsAtMillime(double actual, double expected) =>
+      ((actual - expected) * 1000).round() != 0;
+
   bool get _tpeReceiptReady => _tpeUploadSession?.isUploaded == true;
+
+  double get _actualCardAmount =>
+      double.tryParse(_actualCardCtrl.text.trim()) ?? 0;
+
+  bool get _requiresTpeReceipt => _actualCardAmount > 0;
 
   bool get _stockDocumentReady =>
       _stockDocumentUploadSession?.isUploaded == true;
@@ -127,7 +135,7 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
       final actual =
           double.tryParse(_stockActualControllers[stock.id]?.text ?? '');
       if (actual == null) continue;
-      if ((actual - stock.quantity).abs() > 0.2) return true;
+      if (_differsAtMillime(actual, stock.quantity)) return true;
     }
     return false;
   }
@@ -160,7 +168,7 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
         _actualFloatCtrl.text.isEmpty) {
       return;
     }
-    if (!_tpeReceiptReady) {
+    if (_requiresTpeReceipt && !_tpeReceiptReady) {
       return;
     }
     if (_hasFinancialDiscrepancy && _financialNoteCtrl.text.trim().isEmpty) {

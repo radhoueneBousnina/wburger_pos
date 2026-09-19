@@ -483,6 +483,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     String? glovoOrderId,
     String? giftRecipient,
     DateTime? clientConfirmedAt,
+    String? clientSessionDate,
     String? ticketNumber,
   }) {
     final effectivePaymentType = orderType == null
@@ -504,6 +505,8 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         'gift_recipient': giftRecipient.trim(),
       if (clientConfirmedAt != null)
         'client_confirmed_at': clientConfirmedAt.toUtc().toIso8601String(),
+      if (clientSessionDate != null && clientSessionDate.trim().isNotEmpty)
+        'client_session_date': clientSessionDate.trim(),
       if (ticketNumber != null && ticketNumber.trim().isNotEmpty)
         'ticket_number': ticketNumber.trim(),
     };
@@ -717,6 +720,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         confirmedOrder: confirmedOrder,
       );
     } on DioException catch (e) {
+      if (_isNetworkFailure(e)) rethrow;
       return _checkoutResultFromDio(
         e,
         orderId: orderId,
@@ -758,6 +762,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     final clientOrderId = _newClientOrderId();
     final preparedCart = _cartWithClientLineIds(cart, clientOrderId);
     try {
+      await ref.read(posSessionServiceProvider).syncPendingSession();
       final effectivePaymentType =
           _paymentTypeForOrder(preparedCart.orderType, paymentType);
       // 1. Create order
@@ -1204,6 +1209,13 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     final effectivePaymentType =
         _paymentTypeForOrder(cart.orderType, paymentType);
     final now = DateTime.now();
+    final sessionDate =
+        await ref.read(posSessionServiceProvider).effectiveSessionDate();
+    if (sessionDate == null || sessionDate.isEmpty) {
+      return const CheckoutResult(
+        error: 'No active POS session. Sign in again and open a session first.',
+      );
+    }
     final localOrderId = 'offline-$clientOrderId';
     final ticketNumber = await _reserveNextTicketNumber(now);
     final localOrder = _confirmedOrderFromCart(
@@ -1250,6 +1262,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
         glovoOrderId: glovoOrderId,
         giftRecipient: giftRecipient,
         clientConfirmedAt: now,
+        clientSessionDate: sessionDate,
         ticketNumber: ticketNumber,
       ),
       localOrderJson: localOrder.toLocalJson(),
@@ -1294,6 +1307,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
     if (_isSyncingOfflineOrders || ref.read(testModeProvider).isActive) return;
     _isSyncingOfflineOrders = true;
     try {
+      await ref.read(posSessionServiceProvider).syncPendingSession();
       final queue = orderOfflineQueueForSync(await _offlineQueueStore.load());
       if (queue.isEmpty) {
         PosMonitoringService.instance.setUnsyncedOrdersCount(0);
@@ -1349,6 +1363,16 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<Order>>> {
       if (remaining.isEmpty) {
         unawaited(fetchTodayOrders(showLoading: false, force: true));
       }
+    } catch (error) {
+      apiClient.logError('Offline session/order sync failed', error);
+      unawaited(PosMonitoringService.instance.recordEvent(
+        level: 'warning',
+        eventType: 'offline_sync_failed',
+        message: apiClient.describeError(
+          error,
+          fallback: 'Offline session/order sync failed.',
+        ),
+      ));
     } finally {
       _isSyncingOfflineOrders = false;
     }

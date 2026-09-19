@@ -72,14 +72,14 @@ class _TodaySalesScreenState extends ConsumerState<TodaySalesScreen> {
             .fold<double>(0, (s, o) => s + o.total);
         final glovoTotal = validated
             .where((o) => o.paymentType == PaymentType.glovo)
-            .fold<double>(0, (s, o) => s + o.total);
+            .fold<double>(0, (s, o) => s + o.recognizedRevenue);
         final otherTotal = validated
-            .where((o) =>
-                o.paymentType != PaymentType.cash &&
-                o.paymentType != PaymentType.card &&
-                o.paymentType != PaymentType.glovo)
+            .where((o) => o.paymentType == PaymentType.other)
             .fold<double>(0, (s, o) => s + o.total);
-        final totalRevenue = validated.fold<double>(0, (s, o) => s + o.total);
+        final totalRevenue = validated.fold<double>(
+          0,
+          (sum, order) => sum + order.recognizedRevenue,
+        );
 
         return Column(
           children: [
@@ -110,7 +110,7 @@ class _TodaySalesScreenState extends ConsumerState<TodaySalesScreen> {
                     color: AppColors.info,
                   ),
                   _SummaryCard(
-                    label: 'Glovo',
+                    label: 'Glovo received',
                     value: '${glovoTotal.toStringAsFixed(3)} DT',
                     icon: Icons.delivery_dining_rounded,
                     color: AppColors.blue,

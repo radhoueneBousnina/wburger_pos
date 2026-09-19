@@ -202,7 +202,7 @@ class _StockRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      item.quantity.toStringAsFixed(item.unit == 'pcs' ? 0 : 1),
+                      item.quantity.toStringAsFixed(3),
                       style: AppTextStyles.h4.copyWith(
                         color: item.isCritical
                             ? AppColors.error

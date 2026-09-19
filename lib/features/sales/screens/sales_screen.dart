@@ -57,6 +57,9 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_handleScannerHardwareKey);
+    if (ref.read(cartProvider).items.isEmpty) {
+      unawaited(CustomerDisplayService.instance.showZeroes());
+    }
     _refocusSalesScanner();
   }
 
@@ -821,6 +824,11 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<CartState>(cartProvider, (previous, next) {
+      if (next.items.isEmpty && previous?.items.isNotEmpty == true) {
+        unawaited(CustomerDisplayService.instance.showZeroes());
+      }
+    });
     final layout = context.posLayout;
     final testMode = ref.watch(testModeProvider);
     final showSalesMenuButton = layout.width < 1700;

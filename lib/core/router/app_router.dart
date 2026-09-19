@@ -34,10 +34,15 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: AppRoutes.login,
     redirect: (context, state) {
       final isAuth = auth.isAuthenticated;
+      final sessionReady = auth.sessionReady;
       final onLogin = state.uri.path == AppRoutes.login;
+      final onForcedClosure = state.uri.path == AppRoutes.sessionClosure;
 
       if (!isAuth && !onLogin) return AppRoutes.login;
-      if (isAuth && onLogin) return AppRoutes.sales;
+      if (isAuth && !sessionReady && !onLogin && !onForcedClosure) {
+        return AppRoutes.login;
+      }
+      if (isAuth && sessionReady && onLogin) return AppRoutes.sales;
       if (isAuth && !_canAccessRoute(auth, state.uri.path)) {
         return AppRoutes.sales;
       }

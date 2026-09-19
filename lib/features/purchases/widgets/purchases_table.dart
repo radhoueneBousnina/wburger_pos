@@ -168,16 +168,16 @@ class _HeaderCell extends StatelessWidget {
   }
 }
 
-class _PurchaseRow extends StatelessWidget {
+class _PurchaseRow extends ConsumerWidget {
   final Purchase purchase;
   const _PurchaseRow({required this.purchase});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final layout = context.posLayout;
 
     return InkWell(
-      onTap: () => _showPurchaseDetails(context),
+      onTap: () => _showPurchaseDetails(context, ref),
       overlayColor:
           WidgetStateProperty.all(AppColors.blueSurface.withValues(alpha: 0.1)),
       child: Container(
@@ -266,7 +266,7 @@ class _PurchaseRow extends StatelessWidget {
     );
   }
 
-  void _showPurchaseDetails(BuildContext context) {
+  void _showPurchaseDetails(BuildContext context, WidgetRef ref) {
     final layout = context.posLayout;
 
     showDialog<void>(
@@ -343,7 +343,10 @@ class _PurchaseRow extends StatelessWidget {
                           children: [
                             _PurchaseLinesCard(purchase: purchase),
                             const SizedBox(height: 16),
-                            _InvoiceDetailsCard(purchase: purchase),
+                            _InvoiceDetailsCard(
+                              purchase: purchase,
+                              onReplaceInvoice: () => _replaceInvoice(ctx, ref),
+                            ),
                           ],
                         )
                       : Row(
@@ -356,7 +359,11 @@ class _PurchaseRow extends StatelessWidget {
                             const SizedBox(width: 16),
                             Expanded(
                               flex: 2,
-                              child: _InvoiceDetailsCard(purchase: purchase),
+                              child: _InvoiceDetailsCard(
+                                purchase: purchase,
+                                onReplaceInvoice: () =>
+                                    _replaceInvoice(ctx, ref),
+                              ),
                             ),
                           ],
                         ),
@@ -367,6 +374,47 @@ class _PurchaseRow extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _replaceInvoice(BuildContext context, WidgetRef ref) async {
+    final notifier = ref.read(purchasesProvider.notifier);
+    try {
+      var uploadCompleted = false;
+      final uploadSession = await notifier.createInvoiceReplacementSession(
+        purchaseId: purchase.id,
+      );
+      if (!context.mounted) return;
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: uploadSession.isUploaded,
+        builder: (_) => PurchaseInvoiceQrDialog(
+          initialSession: uploadSession,
+          purchasesNotifier: notifier,
+          onUploaded: (latest) {
+            uploadCompleted = latest.isUploaded;
+          },
+        ),
+      );
+      if (!uploadCompleted) return;
+      await notifier.fetchPurchases(silent: true, force: true);
+      if (!context.mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.pop(context);
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Purchase invoice replaced successfully.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 }
 

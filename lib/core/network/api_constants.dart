@@ -44,6 +44,7 @@ class ApiConstants {
   static const String dailySessions = '$apiPrefix/sales/daily-sessions/';
   static const String sessionStatus = '$apiPrefix/sales/daily-sessions/status/';
   static const String sessionOpenToday = '${dailySessions}open_today/';
+  static const String sessionSyncOffline = '${dailySessions}sync-offline/';
   static const String sessionReopenToday = '${dailySessions}reopen_today/';
   static const String sessionClose = '/close/';
   static const String sessionTpeUpload = '/tpe-upload-session/';

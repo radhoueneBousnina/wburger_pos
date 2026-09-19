@@ -299,6 +299,41 @@ class PurchasesNotifier extends StateNotifier<AsyncValue<List<Purchase>>> {
     }
   }
 
+  Future<PurchaseInvoiceUploadSession> createInvoiceReplacementSession({
+    required String purchaseId,
+  }) async {
+    if (ref.read(testModeProvider).isActive) {
+      return PurchaseInvoiceUploadSession(
+        token: 'test-replacement-token',
+        purchaseId: purchaseId,
+        sessionId: null,
+        sessionDate: null,
+        uploadUrl: '',
+        purchaseTotalAmount: 0,
+        expiresAt: DateTime.now().add(const Duration(minutes: 10)),
+        isExpired: false,
+        isUploaded: true,
+        uploadedAt: DateTime.now(),
+        originalFilename: 'training-replacement-invoice.jpg',
+      );
+    }
+
+    try {
+      final response = await apiClient.dio.post(
+        '${ApiConstants.purchases}$purchaseId${ApiConstants.purchaseInvoiceUpload}',
+      );
+      return PurchaseInvoiceUploadSession.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+      );
+    } catch (e) {
+      apiClient.logError('Create invoice replacement session error', e);
+      throw apiClient.describeError(
+        e,
+        fallback: 'Unable to prepare invoice replacement right now.',
+      );
+    }
+  }
+
   Future<void> confirmUploadedPurchase({
     required String purchaseId,
     required List<Map<String, dynamic>> lines,

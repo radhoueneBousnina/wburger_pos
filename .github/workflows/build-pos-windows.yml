@@ -1,6 +1,9 @@
 name: Build POS Windows Installer
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       api_base_url:
@@ -51,21 +54,17 @@ jobs:
       - name: Analyze POS app
         run: flutter analyze
 
-      - name: Run POS production smoke tests
-        run: >
-          flutter test
-          test/receipt_printer_service_test.dart
-          test/cart_state_test.dart
-          test/windows_fullscreen_shortcuts_test.dart
+      - name: Run complete POS test suite
+        run: flutter test
 
       - name: Build Windows release
         shell: pwsh
         env:
-          API_BASE_URL: ${{ inputs.api_base_url }}
-          POS_PRINTER_NAMES: ${{ inputs.pos_printer_names }}
-          CASH_DRAWER_STATUS_PORT: ${{ inputs.cash_drawer_status_port }}
-          CASH_DRAWER_PRINTER_HOST: ${{ inputs.cash_drawer_printer_host }}
-          CASH_DRAWER_OPEN_WHEN_PIN3_HIGH: ${{ inputs.cash_drawer_open_when_pin3_high }}
+          API_BASE_URL: ${{ inputs.api_base_url || 'https://w-burger.com' }}
+          POS_PRINTER_NAMES: ${{ inputs.pos_printer_names || '' }}
+          CASH_DRAWER_STATUS_PORT: ${{ inputs.cash_drawer_status_port || '' }}
+          CASH_DRAWER_PRINTER_HOST: ${{ inputs.cash_drawer_printer_host || '' }}
+          CASH_DRAWER_OPEN_WHEN_PIN3_HIGH: ${{ inputs.cash_drawer_open_when_pin3_high || 'true' }}
         run: |
           $buildArgs = @(
             "build"
@@ -85,7 +84,7 @@ jobs:
       - name: Validate baked production API URL
         shell: pwsh
         env:
-          API_BASE_URL: ${{ inputs.api_base_url }}
+          API_BASE_URL: ${{ inputs.api_base_url || 'https://w-burger.com' }}
         run: |
           $releaseDir = "build\windows\x64\runner\Release"
           $appSo = "$releaseDir\data\app.so"
