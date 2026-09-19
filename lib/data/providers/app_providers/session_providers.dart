@@ -345,7 +345,7 @@ class PosSessionService {
         ApiConstants.sessionOpenToday,
         data: {'opening_fund': openingFund.toStringAsFixed(3)},
       );
-      return fetchStatus();
+      return await fetchStatus();
     } catch (error) {
       if (!isNetworkFailure(error)) rethrow;
       final openedAt = DateTime.now();
