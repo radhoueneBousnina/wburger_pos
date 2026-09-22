@@ -8,6 +8,7 @@ import '../../features/today_sales/screens/today_sales_screen.dart';
 import '../../features/stock/screens/stock_screen.dart';
 import '../../features/purchases/screens/purchases_screen.dart';
 import '../../features/purchases/screens/create_purchase_screen.dart';
+import '../../features/expenses/screens/expenses_screen.dart';
 import '../../features/closures/screens/session_closure_screen.dart';
 import '../../features/diagnostics/screens/diagnostics_screen.dart';
 import '../../shared/widgets/app_shell.dart';
@@ -20,6 +21,7 @@ class AppRoutes {
   static const stock = '/stock';
   static const purchases = '/purchases';
   static const createPurchase = '/purchases/create';
+  static const expenses = '/expenses';
   static const sessionClosure = '/session_closure';
   static const diagnostics = '/diagnostics';
 }
@@ -82,6 +84,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (ctx, state) => const CreatePurchaseScreen(),
           ),
           GoRoute(
+            path: AppRoutes.expenses,
+            builder: (ctx, state) => const ExpensesScreen(),
+          ),
+          GoRoute(
             path: AppRoutes.sessionClosure,
             builder: (ctx, state) => const SessionClosureScreen(),
           ),
@@ -99,7 +105,9 @@ bool _canAccessRoute(AuthState auth, String path) {
   if (path == AppRoutes.stock) {
     return auth.permissions['can_access_stock'] == true;
   }
-  if (path == AppRoutes.purchases || path == AppRoutes.createPurchase) {
+  if (path == AppRoutes.purchases ||
+      path == AppRoutes.createPurchase ||
+      path == AppRoutes.expenses) {
     return auth.permissions['can_access_purchases'] == true;
   }
   if (path == AppRoutes.todaySales) {

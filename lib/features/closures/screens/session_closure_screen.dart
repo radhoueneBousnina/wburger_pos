@@ -129,8 +129,12 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
   bool get _stockDocumentReady =>
       _stockDocumentUploadSession?.isUploaded == true;
 
+  bool get _requiresStockDocument => (ref.read(stockProvider).value ?? [])
+      .any((stock) => stock.isActive && stock.requiresStockCheck);
+
   bool get _hasStockDiscrepancy {
-    final stocks = ref.read(stockProvider).value ?? [];
+    final stocks = (ref.read(stockProvider).value ?? [])
+        .where((stock) => stock.isActive && stock.requiresStockCheck);
     for (final stock in stocks) {
       final actual =
           double.tryParse(_stockActualControllers[stock.id]?.text ?? '');
@@ -141,8 +145,8 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
   }
 
   bool get _allStockItemsEntered {
-    final stocks = ref.read(stockProvider).value ?? [];
-    if (stocks.isEmpty) return false;
+    final stocks = (ref.read(stockProvider).value ?? [])
+        .where((stock) => stock.isActive && stock.requiresStockCheck);
     return stocks.every((stock) {
       final value = _stockActualControllers[stock.id]?.text.trim() ?? '';
       return value.isNotEmpty && double.tryParse(value) != null;
@@ -318,11 +322,13 @@ class _SessionClosureScreenState extends ConsumerState<SessionClosureScreen> {
   Future<void> _submitStockStep() async {
     setState(() => _submittedStock = true);
     if (!_allStockItemsEntered) return;
-    if (!_stockDocumentReady) return;
+    if (_requiresStockDocument && !_stockDocumentReady) return;
     if (_hasStockDiscrepancy && _stockNoteCtrl.text.trim().isEmpty) return;
 
     final sessionService = ref.read(posSessionServiceProvider);
-    final stocks = ref.read(stockProvider).value ?? [];
+    final stocks = (ref.read(stockProvider).value ?? [])
+        .where((stock) => stock.isActive && stock.requiresStockCheck)
+        .toList();
     final actualCash = double.tryParse(_actualCashCtrl.text) ?? 0;
     final actualCard = double.tryParse(_actualCardCtrl.text) ?? 0;
     final actualOther = double.tryParse(_actualOtherCtrl.text) ?? 0;

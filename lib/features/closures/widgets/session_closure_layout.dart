@@ -74,8 +74,12 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
                         error: (error, _) =>
                             Center(child: Text(error.toString())),
                         data: (stocks) {
-                          _syncStockControllers(stocks);
-                          return _buildStockStep(context, stocks);
+                          final checkedStocks = stocks
+                              .where((stock) =>
+                                  stock.isActive && stock.requiresStockCheck)
+                              .toList();
+                          _syncStockControllers(checkedStocks);
+                          return _buildStockStep(context, checkedStocks);
                         },
                       ),
               ],
@@ -256,6 +260,12 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
           ),
           child: Column(
             children: [
+              if (stocks.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(18),
+                  child: Text(
+                      'No stock items are configured for session counting.'),
+                ),
               for (final stock in stocks)
                 Padding(
                   padding: const EdgeInsets.all(12),
@@ -306,19 +316,20 @@ extension _SessionClosureLayout on _SessionClosureScreenState {
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        _UploadBox(
-          isUploaded: _stockDocumentReady,
-          isLoading: _isCreatingStockDocumentUpload,
-          fileName: _stockDocumentUploadSession?.originalFilename,
-          hasError: _submittedStock && !_stockDocumentReady,
-          label: 'Scan QR to upload signed stock document',
-          uploadedLabel: 'Signed stock document uploaded',
-          onTap: _isCreatingStockDocumentUpload
-              ? null
-              : _showStockDocumentQrUploadFlow,
-        ),
-        if (_submittedStock && !_stockDocumentReady)
+        if (stocks.isNotEmpty) const SizedBox(height: 16),
+        if (stocks.isNotEmpty)
+          _UploadBox(
+            isUploaded: _stockDocumentReady,
+            isLoading: _isCreatingStockDocumentUpload,
+            fileName: _stockDocumentUploadSession?.originalFilename,
+            hasError: _submittedStock && !_stockDocumentReady,
+            label: 'Scan QR to upload signed stock document',
+            uploadedLabel: 'Signed stock document uploaded',
+            onTap: _isCreatingStockDocumentUpload
+                ? null
+                : _showStockDocumentQrUploadFlow,
+          ),
+        if (stocks.isNotEmpty && _submittedStock && !_stockDocumentReady)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text('Signed stock document upload is required.',

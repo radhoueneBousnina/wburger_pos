@@ -25,6 +25,7 @@ class ApiConstants {
   static const String stockMovements = '$apiPrefix/inventory/movements/';
   static const String recipes = '$apiPrefix/inventory/recipes/';
   static const String purchases = '$apiPrefix/purchases/';
+  static const String expenses = '$apiPrefix/reporting/expenses/';
   static const String purchaseInvoiceUpload = '/invoice-upload-session/';
 
   // Sales

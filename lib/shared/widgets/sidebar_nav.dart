@@ -36,6 +36,11 @@ class SidebarNav extends ConsumerWidget {
         route: AppRoutes.purchases,
         permission: 'can_access_purchases'),
     _NavItem(
+        icon: Icons.account_balance_wallet_rounded,
+        label: 'Other Expenses',
+        route: AppRoutes.expenses,
+        permission: 'can_access_purchases'),
+    _NavItem(
         icon: Icons.lock_clock_rounded,
         label: 'Session Closure',
         route: AppRoutes.sessionClosure,

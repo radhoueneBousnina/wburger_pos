@@ -9,6 +9,8 @@ class StockItem {
   final double purchasePrice;
   final double basePrice;
   final bool isSauce;
+  final bool requiresStockCheck;
+  final bool isActive;
 
   const StockItem({
     required this.id,
@@ -19,10 +21,14 @@ class StockItem {
     required this.purchasePrice,
     required this.basePrice,
     this.isSauce = false,
+    this.requiresStockCheck = false,
+    this.isActive = true,
   });
 
-  bool get isLowStock => quantity <= minThreshold;
-  bool get isCritical => quantity <= minThreshold * 0.5;
+  bool get isLowStock =>
+      isActive && requiresStockCheck && quantity <= minThreshold;
+  bool get isCritical =>
+      isActive && requiresStockCheck && quantity <= minThreshold * 0.5;
 
   StockItem copyWith({double? quantity}) {
     return StockItem(
@@ -34,6 +40,8 @@ class StockItem {
       purchasePrice: purchasePrice,
       basePrice: basePrice,
       isSauce: isSauce,
+      requiresStockCheck: requiresStockCheck,
+      isActive: isActive,
     );
   }
 
@@ -51,6 +59,8 @@ class StockItem {
           double.tryParse(json['base_price']?.toString() ?? '0') ?? 0.0,
       basePrice: double.tryParse(json['base_price']?.toString() ?? '0') ?? 0.0,
       isSauce: json['is_sauce'] == true,
+      requiresStockCheck: json['requires_stock_check'] == true,
+      isActive: json['is_active'] != false,
     );
   }
 }
