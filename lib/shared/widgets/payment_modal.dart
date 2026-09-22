@@ -39,6 +39,9 @@ class PaymentModal extends ConsumerStatefulWidget {
   final String? referenceLabel;
   final double? staffDiscountBaseTotal;
 
+  /// Overrides physical customer-display writes when the modal is embedded.
+  final Future<void> Function(double amount)? customerDisplayWriter;
+
   const PaymentModal({
     super.key,
     required this.total,
@@ -53,6 +56,7 @@ class PaymentModal extends ConsumerStatefulWidget {
     this.customerNote,
     this.referenceLabel,
     this.staffDiscountBaseTotal,
+    this.customerDisplayWriter,
   });
 
   static Future<void> show(
@@ -316,7 +320,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
   }
 
   void _cancelPayment() {
-    unawaited(CustomerDisplayService.instance.showZeroes());
+    _writeCustomerDisplayAmount(0);
     Navigator.pop(context);
   }
 
@@ -374,8 +378,21 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(CustomerDisplayService.instance.showTotal(displayTotal));
+      _writeCustomerDisplayAmount(displayTotal);
     });
+  }
+
+  void _writeCustomerDisplayAmount(double amount) {
+    final writer = widget.customerDisplayWriter;
+    if (writer != null) {
+      unawaited(writer(amount));
+      return;
+    }
+    unawaited(
+      amount == 0
+          ? CustomerDisplayService.instance.showZeroes()
+          : CustomerDisplayService.instance.showTotal(amount),
+    );
   }
 
   void _insertCashCharacter(String value) {
@@ -851,6 +868,7 @@ class _PaymentModalState extends ConsumerState<PaymentModal> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextField(
+                  key: const ValueKey('cash-amount-field'),
                   controller: _cashGivenController,
                   focusNode: _cashFocusNode,
                   cursorColor: AppColors.accentFor(context),

@@ -328,6 +328,7 @@ class _CashNumberPad extends StatelessWidget {
               }
               final value = keys[index];
               return _CashPadKey(
+                key: ValueKey('cash-key-$value'),
                 label: value,
                 tone: value == '.'
                     ? _CashPadKeyTone.accent
@@ -353,6 +354,7 @@ class _CashPadKey extends StatelessWidget {
   final bool dense;
 
   const _CashPadKey({
+    super.key,
     this.label,
     this.icon,
     required this.tone,

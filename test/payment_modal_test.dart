@@ -7,6 +7,8 @@ import 'package:wburger_pos/data/models/order_models.dart';
 import 'package:wburger_pos/data/providers/app_providers.dart';
 import 'package:wburger_pos/shared/widgets/payment_modal.dart';
 
+Future<void> _ignoreCustomerDisplay(double _) async {}
+
 class _StaticPosSettingsNotifier extends PosSettingsNotifier {
   _StaticPosSettingsNotifier() : super(autoFetch: false) {
     state = const AsyncValue.data(PosSettings(staffDiscountPercent: 40));
@@ -59,6 +61,7 @@ void main() {
             body: PaymentModal(
               total: 12,
               initialPaymentType: PaymentType.cash,
+              customerDisplayWriter: _ignoreCustomerDisplay,
               onConfirm: (
                 _,
                 __, {
@@ -78,22 +81,26 @@ void main() {
     );
     await tester.pump();
 
-    await tester.ensureVisible(find.text('1'));
+    const oneKey = ValueKey('cash-key-1');
+    const twoKey = ValueKey('cash-key-2');
+    const amountFieldKey = ValueKey('cash-amount-field');
+
+    await tester.ensureVisible(find.byKey(oneKey));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('1'));
+    await tester.tap(find.byKey(oneKey));
     await tester.pump();
 
-    final editableText = tester.widget<EditableText>(find.byType(EditableText));
-    editableText.controller.selection = const TextSelection(
+    final amountField = tester.widget<TextField>(find.byKey(amountFieldKey));
+    amountField.controller!.selection = const TextSelection(
       baseOffset: 0,
       extentOffset: 1,
     );
 
-    await tester.tap(find.text('2'));
+    await tester.tap(find.byKey(twoKey));
     await tester.pump();
 
-    expect(editableText.controller.text, '12');
+    expect(amountField.controller!.text, '12');
   });
 
   testWidgets('staff payment displays configured discounted total',
@@ -118,6 +125,7 @@ void main() {
               total: 20,
               staffDiscountBaseTotal: 20,
               initialPaymentType: PaymentType.staff,
+              customerDisplayWriter: _ignoreCustomerDisplay,
               onConfirm: (
                 _,
                 __, {
@@ -156,6 +164,7 @@ void main() {
             body: PaymentModal(
               total: 20,
               initialPaymentType: PaymentType.cash,
+              customerDisplayWriter: _ignoreCustomerDisplay,
               onConfirm: (
                 _,
                 __, {
@@ -198,6 +207,7 @@ void main() {
             body: PaymentModal(
               total: 20,
               initialPaymentType: PaymentType.cash,
+              customerDisplayWriter: _ignoreCustomerDisplay,
               onConfirm: (
                 _,
                 __, {
@@ -243,6 +253,7 @@ void main() {
               total: 20,
               staffDiscountBaseTotal: 20,
               initialPaymentType: PaymentType.gift,
+              customerDisplayWriter: _ignoreCustomerDisplay,
               onConfirm: (
                 _,
                 __, {
